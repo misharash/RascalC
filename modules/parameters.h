@@ -13,36 +13,36 @@ public:
 
     // The name of the input random particle files (first set)
 	char *fname = NULL;
-	const char default_fname[500] = "/mnt/store1/oliverphilcox/Yuting/LRG_randoms_v2_10x.txt";
+	const char default_fname[500] = "qpm_randoms_10x.xyzwj";
 
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;
-    const char default_radial_bin_file[500] = "/home/oliverphilcox/eBOSS_MockChallenge/radial_binning_cov.csv";
+    const char default_radial_bin_file[500] = "radial_binning_cov.csv";
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
-	const char default_corname[500] = "/home/oliverphilcox/eBOSS_MockChallenge/v3_low/xi_n100_m10_periodic_11.dat";
+	const char default_corname[500] = "xi/xi_n200_m120_11.dat";
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_cf = NULL;
-    const char default_radial_bin_file_cf[500] = "/home/oliverphilcox/eBOSS_MockChallenge/v3_low/radial_binning_corr_low.csv";
+    const char default_radial_bin_file_cf[500] = "radial_binning_corr.csv";
 
     // Number of galaxies in first dataset
-    Float nofznorm =156800;
+    Float nofznorm =642051;
 
     // Output directory
     char *out_file = NULL;
-    const char default_out_file[500] = "/home/oliverphilcox/eBOSS_MockChallenge/v7/";
+    const char default_out_file[500] = "./";
 
     // The number of mu bins in the correlation function
-    int mbin_cf = 10;
+    int mbin_cf = 120;
 
     // The number of threads to run on
-	int nthread = 30;
+	int nthread = 10;
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
-	int nside = 71;
+	int nside = 251;
 
     // Whether or not we are using a periodic box
 	bool perbox = false;
@@ -50,17 +50,17 @@ public:
     //---------- (r,mu) PARAMETERS ------------------------------------------
 
 	// The number of mu bins
-	int mbin = 20;
+	int mbin = 12;
 
      // Name of the RR bin file
     char *RR_bin_file = NULL; // RR_{aA}^{11} file
-    const char default_RR_bin_file[500] = "";
+    const char default_RR_bin_file[500] = "weights/binned_pair_counts_n36_m12_j169_11.dat";
 
     //---------- JACKKNIFE PARAMETERS ---------------------------------------
 
     // Name of the jackknife weight file
     char *jk_weight_file = NULL; // w_{aA}^{11} weights
-    const char default_jk_weight_file[500] = "";
+    const char default_jk_weight_file[500] = "weights/jackknife_weights_n36_m12_j169_11.dat";
 
     //-------- LEGENDRE PARAMETERS -------------------------------------------
 
@@ -80,7 +80,7 @@ public:
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
-    int max_loops = 40;
+    int max_loops = 10;
 
     // Number of random cells to draw at each stage
     int N2 = 20; // number of j cells per i cell
