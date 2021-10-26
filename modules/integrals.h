@@ -308,13 +308,13 @@ public:
 
             // Now compute the integral;
             c4v = tmp_weight/prob*2.*xi_ik[i]*xi_jl; // with xi_ik*xi_jl = xi_il*xi_jk symmetry factor
+            // Compute jackknife weight tensor:
+            tmp_full_bin = bin_ij[i]*mbin*nbin+tmp_bin;
 
             // Print distances and mu's  between both pairs
             cleanup_l(pi.pos, pk.pos, rik_mag, rik_mu);
-            fprintf(fourpoint_info_outfile, "%lf %lf %lf %lf %le %le\n", rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v);
+            fprintf(fourpoint_info_outfile, "%d %d %lf %lf %lf %lf %le %le\n", bin_ij[i], tmp_full_bin, rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v);
 
-            // Compute jackknife weight tensor:
-            tmp_full_bin = bin_ij[i]*mbin*nbin+tmp_bin;
             // Add to local counts
             c4[tmp_full_bin]+=c4v;
             binct4[tmp_full_bin]++;
