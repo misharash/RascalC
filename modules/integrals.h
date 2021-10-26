@@ -24,6 +24,7 @@ private:
     Float *product_weights12_12, *product_weights12_23, *product_weights12_34; // arrays to get products of jackknife weights to avoid recomputation
 #endif
     char* out_file;
+    FILE *fourpoint_info_outfile;
     bool box,rad=0; // Flags to decide whether we have a periodic box + if we have a radial correlation function only
     int I1, I2, I3, I4; // indices for which fields to use for each particle
 
@@ -55,6 +56,10 @@ public:
         nbin = par->nbin; // number of radial bins
         mbin = par->mbin; // number of mu bins
         out_file = par->out_file; // output directory
+
+        char fourpoint_info_outfilename[1000];
+        snprintf(fourpoint_info_outfilename, 1000, "%sfourpoint_info_out.txt", out_file);
+        fourpoint_info_outfile = fopen(fourpoint_info_outfilename, "w");
 
         int ec=0;
         // Initialize the binning
@@ -113,6 +118,7 @@ public:
         free(RRaA1);
         free(RRaA2);
 #endif
+        fclose(fourpoint_info_outfile);
     }
 
     void reset(){
@@ -305,7 +311,7 @@ public:
 
             // Print distances and mu's  between both pairs
             cleanup_l(pi.pos, pk.pos, rik_mag, rik_mu);
-            printf("rik_mag=%lf, rik_mu=%lf, rjl_mag=%lf, rjl_mu=%lf, xi_ik*xi_jl=%le, c4v=%le\n", rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v);
+            fprintf(fourpoint_info_outfile, "%lf %lf %lf %lf %le %le\n", rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v);
 
             // Compute jackknife weight tensor:
             tmp_full_bin = bin_ij[i]*mbin*nbin+tmp_bin;
