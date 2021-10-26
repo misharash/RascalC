@@ -305,7 +305,7 @@ public:
 
             // Print distances and mu's  between both pairs
             cleanup_l(pi.pos, pk.pos, rik_mag, rik_mu);
-            printf("rik_mag=%lf, rik_mu=%lf, rjl_mag=%lf, rjl_mu=%lf, xi_ik*xi_jl=%lf, c4v=%lf\n", rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v);
+            printf("rik_mag=%lf, rik_mu=%lf, rjl_mag=%lf, rjl_mu=%lf, xi_ik*xi_jl=%le, c4v=%le\n", rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v);
 
             // Compute jackknife weight tensor:
             tmp_full_bin = bin_ij[i]*mbin*nbin+tmp_bin;
