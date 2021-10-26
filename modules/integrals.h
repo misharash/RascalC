@@ -291,6 +291,8 @@ public:
         cleanup_l(pl.pos,pj.pos,rjl_mag,rjl_mu);
         xi_jl = cf24->xi(rjl_mag, rjl_mu); // j-l correlation
 
+        Float rik_mag, rik_mu; // distance and mu between first and third particles, for information printout
+
         for(int i=0;i<pln;i++){ // Iterate over particle in pi_list
             if(wijk[i]==-1) continue; // skip incorrect bins / ij self counts
             if(((prim_ids[i]==pl_id)&&(I1==I4))||((pj_id==pl_id)&&(I2==I4))||((pk_id==pl_id)&&(I3==I4))) continue; // don't self-count
@@ -300,6 +302,11 @@ public:
 
             // Now compute the integral;
             c4v = tmp_weight/prob*2.*xi_ik[i]*xi_jl; // with xi_ik*xi_jl = xi_il*xi_jk symmetry factor
+
+            // Print distances and mu's  between both pairs
+            cleanup_l(pi.pos, pk.pos, rik_mag, rik_mu);
+            printf("rik_mag=%lf, rik_mu=%lf, rjl_mag=%lf, rjl_mu=%lf, xi_ik*xi_jl=%lf, c4v=%lf\n", rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v);
+
             // Compute jackknife weight tensor:
             tmp_full_bin = bin_ij[i]*mbin*nbin+tmp_bin;
             // Add to local counts
