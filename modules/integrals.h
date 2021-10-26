@@ -313,6 +313,9 @@ public:
 
             // Print distances and mu's  between both pairs
             cleanup_l(pi.pos, pk.pos, rik_mag, rik_mu);
+            #ifdef OPENMP
+            #pragma omp critical // only one processor should print simultaneosly, otherwise lines are mixed sometimes
+            #endif
             fprintf(fourpoint_info_outfile, "%d %d %lf %lf %lf %lf %le %le\n", bin_ij[i], tmp_full_bin, rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v);
 
             // Add to local counts
