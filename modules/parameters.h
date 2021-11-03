@@ -50,7 +50,7 @@ public:
     //---------- (r,mu) PARAMETERS ------------------------------------------
 
 	// The number of mu bins
-	int mbin = 12;
+	int mbin = 1;
 
      // Name of the RR bin file
     char *RR_bin_file = NULL; // RR_{aA}^{11} file
