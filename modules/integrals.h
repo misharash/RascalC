@@ -24,7 +24,7 @@ private:
     Float *product_weights12_12, *product_weights12_23, *product_weights12_34; // arrays to get products of jackknife weights to avoid recomputation
 #endif
     char* out_file;
-    FILE ***fourpoint_info_outfiles;
+    FILE **fourpoint_info_outfiles;
     bool box,rad=0; // Flags to decide whether we have a periodic box + if we have a radial correlation function only
     int I1, I2, I3, I4; // indices for which fields to use for each particle
 
@@ -58,17 +58,12 @@ public:
         out_file = par->out_file; // output directory
 
         char fourpoint_info_outfilename[1000];
-        fourpoint_info_outfiles = (FILE***)calloc(nbin*mbin, sizeof(FILE**));
+        fourpoint_info_outfiles = (FILE**)calloc(nbin*mbin, sizeof(FILE*));
         snprintf(fourpoint_info_outfilename, 1000, "%sfourpoint_info_out", out_file);
         mkdir(fourpoint_info_outfilename, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); //create printout base directory
         for (int i = 0; i < nbin*mbin; i++) {
-            fourpoint_info_outfiles[i] = (FILE**)calloc(nbin*mbin, sizeof(FILE*));
-            snprintf(fourpoint_info_outfilename, 1000, "%sfourpoint_info_out/%d", out_file, i);
-            mkdir(fourpoint_info_outfilename, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); //create printout subdirectories
-            for (int j = 0; j < nbin*mbin; j++) {
-                snprintf(fourpoint_info_outfilename, 1000, "%sfourpoint_info_out/%d/%d.txt", out_file, i, j);
-                fourpoint_info_outfiles[i][j] = fopen(fourpoint_info_outfilename, "w"); //open printout files
-            }
+            snprintf(fourpoint_info_outfilename, 1000, "%sfourpoint_info_out/%d.txt", out_file, i);
+            fourpoint_info_outfiles[i] = fopen(fourpoint_info_outfilename, "w"); //open printout files
         }
 
         int ec=0;
@@ -129,8 +124,7 @@ public:
         free(RRaA2);
 #endif
         for (int i = 0; i < nbin*mbin; i++)
-            for (int j = 0; j < nbin*mbin; j++)
-                fclose(fourpoint_info_outfiles[i][j]); //close printout files
+            fclose(fourpoint_info_outfiles[i]); //close printout files
     }
 
     void reset(){
@@ -328,7 +322,7 @@ public:
             #ifdef OPENMP
             #pragma omp critical // only one processor should print simultaneosly, otherwise lines are mixed sometimes
             #endif
-            fprintf(fourpoint_info_outfiles[bin_ij[i]][tmp_bin], "%lf %lf %lf %lf %le %le\n", rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v); //print into file designated for this bin combination
+            fprintf(fourpoint_info_outfiles[bin_ij[i]], "%d %lf %lf %lf %lf %le %le\n", tmp_bin, rik_mag, rik_mu, rjl_mag, rjl_mu, xi_ik[i]*xi_jl, c4v); //print into file designated for this bin combination
 
             // Add to local counts
             c4[tmp_full_bin]+=c4v;
