@@ -32,7 +32,7 @@ public:
 
     // Output directory
     char *out_file = NULL;
-    const char default_out_file[500] = "./";
+    const char default_out_file[500] = "./out/";
 
     // The number of mu bins in the correlation function
     int mbin_cf = 120;
