@@ -11,10 +11,10 @@
 class Integrals{
 private:
     CorrelationFunction *cf12, *cf13, *cf24;
-    int nbin, mbin;
+    int nbin, mbin, nbin_detailed;
     Float rmin,rmax,mumin,mumax,dmu; //Ranges in r and mu
     Float *r_high, *r_low; // Max and min of each radial bin
-    Float *Ra, *c2, *c3, *c4; // Arrays to accumulate integrals
+    Float *Ra, *c2, *c3, *c4, *c4_detailed; // Arrays to accumulate integrals
     JK_weights *JK12, *JK23, *JK34; // RR counts and jackknife weightts
 #ifdef JACKKNIFE
     int n_jack;
@@ -27,7 +27,7 @@ private:
     bool box,rad=0; // Flags to decide whether we have a periodic box + if we have a radial correlation function only
     int I1, I2, I3, I4; // indices for which fields to use for each particle
 
-    uint64 *binct, *binct3, *binct4; // Arrays to accumulate bin counts
+    uint64 *binct, *binct3, *binct4, *binct4_detailed; // Arrays to accumulate bin counts
 
 public:
     Integrals(){};
@@ -54,6 +54,7 @@ public:
     void init(Parameters *par){
         nbin = par->nbin; // number of radial bins
         mbin = par->mbin; // number of mu bins
+        nbin_detailed = (int)floor(par->rmax_cf)+1; // number of bins for c4/binct4 detailed
         out_file = par->out_file; // output directory
 
         int ec=0;
@@ -62,9 +63,11 @@ public:
         ec+=posix_memalign((void **) &c2, PAGE, sizeof(double)*nbin*mbin);
         ec+=posix_memalign((void **) &c3, PAGE, sizeof(double)*nbin*mbin*nbin*mbin);
         ec+=posix_memalign((void **) &c4, PAGE, sizeof(double)*nbin*mbin*nbin*mbin);
+        ec+=posix_memalign((void **) &c4_detailed, PAGE, sizeof(double)*nbin*mbin*nbin*mbin*nbin_detailed*nbin_detailed);
         ec+=posix_memalign((void **) &binct, PAGE, sizeof(uint64)*nbin*mbin);
         ec+=posix_memalign((void **) &binct3, PAGE, sizeof(uint64)*nbin*mbin*nbin*mbin);
         ec+=posix_memalign((void **) &binct4, PAGE, sizeof(uint64)*nbin*mbin*nbin*mbin);
+        ec+=posix_memalign((void **) &binct4_detailed, PAGE, sizeof(uint64)*nbin*mbin*nbin*mbin*nbin_detailed*nbin_detailed);
 #ifdef JACKKNIFE
         n_jack = fmax(fmax(JK12->n_JK_filled,JK23->n_JK_filled),JK34->n_JK_filled); // number of non-empty jackknives
         ec+=posix_memalign((void **) &c2j, PAGE, sizeof(double)*nbin*mbin);
@@ -101,9 +104,11 @@ public:
         free(c2);
         free(c3);
         free(c4);
+        free(c4_detailed);
         free(binct);
         free(binct3);
         free(binct4);
+        free(binct4_detailed);
 #ifdef JACKKNIFE
         free(c2j);
         free(c3j);
@@ -140,6 +145,10 @@ public:
             RRaA2[j] = 0;
 #endif
         }
+        for (int j=0; j<nbin*mbin*nbin*mbin*nbin_detailed*nbin_detailed; j++) {
+            c4_detailed[j]=0;
+            binct4_detailed[j] = 0;
+        }
     }
 
     inline int getbin(Float r, Float mu){
@@ -156,6 +165,15 @@ public:
             }
         }
         return which_bin*mbin + floor((mu-mumin)/dmu);
+    }
+
+    inline int getbin_detailed(Float r, Float mu){
+        // Linearizes 2D indices
+        // First define which r bin we are in;
+        int which_bin = (int)floor(r); // just round radius to integer
+        if (which_bin >= nbin_detailed) return nbin_detailed-1; // put all far things in last extra bin
+        if (which_bin < 0) return 0; // should not be the case, just to be safe
+        return which_bin;
     }
 
     inline void second(const Particle* pi_list, const int* prim_ids, int pln, const Particle pj, const int pj_id, int* &bin, Float* &wij, const double prob, const double prob1, const double prob2){
@@ -279,8 +297,8 @@ public:
         // Accumulates the four point integral C4.
         // First define variables
         Particle pi;
-        Float rjl_mag, rjl_mu, rkl_mag, rkl_mu, c4v, xi_jl, tmp_weight;
-        int tmp_bin, tmp_full_bin, max_bin = nbin*mbin;
+        Float rik_mag, rik_mu, rjl_mag, rjl_mu, rkl_mag, rkl_mu, c4v, xi_jl, tmp_weight;
+        int tmp_bin, tmp_bin_ik, tmp_bin_jl, tmp_full_bin, tmp_full_bin_detailed, max_bin = nbin*mbin;
         cleanup_l(pl.pos,pk.pos,rkl_mag,rkl_mu);
 #ifdef JACKKNIFE
         Float c4vj,JK_weight;
@@ -298,13 +316,21 @@ public:
             pi = pi_list[i];
             tmp_weight = wijk[i]*pl.w; // product of weights, w_i*w_j*w_k*w_l
 
+            tmp_bin_jl = getbin_detailed(rjl_mag, rjl_mu);
+            cleanup_l(pi.pos,pk.pos,rik_mag,rik_mu); // calculate ik distance (again)
+            tmp_bin_ik = getbin_detailed(rik_mag, rik_mu);
+
             // Now compute the integral;
             c4v = tmp_weight/prob*2.*xi_ik[i]*xi_jl; // with xi_ik*xi_jl = xi_il*xi_jk symmetry factor
             // Compute jackknife weight tensor:
             tmp_full_bin = bin_ij[i]*mbin*nbin+tmp_bin;
+            tmp_full_bin_detailed = (tmp_full_bin*nbin_detailed+tmp_bin_ik)*nbin_detailed+tmp_bin_jl;
             // Add to local counts
             c4[tmp_full_bin]+=c4v;
             binct4[tmp_full_bin]++;
+            // Add to local counts separated by ik, jl bins
+            c4_detailed[tmp_full_bin_detailed]+=c4v;
+            binct4_detailed[tmp_full_bin_detailed]++;
 #ifdef JACKKNIFE
             JK_weight=weight_tensor(int(pi.JK),int(pj.JK),int(pk.JK),int(pl.JK),bin_ij[i],tmp_bin, JK12, JK34, product_weights12_34);
             c4vj = c4v*JK_weight;
@@ -376,6 +402,10 @@ public:
                 c4[i*nbin*mbin+j]+=ints->c4[i*nbin*mbin+j];
                 binct3[i*nbin*mbin+j]+=ints->binct3[i*nbin*mbin+j];
                 binct4[i*nbin*mbin+j]+=ints->binct4[i*nbin*mbin+j];
+                for (int k=0; k<nbin_detailed*nbin_detailed; k++) {
+                    c4_detailed[(i*nbin*mbin+j)*nbin_detailed*nbin_detailed+k]+=ints->c4_detailed[(i*nbin*mbin+j)*nbin_detailed*nbin_detailed+k];
+                    binct4_detailed[(i*nbin*mbin+j)*nbin_detailed*nbin_detailed+k]+=ints->binct4_detailed[(i*nbin*mbin+j)*nbin_detailed*nbin_detailed+k];
+                }
 #ifdef JACKKNIFE
                 c3j[i*nbin*mbin+j]+=ints->c3j[i*nbin*mbin+j];
                 c4j[i*nbin*mbin+j]+=ints->c4j[i*nbin*mbin+j];
@@ -486,6 +516,8 @@ public:
             for(int j=0;j<nbin*mbin;j++){
                 c3[i*nbin*mbin+j]/=(n_triples*corrf3);
                 c4[i*nbin*mbin+j]/=(n_quads*corrf4);
+                for (int k=0; k<nbin_detailed*nbin_detailed; k++)
+                    c4_detailed[(i*nbin*mbin+j)*nbin_detailed*nbin_detailed+k]/=(n_quads*corrf4);
 #ifdef JACKKNIFE
                 c3j[i*nbin*mbin+j]/=(n_triples*corrf3);
                 c4j[i*nbin*mbin+j]/=(n_quads*corrf4);
@@ -505,6 +537,8 @@ public:
                 Float Rab4=Ra_i*JK34->RR_pair_counts[j];
                 c3[i*nbin*mbin+j]/=Rab3;
                 c4[i*nbin*mbin+j]/=Rab4;
+                for (int k=0; k<nbin_detailed*nbin_detailed; k++)
+                    c4_detailed[(i*nbin*mbin+j)*nbin_detailed*nbin_detailed+k]/=Rab4;
 #ifdef JACKKNIFE
                 Float Rab_jk3 = Rab3*(1.-product_weights12_23[i*nbin*mbin+j]);
                 Float Rab_jk4 = Rab4*(1.-product_weights12_34[i*nbin*mbin+j]);
@@ -541,11 +575,14 @@ public:
         snprintf(c3name, sizeof c3name, "%sCovMatricesAll/c3_n%d_m%d_%d,%d%d_%s.txt", out_file, nbin, mbin,I2,I1,I3,suffix);
         char c4name[1000];
         snprintf(c4name, sizeof c4name, "%sCovMatricesAll/c4_n%d_m%d_%d%d,%d%d_%s.txt", out_file, nbin, mbin, I1,I2,I3,I4,suffix);
+        char c4name_detailed[1000];
+        snprintf(c4name, sizeof c4name, "%sCovMatricesAll/c4_detailed_n%d_m%d_%d_%d%d,%d%d_%s.bin", out_file, nbin, mbin, nbin_detailed, I1,I2,I3,I4,suffix);
         char RRname[1000];
         snprintf(RRname, sizeof RRname, "%sCovMatricesAll/RR_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1,I2,suffix);
         FILE * C2File = fopen(c2name,"w"); // for c2 part of integral
         FILE * C3File = fopen(c3name,"w"); // for c3 part of integral
         FILE * C4File = fopen(c4name,"w"); // for c4 part of integral
+        FILE * C4File_detailed = fopen(c4name_detailed,"wb"); // for c4 part of integral divided by CF regions
         FILE * RRFile = fopen(RRname,"w"); // for RR part of integral
 
         for (int j=0;j<nbin*mbin;j++){
@@ -562,17 +599,24 @@ public:
             fprintf(C4File,"\n");
         }
 
+        fwrite(c4_detailed, sizeof(Float), nbin*mbin*nbin*mbin*nbin_detailed*nbin_detailed, C4File_detailed);
+
         fflush(NULL);
 
         // Close open files
         fclose(C2File);
         fclose(C3File);
         fclose(C4File);
+        fclose(C4File_detailed);
         fclose(RRFile);
         if(save_all==1){
             char binname[1000];
             snprintf(binname,sizeof binname, "%sCovMatricesAll/binct_c4_n%d_m%d_%d%d,%d%d_%s.txt",out_file, nbin,mbin,I1,I2,I3,I4,suffix);
             FILE * BinFile = fopen(binname,"w");
+
+            char binname_detailed[1000];
+            snprintf(binname_detailed,sizeof binname, "%sCovMatricesAll/binct_c4_detailed_n%d_m%d_%d_%d%d,%d%d_%s.bin",out_file, nbin,mbin,nbin_detailed,I1,I2,I3,I4,suffix);
+            FILE * BinFile_detailed = fopen(binname,"w");
 
             char bin3name[1000];
             snprintf(bin3name,sizeof bin3name, "%sCovMatricesAll/binct_c3_n%d_m%d_%d,%d%d_%s.txt",out_file, nbin,mbin,I2,I1,I3,suffix);
@@ -594,7 +638,11 @@ public:
                 fprintf(BinFile,"\n");
                 fprintf(Bin3File,"\n");
             }
+
+            fwrite(binct4_detailed, sizeof(uint64), nbin*mbin*nbin*mbin*nbin_detailed*nbin_detailed, BinFile_detailed);
+
             fclose(BinFile);
+            fclose(BinFile_detailed);
             fclose(Bin2File);
             fclose(Bin3File);
         }
