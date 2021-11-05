@@ -17,7 +17,7 @@ nbins_detailed = int(sys.argv[4])
 suffix = str(sys.argv[5])
 outdir_name = str(sys.argv[6])
 
-main_filename = os.path.join(indir_name, "CovMatricesAll/c4_detailed_n%d_m%d_%d_%d%d,%d%d_%s.bin" % (nbin, mbin, nbin_detailed, 1,1,1,1, suffix)) # hardcoded for all particle classes = 1 so far
+main_filename = os.path.join(indir_name, "CovMatricesAll/c4_detailed_n%d_m%d_%d_%d%d,%d%d_%s.bin" % (nbins, mbins, nbins_detailed, 1,1,1,1, suffix)) # hardcoded for all particle classes = 1 so far
 data_len = (nbins_tot*nbins_detailed)**2
 print("Loading %d floats from %s" % (data_len, main_filename))
 data = np.fromfile(main_filename, count=data_len) # load binary data
