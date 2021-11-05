@@ -576,7 +576,7 @@ public:
         char c4name[1000];
         snprintf(c4name, sizeof c4name, "%sCovMatricesAll/c4_n%d_m%d_%d%d,%d%d_%s.txt", out_file, nbin, mbin, I1,I2,I3,I4,suffix);
         char c4name_detailed[1000];
-        snprintf(c4name, sizeof c4name, "%sCovMatricesAll/c4_detailed_n%d_m%d_%d_%d%d,%d%d_%s.bin", out_file, nbin, mbin, nbin_detailed, I1,I2,I3,I4,suffix);
+        snprintf(c4name_detailed, sizeof c4name, "%sCovMatricesAll/c4_detailed_n%d_m%d_%d_%d%d,%d%d_%s.bin", out_file, nbin, mbin, nbin_detailed, I1,I2,I3,I4,suffix);
         char RRname[1000];
         snprintf(RRname, sizeof RRname, "%sCovMatricesAll/RR_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1,I2,suffix);
         FILE * C2File = fopen(c2name,"w"); // for c2 part of integral
@@ -616,7 +616,7 @@ public:
 
             char binname_detailed[1000];
             snprintf(binname_detailed,sizeof binname, "%sCovMatricesAll/binct_c4_detailed_n%d_m%d_%d_%d%d,%d%d_%s.bin",out_file, nbin,mbin,nbin_detailed,I1,I2,I3,I4,suffix);
-            FILE * BinFile_detailed = fopen(binname,"w");
+            FILE * BinFile_detailed = fopen(binname_detailed,"w");
 
             char bin3name[1000];
             snprintf(bin3name,sizeof bin3name, "%sCovMatricesAll/binct_c3_n%d_m%d_%d,%d%d_%s.txt",out_file, nbin,mbin,I2,I1,I3,suffix);
