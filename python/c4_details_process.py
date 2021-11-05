@@ -17,6 +17,8 @@ nbins_detailed = int(sys.argv[4])
 suffix = str(sys.argv[5])
 outdir_name = str(sys.argv[6])
 
+outdir_name = os.path.join(outdir_name, suffix)
+
 main_filename = os.path.join(indir_name, "CovMatricesAll/c4_detailed_n%d_m%d_%d_%d%d,%d%d_%s.bin" % (nbins, mbins, nbins_detailed, 1,1,1,1, suffix)) # hardcoded for all particle classes = 1 so far
 data_len = (nbins_tot*nbins_detailed)**2
 print("Loading %d floats from %s" % (data_len, main_filename))
@@ -29,7 +31,7 @@ print("Data symmetrized in first pair of indices, symmetrizing in last pair of i
 data = (data + data.transpose(0, 1, 3, 2))/2 # symmetrize in last two indices
 print("Data symmetrized in last pair of indices")
 
-os.mkdir(outdir_name)
+os.makedirs(outdir_name)
 print("Writing into separate files by covariance bins, to directory %s" % outdir_name)
 # loop over i - ij bin number
 for i in range(nbins_tot):
