@@ -80,7 +80,7 @@ public:
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
-    int max_loops = 120;
+    int max_loops = 600;
 
     // Number of random cells to draw at each stage
     int N2 = 20; // number of j cells per i cell
