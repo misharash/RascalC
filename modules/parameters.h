@@ -38,7 +38,7 @@ public:
     int mbin_cf = 120;
 
     // The number of threads to run on
-	int nthread = 10;
+	int nthread = 40;
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
@@ -80,7 +80,7 @@ public:
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
-    int max_loops = 10;
+    int max_loops = 120;
 
     // Number of random cells to draw at each stage
     int N2 = 20; // number of j cells per i cell
