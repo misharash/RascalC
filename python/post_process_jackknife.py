@@ -38,10 +38,11 @@ good_jk=np.unique(np.where(np.isfinite(xi_jack))[0])
 print("Using %d out of %d jackknives"%(len(good_jk),n_jack))
 xi_jack = xi_jack[good_jk]
 weights = weights[good_jk]
+weights /= np.sum(weights, axis=0) # renormalize weights after possibly discarding some jackknives
 
 # Compute data covariance matrix
 print("Computing data covariance matrix")
-mean_xi = np.sum(xi_jack*weights,axis=0)/np.sum(weights,axis=0)
+mean_xi = np.sum(xi_jack*weights,axis=0)
 tmp = weights*(xi_jack-mean_xi)
 data_cov = np.matmul(tmp.T,tmp)
 denom = np.matmul(weights.T,weights)
@@ -130,7 +131,7 @@ alpha_best = fmin(neg_log_L1,1.)
 print("Optimization complete - optimal rescaling parameter is %.6f"%alpha_best)
 
 # Compute jackknife and full covariance matrices
-jack_cov = c4+c3*alpha_best+c2*alpha_best**2.
+jack_cov = c4j+c3j*alpha_best+c2j*alpha_best**2.
 jack_prec = Psi(alpha_best)
 c2f,c3f,c4f=load_matrices('full',jack=False)
 full_cov = c4f+c3f*alpha_best+c2f*alpha_best**2.
