@@ -13,7 +13,7 @@ public:
 
     // The name of the input random particle files (first set)
 	char *fname = NULL;
-	const char default_fname[500] = "LRG_z0.925.dat.xyzwj";
+	const char default_fname[500] = "LRG_z0.925.ran.xyzwj";
 
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;
