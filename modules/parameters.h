@@ -28,7 +28,7 @@ public:
     const char default_radial_bin_file_cf[500] = "radial_binning_corr.csv";
 
     // Number of galaxies in first dataset
-    Float nofznorm = 44798;
+    Float nofznorm = 262269;
 
     // Output directory
     char *out_file = NULL;
