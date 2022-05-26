@@ -13,7 +13,7 @@ public:
 
     // The name of the input random particle files (first set)
 	char *fname = NULL;
-	const char default_fname[500] = "LRG_z0.925.ran.xyzwj";
+	const char default_fname[500] = "LRG_NScomb_0.4_1.1.less.ran.xyzwj";
 
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;
@@ -21,7 +21,7 @@ public:
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
-	const char default_corname[500] = "xi/xi_n100_m10_11.dat";
+	const char default_corname[500] = "xi/xi_n200_m10_11.dat";
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_cf = NULL;
@@ -54,13 +54,13 @@ public:
 
      // Name of the RR bin file
     char *RR_bin_file = NULL; // RR_{aA}^{11} file
-    const char default_RR_bin_file[500] = "weights/binned_pair_counts_n16_m1_j20_11.dat";
+    const char default_RR_bin_file[500] = "weights/binned_pair_counts_n50_m1_j102_11.dat";
 
     //---------- JACKKNIFE PARAMETERS ---------------------------------------
 
     // Name of the jackknife weight file
     char *jk_weight_file = NULL; // w_{aA}^{11} weights
-    const char default_jk_weight_file[500] = "weights/jackknife_weights_n16_m1_j20_11.dat";
+    const char default_jk_weight_file[500] = "weights/jackknife_weights_n50_m1_j102_11.dat";
 
     //-------- LEGENDRE PARAMETERS -------------------------------------------
 
