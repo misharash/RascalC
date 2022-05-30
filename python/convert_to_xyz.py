@@ -8,14 +8,22 @@ Output file format has (x,y,z,w) coordinates in Mpc/h units
         OMEGA_M = Matter density (default 0.31)
         OMEGA_K = Curvature density (default 0.0)
         W_DARK_ENERGY = Dark Energy equation of state parameter (default -1.)
+        ---FURTHER OPTIONAL---
+        USE_FKP_WEIGHTS = whether to use FKP weights column (default False/0; only applies to (DESI) FITS files)
 
 """
 
 import sys
 import numpy as np
 
+# Determine whether to use FKP weights, only applies to (DESI) FITS files
+if len(sys.argv==7):
+    use_FKP_weights = bool(sys.argv[6])
+else:
+    use_FKP_weights = False
+
 # Read in optional cosmology parameters
-if len(sys.argv)==6:
+if len(sys.argv) in (6, 7):
     omega_m = float(sys.argv[3])
     omega_k = float(sys.argv[4])
     w_dark_energy = float(sys.argv[5])
@@ -24,7 +32,7 @@ elif len(sys.argv)==3: # use defaults (from the BOSS DR12 2016 clustering paper 
     omega_k = 0.
     w_dark_energy = -1.
 else:
-    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} [{OMEGA_M} {OMEGA_K} {W_DARK_ENERGY}]")
+    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} [{OMEGA_M} {OMEGA_K} {W_DARK_ENERGY} [{USE_FKP_WEIGHTS}]]")
     sys.exit()
 
 print("\nUsing cosmological parameters as Omega_m = %.2f, Omega_k = %.2f, w = %.2f" %(omega_m,omega_k,w_dark_energy))
@@ -50,6 +58,8 @@ if input_file.endswith(".fits"):
     all_dec = data["DEC"]
     all_z = data["Z"]
     all_w = data["WEIGHT"]
+    if use_FKP_weights:
+        all_w *= data["WEIGHT_FKP"]
 else:
     # read text file
     # Load in data:
