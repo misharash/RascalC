@@ -13,7 +13,7 @@ public:
 
     // The name of the input random particle files (first set)
 	char *fname = NULL;
-	const char default_fname[500] = "LRG_NScomb_0.4_1.1.less.ran.xyzwj";
+	const char default_fname[500] = "BGS_BRIGHT_NScomb_0.1_0.5.less.ran.xyzwj";
 
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;
@@ -28,7 +28,7 @@ public:
     const char default_radial_bin_file_cf[500] = "radial_binning_corr.csv";
 
     // Number of galaxies in first dataset
-    Float nofznorm = 262269;
+    Float nofznorm = 633204;
 
     // Output directory
     char *out_file = NULL;
