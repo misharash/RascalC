@@ -38,7 +38,7 @@ public:
     int mbin_cf = 10;
 
     // The number of threads to run on
-	int nthread = 60;
+	int nthread = 24;
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
@@ -80,7 +80,7 @@ public:
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
-    int max_loops = 360;
+    int max_loops = 120;
 
     // Exit after relative Frobenius difference is less than (convergence_threshold_percent %) for (convergence_ntimes) times
     Float convergence_threshold_percent = 0.01;
