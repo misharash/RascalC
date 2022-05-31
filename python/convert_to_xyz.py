@@ -17,7 +17,7 @@ import sys
 import numpy as np
 
 # Determine whether to use FKP weights, only applies to (DESI) FITS files
-if len(sys.argv==7):
+if len(sys.argv)==7:
     use_FKP_weights = bool(sys.argv[6])
 else:
     use_FKP_weights = False
