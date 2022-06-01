@@ -54,13 +54,13 @@ public:
 
      // Name of the RR bin file
     char *RR_bin_file = NULL; // RR_{aA}^{11} file
-    const char default_RR_bin_file[500] = "weights/binned_pair_counts_n50_m1_j102_11.dat";
+    const char default_RR_bin_file[500] = "weights/binned_pair_counts_n50_m1_j129_11.dat";
 
     //---------- JACKKNIFE PARAMETERS ---------------------------------------
 
     // Name of the jackknife weight file
     char *jk_weight_file = NULL; // w_{aA}^{11} weights
-    const char default_jk_weight_file[500] = "weights/jackknife_weights_n50_m1_j102_11.dat";
+    const char default_jk_weight_file[500] = "weights/jackknife_weights_n50_m1_j129_11.dat";
 
     //-------- LEGENDRE PARAMETERS -------------------------------------------
 
