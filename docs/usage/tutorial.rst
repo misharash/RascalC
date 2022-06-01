@@ -3,9 +3,23 @@ Tutorial: Aperiodic Data and Jackknifes
 
 We present a basic example of the use of the RascalC code for a single field, computing the 2PCF in :math:`(r,\mu)` bins, and calibrating for the non-Gaussianity parameter using jackknifes. Multiple field cases proceed similarly. Detailed documentation for all functions is given in associated pages, as overviewed in the :doc:`getting-started` pages. Note that we here run the main code in the JACKKNIFE mode for an *aperiodic* data-set.
 
-An associated tutorial (:ref:`tutorial_periodic`) shows how to run the code for Legendre multipoles in a *periodic* simulation.
+An associated tutorial (:doc:`tutorial_periodic`) shows how to run the code for Legendre multipoles in a *periodic* simulation.
 
 Here, we compute the covariance matrix for a single `QPM <https://arxiv.org/pdf/1309.5532.pdf>`_ mock dataset. We'll work in the directory in which RascalC is installed for simplicity.
+
+For advanced users who would like to do things in parallel when possible, here is a graph showing how each step depends on the results of others:
+
+.. graphviz::
+
+   digraph deps {
+      "convert_to_xyz galaxies" -> "create_jackknives galaxies";
+      "convert_to_xyz randoms" -> "create_jackknives randoms" -> "take_subset_of_particles";
+      {"write_binning_file cov" "take_subset_of_particles"} -> "jackknife_weights";
+      {"write_binning_file corr" "create_jackknives galaxies" "create_jackknives randoms" "take_subset_of_particles"} -> "xi_estimator_aperiodic";
+      {"write_binning_file cov" "create_jackknives galaxies" "create_jackknives randoms" "take_subset_of_particles" "jackknife_weights"} -> "xi_estimator_jack";
+      {"write_binning_file corr" "write_binning_file cov" "take_subset_of_particles" "jackknife_weights" "xi_estimator_aperiodic"} -> "./cov";
+      {"jackknife_weights" "xi_estimator_jack" "./cov"} -> "post_process_jackknife";
+   }
 
 1) Pre-Processing
 ------------------
@@ -211,7 +225,7 @@ Although the C++ code computes all the relevant parts of the covariance matrices
 
 For a single field analysis, this is run as follows, specifying the jackknife correlation functions, output covariance term directory and weights. Since we used :math:`N_\mathrm{loops}=10` above, we'll set this as the number of subsamples here::
 
-    python python/post_process.py xi_jack/xi_jack_n36_m12_j169_11.dat weights/ ./ 12 10 ./
+    python python/post_process_jackknife.py xi_jack/xi_jack_n36_m12_j169_11.dat weights/ ./ 12 10 ./
 
 (See :ref:`post-processing-general`).
 
