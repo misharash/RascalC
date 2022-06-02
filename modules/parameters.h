@@ -13,7 +13,7 @@ public:
 
     // The name of the input random particle files (first set)
 	char *fname = NULL;
-	const char default_fname[500] = "LRG_0.8_1.1.ran.xyzwj";
+	const char default_fname[500] = "LRG_0.8_1.1.less.ran.xyzwj";
 
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;
@@ -100,7 +100,7 @@ public:
 
     // Second set of random particles
     char *fname2 = NULL;
-    const char default_fname2[500] = "ELG_0.8_1.1.ran.xyzwj";
+    const char default_fname2[500] = "ELG_0.8_1.1.less.ran.xyzwj";
 
     // Correlation functions
     char *corname2 = NULL; // xi_22 file
