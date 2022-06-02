@@ -80,7 +80,7 @@ public:
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
-    int max_loops = 360;
+    int max_loops = 720;
 
     // Exit after relative Frobenius difference is less than (convergence_threshold_percent %) for (convergence_ntimes) times
     Float convergence_threshold_percent = 0.01;
