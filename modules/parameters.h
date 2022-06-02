@@ -38,7 +38,7 @@ public:
     int mbin_cf = 10;
 
     // The number of threads to run on
-	int nthread = 60;
+	int nthread = 30;
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
