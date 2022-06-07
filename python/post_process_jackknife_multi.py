@@ -40,7 +40,7 @@ n = n_bins//m # radial bins
 xi_jack_all = [xi_jack_11,xi_jack_22]
 
 # First exclude any dodgy jackknife regions
-good_jk=np.unique(np.where(np.isfinite(xi_jack_11)&np.isfinite(xi_jack_22)&np.isfinite(xi_jack_12))[0])
+good_jk = np.where(np.all(np.isfinite(xi_jack_11) & np.isfinite(xi_jack_12) & np.isfinite(xi_jack_22), axis=1))[0] # all xi in jackknife have to be normal numbers
 print("Using %d out of %d jackknives"%(len(good_jk),n_jack))
 
 # Initialize full data covariance matrix (ordering [xi_11, xi_12, xi_22])
@@ -64,10 +64,11 @@ weights22 = np.loadtxt(weight_file22)[:,1:]
 weights_all[:,:n_bins]=weights11[good_jk]
 weights_all[:,n_bins:2*n_bins]=weights12[good_jk]
 weights_all[:,2*n_bins:]=weights22[good_jk]
+weights_all /= np.sum(weights_all,axis=0) # renormalize after possibly discarding some jackknives
 
 # Compute full covariance matrix:
 tmp_cov = np.zeros([len(good_jk),3*n_bins])
-mean_xi = np.sum(xi_all*weights_all,axis=0)/np.sum(weights_all,axis=0)
+mean_xi = np.sum(xi_all*weights_all, axis=0)
 tmp_cov = weights_all*(xi_all-mean_xi)
 
 print("Computing full data covariance matrix")
