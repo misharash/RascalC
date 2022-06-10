@@ -45,7 +45,7 @@ public:
 	int nside = 451;
 
     // Whether or not we are using a periodic box
-	bool perbox = false;
+	bool perbox = true;
 
     //---------- (r,mu) PARAMETERS ------------------------------------------
 
@@ -166,13 +166,13 @@ public:
     int cf_loops = 10;
 
     // The periodicity of the position-space cube.
-	Float boxsize = 200.; // this is only used if the input particles are made randomly
+	Float boxsize = 500.; // this is only used if the input particles are made randomly
 
 	// The particles will be read from the unit cube, but then scaled by boxsize.
 	Float rescale = 1.;   // If left zero or negative, set rescale=boxsize
 
 	// The radius beyond which the correlation function is set to zero
-	Float xicutoff = 250.;
+	Float xicutoff = 125.;
 
 	// The maximum number of points to read
 	uint64 nmax = 1000000000000;
@@ -186,10 +186,10 @@ public:
 	int qinvert = 0, qbalance = 0;
 
 	// If set, we'll just throw random periodic points instead of reading the file
-	int make_random = 0;
+	int make_random = 1;
 
 	// Will be number of particles in a random distribution, but gets overwritten if reading from a file.
-	int np = 3000000; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
+	int np = 4000000; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
 
 	// The index from which on to invert the sign of the weights
 	int rstart = 0;
