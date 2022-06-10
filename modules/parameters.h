@@ -21,7 +21,7 @@ public:
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
-	const char default_corname[500] = "xi/xi_n200_m10_11.dat";
+	const char default_corname[500] = "xi/xi_n100_m10_11.dat";
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_cf = NULL;
@@ -104,10 +104,10 @@ public:
 
     // Correlation functions
     char *corname2 = NULL; // xi_22 file
-    const char default_corname2[500] = "xi/xi_n200_m10_22.dat";
+    const char default_corname2[500] = "xi/xi_n100_m10_22.dat";
 
     char *corname12 = NULL; // xi_12 file
-    const char default_corname12[500] = "xi/xi_n200_m10_12.dat";
+    const char default_corname12[500] = "xi/xi_n100_m10_12.dat";
 
     // Number of galaxies in second dataset
     Float nofznorm2=118702; //
