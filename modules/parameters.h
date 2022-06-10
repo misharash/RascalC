@@ -28,7 +28,7 @@ public:
     const char default_radial_bin_file_cf[500] = "radial_binning_corr.csv";
 
     // Number of galaxies in first dataset
-    Float nofznorm = 47825;
+    Float nofznorm = 46352.8535791757;
 
     // Output directory
     char *out_file = NULL;
@@ -110,7 +110,7 @@ public:
     const char default_corname12[500] = "xi/xi_n100_m10_12.dat";
 
     // Number of galaxies in second dataset
-    Float nofznorm2=118702; //
+    Float nofznorm2 = 105407.65401301518; //
 
     //---------- (r,mu) MULTI-FIELD PARAMETERS ------------------------------
 
