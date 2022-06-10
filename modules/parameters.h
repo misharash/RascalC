@@ -42,7 +42,7 @@ public:
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
-	int nside = 451;
+	int nside = 101;
 
     // Whether or not we are using a periodic box
 	bool perbox = true;
