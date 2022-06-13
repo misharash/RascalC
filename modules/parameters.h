@@ -42,7 +42,7 @@ public:
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
-	int nside = 101;
+	int nside = 51;
 
     // Whether or not we are using a periodic box
 	bool perbox = true;
@@ -87,9 +87,9 @@ public:
     int convergence_ntimes = 10;
 
     // Number of random cells to draw at each stage
-    int N2 = 20; // number of j cells per i cell
-    int N3 = 40; // number of k cells per j cell
-    int N4 = 80; // number of l cells per k cell
+    int N2 = 10; // number of j cells per i cell
+    int N3 = 20; // number of k cells per j cell
+    int N4 = 40; // number of l cells per k cell
 
     //------------------ EXTRA 3PCF AUTOCOVARIANCE PARAMETERS ----------------
 
@@ -189,7 +189,7 @@ public:
 	int make_random = 1;
 
 	// Will be number of particles in a random distribution, but gets overwritten if reading from a file.
-	int np = 4000000; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
+	int np = 500000; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
 
 	// The index from which on to invert the sign of the weights
 	int rstart = 0;
