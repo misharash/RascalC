@@ -21,14 +21,14 @@ public:
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
-	const char default_corname[500] = "xi/xi_n100_m10_11.dat";
+	const char default_corname[500] = "xi/xi_n200_m10_11.dat";
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_cf = NULL;
     const char default_radial_bin_file_cf[500] = "radial_binning_corr.csv";
 
     // Number of galaxies in first dataset
-    Float nofznorm = 262269;
+    Float nofznorm = 13618156.0;
 
     // Output directory
     char *out_file = NULL;
@@ -42,7 +42,7 @@ public:
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
-	int nside = 51;
+	int nside = 151;
 
     // Whether or not we are using a periodic box
 	bool perbox = true;
@@ -80,7 +80,7 @@ public:
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
-    int max_loops = 720;
+    int max_loops = 120;
 
     // Exit after relative Frobenius difference is less than (convergence_threshold_percent %) for (convergence_ntimes) times
     Float convergence_threshold_percent = 0.01;
@@ -166,13 +166,13 @@ public:
     int cf_loops = 10;
 
     // The periodicity of the position-space cube.
-	Float boxsize = 500.; // this is only used if the input particles are made randomly
+	Float boxsize = 2000.; // this is only used if the input particles are made randomly
 
 	// The particles will be read from the unit cube, but then scaled by boxsize.
 	Float rescale = 1.;   // If left zero or negative, set rescale=boxsize
 
 	// The radius beyond which the correlation function is set to zero
-	Float xicutoff = 125.;
+	Float xicutoff = 250.;
 
 	// The maximum number of points to read
 	uint64 nmax = 1000000000000;
@@ -189,7 +189,7 @@ public:
 	int make_random = 1;
 
 	// Will be number of particles in a random distribution, but gets overwritten if reading from a file.
-	int np = 500000; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
+	int np = 13618156; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
 
 	// The index from which on to invert the sign of the weights
 	int rstart = 0;
