@@ -13,7 +13,7 @@ public:
 
     // The name of the input random particle files (first set)
 	char *fname = NULL;
-	const char default_fname[500] = "LRG_0.8_1.1.less.ran.xyzwj";
+	const char default_fname[500] = "LRG_NScomb_0.4_1.1.less.ran.xyzwj";
 
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;
@@ -28,7 +28,7 @@ public:
     const char default_radial_bin_file_cf[500] = "radial_binning_corr.csv";
 
     // Number of galaxies in first dataset
-    Float nofznorm = 46352.8535791757;
+    Float nofznorm = 262269;
 
     // Output directory
     char *out_file = NULL;
@@ -54,13 +54,13 @@ public:
 
      // Name of the RR bin file
     char *RR_bin_file = NULL; // RR_{aA}^{11} file
-    const char default_RR_bin_file[500] = "weights/binned_pair_counts_n50_m1_j20_11.dat";
+    const char default_RR_bin_file[500] = "weights/binned_pair_counts_n50_m1_j102_11.dat";
 
     //---------- JACKKNIFE PARAMETERS ---------------------------------------
 
     // Name of the jackknife weight file
     char *jk_weight_file = NULL; // w_{aA}^{11} weights
-    const char default_jk_weight_file[500] = "weights/jackknife_weights_n50_m1_j20_11.dat";
+    const char default_jk_weight_file[500] = "weights/jackknife_weights_n50_m1_j102_11.dat";
 
     //-------- LEGENDRE PARAMETERS -------------------------------------------
 
@@ -100,35 +100,35 @@ public:
 
     // Second set of random particles
     char *fname2 = NULL;
-    const char default_fname2[500] = "ELG_0.8_1.1.less.ran.xyzwj";
+    const char default_fname2[500] = "";
 
     // Correlation functions
     char *corname2 = NULL; // xi_22 file
-    const char default_corname2[500] = "xi/xi_n100_m10_22.dat";
+    const char default_corname2[500] = "";
 
     char *corname12 = NULL; // xi_12 file
-    const char default_corname12[500] = "xi/xi_n100_m10_12.dat";
+    const char default_corname12[500] = "";
 
     // Number of galaxies in second dataset
-    Float nofznorm2 = 105407.65401301518; //
+    Float nofznorm2=3398430; //
 
     //---------- (r,mu) MULTI-FIELD PARAMETERS ------------------------------
 
     // Summed pair count files
     char *RR_bin_file12 = NULL; // RR_{aA}^{12} file
-    const char default_RR_bin_file12[500] = "weights/binned_pair_counts_n50_m1_j20_12.dat";
+    const char default_RR_bin_file12[500] = "";
 
     char *RR_bin_file2 = NULL; // RR_{aA}^{22} file
-    const char default_RR_bin_file2[500] = "weights/binned_pair_counts_n50_m1_j20_22.dat";
+    const char default_RR_bin_file2[500] = "";
 
     //-------- JACKKNIFE MULTI-FIELD PARAMETERS ------------------------------
 
     // Jackknife weight files
     char *jk_weight_file12 = NULL; // w_{aA}^{12} weights
-    const char default_jk_weight_file12[500] = "weights/jackknife_weights_n50_m1_j20_12.dat";
+    const char default_jk_weight_file12[500] = "";
 
     char *jk_weight_file2 = NULL; // w_{aA}^{22} weights
-    const char default_jk_weight_file2[500] = "weights/jackknife_weights_n50_m1_j20_22.dat";
+    const char default_jk_weight_file2[500] = "";
 
     //-------- LEGENDRE MULTI-FIELD PARAMETERS -------------------------------
 
