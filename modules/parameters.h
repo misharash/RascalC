@@ -13,7 +13,7 @@ public:
 
     // The name of the input random particle files (first set)
 	char *fname = NULL;
-	const char default_fname[500] = "LRG_NScomb_0.4_1.1.less.ran.xyzwj";
+	const char default_fname[500] = "BGS.ran.xyzwj";
 
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;
@@ -45,7 +45,7 @@ public:
 	int nside = 151;
 
     // Whether or not we are using a periodic box
-	bool perbox = true;
+	bool perbox = false;
 
     //---------- (r,mu) PARAMETERS ------------------------------------------
 
@@ -186,7 +186,7 @@ public:
 	int qinvert = 0, qbalance = 0;
 
 	// If set, we'll just throw random periodic points instead of reading the file
-	int make_random = 1;
+	int make_random = 0;
 
 	// Will be number of particles in a random distribution, but gets overwritten if reading from a file.
 	int np = 13618156; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
