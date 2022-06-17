@@ -13,11 +13,11 @@ public:
 
     // The name of the input random particle files (first set)
 	char *fname = NULL;
-	const char default_fname[500] = "BGS.ran.xyzwj";
+	const char default_fname[500] = "BGS.ran.xyzw";
 
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;
-    const char default_radial_bin_file[500] = "radial_binning_cov.csv";
+    const char default_radial_bin_file[500] = "../radial_binning_cov.csv";
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
@@ -25,7 +25,7 @@ public:
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_cf = NULL;
-    const char default_radial_bin_file_cf[500] = "radial_binning_corr.csv";
+    const char default_radial_bin_file_cf[500] = "../radial_binning_corr.csv";
 
     // Number of galaxies in first dataset
     Float nofznorm = 13618156.0;
@@ -54,7 +54,7 @@ public:
 
      // Name of the RR bin file
     char *RR_bin_file = NULL; // RR_{aA}^{11} file
-    const char default_RR_bin_file[500] = "weights/binned_pair_counts_n50_m1_j102_11.dat";
+    const char default_RR_bin_file[500] = "weights/RR_counts_n50_m1_11.txt";
 
     //---------- JACKKNIFE PARAMETERS ---------------------------------------
 
