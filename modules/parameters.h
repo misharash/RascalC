@@ -38,11 +38,11 @@ public:
     int mbin_cf = 10;
 
     // The number of threads to run on
-	int nthread = 30;
+	int nthread = 24;
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
-	int nside = 151;
+	int nside = 201;
 
     // Whether or not we are using a periodic box
 	bool perbox = false;
