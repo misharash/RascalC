@@ -21,7 +21,7 @@ assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
 mu_factor = n_mu_orig // 2 // n_mu
 
 result = result_orig[::r_step, ::mu_factor] # rebin
-paircounts = (result.R1R2.wcounts[:, n_mu:] + result.R1R2.wcounts[:, n_mu-1::-1])/2 / counts_factor # wrap around zero
+paircounts = (result.R1R2.wcounts[:, n_mu:] + result.R1R2.wcounts[:, n_mu-1::-1]) / counts_factor # wrap around zero
 
 ## Write to file using numpy funs
 np.savetxt(outfile_name, paircounts.reshape(-1, 1)) # the file always has 1 column

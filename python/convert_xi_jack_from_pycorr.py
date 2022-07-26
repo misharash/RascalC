@@ -24,7 +24,7 @@ assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
 mu_factor = n_mu_orig // 2 // n_mu
 
 result = result_orig[::r_step, ::mu_factor] # rebin
-binpairs = ((result.R1R2.wcounts[:, n_mu:] + result.R1R2.wcounts[:, n_mu-1::-1])/2).ravel() / counts_factor # total counts, just wrap around mu=0 and make 1D
+binpairs = (result.R1R2.wcounts[:, n_mu:] + result.R1R2.wcounts[:, n_mu-1::-1]).ravel() / counts_factor # total counts, just wrap around mu=0 and make 1D
 
 def jack_realization_rascalc(jack_estimator, i):
     # returns RascalC-framed jackknife realization, different from implemented in pycorr
@@ -38,7 +38,7 @@ def jack_realization_rascalc(jack_estimator, i):
 
 results = [jack_realization_rascalc(result, i) for i in result.realizations]
 jack_xi = np.array([((jack.corr[:, n_mu:] + jack.corr[:, n_mu-1::-1])/2).ravel() for jack in results]) # wrap around mu=0
-jack_pairs = np.array([((jack.R1R2.wcounts[:, n_mu:] + jack.R1R2.wcounts[:, n_mu-1::-1])/2).ravel() for jack in results]) / counts_factor # wrap around mu=0
+jack_pairs = np.array([(jack.R1R2.wcounts[:, n_mu:] + jack.R1R2.wcounts[:, n_mu-1::-1]).ravel() for jack in results]) / counts_factor # wrap around mu=0
 jack_pairs_sum = np.sum(jack_pairs, axis=0)
 assert np.allclose(jack_pairs_sum, binpairs), "Total counts mismatch"
 jack_weights = jack_pairs / binpairs[None, :]
