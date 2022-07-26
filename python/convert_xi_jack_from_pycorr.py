@@ -37,7 +37,12 @@ def jack_realization_rascalc(jack_estimator, i):
     return cls(**kw)
 
 results = [jack_realization_rascalc(result, i) for i in result.realizations]
-jack_xi = np.array([((jack.corr[:, n_mu:] + jack.corr[:, n_mu-1::-1])/2).ravel() for jack in results]) # wrap around mu=0
+
+def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
+    xi_RR = xi*RR
+    return (xi_RR[:, n_mu:] + xi_RR[:, n_mu-1::-1]) / (RR[:, n_mu:] + RR[:, n_mu-1::-1])
+
+jack_xi = np.array([fold_xi(jack.corr, jack.R1R2.wcounts).ravel() for jack in results]) # wrap around mu=0
 jack_pairs = np.array([(jack.R1R2.wcounts[:, n_mu:] + jack.R1R2.wcounts[:, n_mu-1::-1]).ravel() for jack in results]) / counts_factor # wrap around mu=0
 jack_pairs_sum = np.sum(jack_pairs, axis=0)
 assert np.allclose(jack_pairs_sum, binpairs), "Total counts mismatch"

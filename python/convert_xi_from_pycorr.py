@@ -19,7 +19,12 @@ assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
 mu_factor = n_mu_orig // 2 // n_mu
 
 result = result_orig[::r_step, ::mu_factor] # rebin
-xi = (result.corr[:, n_mu:] + result.corr[:, n_mu-1::-1])/2 # wrap around zero
+
+def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
+    xi_RR = xi*RR
+    return (xi_RR[:, n_mu:] + xi_RR[:, n_mu-1::-1]) / (RR[:, n_mu:] + RR[:, n_mu-1::-1])
+
+xi = fold_xi(result.corr, result.R1R2.wcounts) # wrap around zero
 
 ## Custom array to string function
 def my_a2s(a, fmt='%.18e'):
