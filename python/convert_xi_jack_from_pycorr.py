@@ -2,7 +2,7 @@
 
 from pycorr import TwoPointCorrelationFunction
 import numpy as np
-import os
+import sys
 
 ## PARAMETERS
 if len(sys.argv) not in (8, 9):
