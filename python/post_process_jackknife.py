@@ -28,7 +28,7 @@ print("Loading correlation function jackknife estimates from %s"%jackknife_file)
 xi_jack = np.loadtxt(jackknife_file,skiprows=2)[:, skip_bins:]
 n_bins = xi_jack.shape[1] # total bins
 n_jack = xi_jack.shape[0] # total jackknives
-n = n_bins//m # radial bins
+n = (n_bins+skip_bins)//m # radial bins
 
 weight_file = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_11.dat'%(n,m,n_jack))
 RR_file = os.path.join(weight_dir, 'binned_pair_counts_n%d_m%d_j%d_11.dat'%(n,m,n_jack))
@@ -52,7 +52,7 @@ denom = np.matmul(weights.T,weights)
 data_cov /= (np.ones_like(denom)-denom)
 
 print("Loading weights file from %s"%RR_file)
-RR=np.loadtxt(RR_file)[:, skip_bins:]
+RR=np.loadtxt(RR_file)[skip_bins:]
 
 def load_matrices(index,jack=True):
     """Load intermediate or full covariance matrices"""
