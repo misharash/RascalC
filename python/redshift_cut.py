@@ -20,7 +20,7 @@ if len(sys.argv) not in (5, 6):
     sys.exit()
 
 # Determine whether to use FKP weights, only applies to (DESI) FITS files
-if len(sys.argv==6):
+if len(sys.argv)==6:
     use_FKP_weights = bool(sys.argv[5])
 else:
     use_FKP_weights = False

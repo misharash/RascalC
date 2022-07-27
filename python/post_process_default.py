@@ -5,8 +5,8 @@ import numpy as np
 import sys,os
 
 # PARAMETERS
-if len(sys.argv)!=6 and len(sys.argv)!=7:
-    print("Usage: python post_process_default.py {COVARIANCE_DIR} {N_R_BINS} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SHOT_NOISE_RESCALING}]")
+if len(sys.argv) not in (6, 7, 8):
+    print("Usage: python post_process_default.py {COVARIANCE_DIR} {N_R_BINS} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SHOT_NOISE_RESCALING} [{SKIP_R_BINS}]]")
     sys.exit()
 
 file_root = str(sys.argv[1])
@@ -14,10 +14,12 @@ n = int(sys.argv[2])
 m = int(sys.argv[3])
 n_samples = int(sys.argv[4])
 outdir = str(sys.argv[5])
-if len(sys.argv)==7:
+alpha = 1
+if len(sys.argv) >= 7:
     alpha = float(sys.argv[6])
-else:
-    alpha = 1.;
+skip_bins = 0
+if len(sys.argv) == 8:
+    skip_bins = int(sys.argv[7]) * m # convert from radial to total number of bins right away
 
 # Create output directory
 if not os.path.exists(outdir):
@@ -26,9 +28,9 @@ if not os.path.exists(outdir):
 def load_matrices(index):
     """Load intermediate or full covariance matrices"""
     cov_root = os.path.join(file_root, 'CovMatricesAll/')
-    c2 = np.diag(np.loadtxt(cov_root+'c2_n%d_m%d_11_%s.txt'%(n,m,index)))
-    c3 = np.loadtxt(cov_root+'c3_n%d_m%d_1,11_%s.txt'%(n,m,index))
-    c4 = np.loadtxt(cov_root+'c4_n%d_m%d_11,11_%s.txt'%(n,m,index))
+    c2 = np.diag(np.loadtxt(cov_root+'c2_n%d_m%d_11_%s.txt'%(n,m,index))[skip_bins:])
+    c3 = np.loadtxt(cov_root+'c3_n%d_m%d_1,11_%s.txt'%(n,m,index))[skip_bins:, skip_bins:]
+    c4 = np.loadtxt(cov_root+'c4_n%d_m%d_11,11_%s.txt'%(n,m,index))[skip_bins:, skip_bins:]
 
     # Now symmetrize and return matrices
     return c2,0.5*(c3+c3.T),0.5*(c4+c4.T)
@@ -43,6 +45,7 @@ eig_c4 = eigvalsh(c4)
 eig_c2 = eigvalsh(c2)
 if min(eig_c4)<-1.*min(eig_c2):
     print("4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
     sys.exit()
 
 # Compute full covariance matrices and precision
