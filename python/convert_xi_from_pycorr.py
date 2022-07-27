@@ -19,12 +19,21 @@ n_mu_orig = result_orig.shape[1]
 assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
 mu_factor = n_mu_orig // 2 // n_mu
 result = result_orig[::r_step, ::mu_factor] # rebin
+# retrieve data sizes
+data_size1_sum = result_orig.D1D2.size1
+data_size2_sum = result_orig.D1D2.size2
 
 # load remaining input files if any
 for infile_name in infile_names[1:]:
     result_tmp = TwoPointCorrelationFunction.load(infile_name)
     assert result_tmp.shape == result_orig.shape, "Different shape in file %s" % infile_name
     result += result_tmp[::r_step, ::mu_factor] # rebin and accumulate
+    # accumulate data sizes
+    data_size1_sum += result_tmp.D1D2.size1
+    data_size2_sum += result_tmp.D1D2.size2
+
+print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6f}")
+print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6f}")
 
 def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
     xi_RR = xi*RR
