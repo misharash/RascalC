@@ -1,24 +1,30 @@
-"This reads a cosmodesi/pycorr .npy file and generates input xi text file for RascalC to use"
+"This reads cosmodesi/pycorr .npy file(s) and generates input xi text file for RascalC to use"
 
 from pycorr import TwoPointCorrelationFunction
 import numpy as np
 import os
 
 ## PARAMETERS
-if len(sys.argv) != 5:
-    print("Usage: python convert_xi_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_XI_DAT_FILE} {R_STEP} {N_MU}.")
+if len(sys.argv) < 5:
+    print("Usage: python convert_xi_from_pycorr.py {INPUT_NPY_FILE1} [{INPUT_NPY_FILE2} ...] {OUTPUT_XI_DAT_FILE} {R_STEP} {N_MU}.")
     sys.exit()
-infile_name = str(sys.argv[1])
-outfile_name = str(sys.argv[2])
-r_step = int(sys.argv[3])
-n_mu = int(sys.argv[4])
+infile_names = sys.argv[1:-3]
+outfile_name = str(sys.argv[-3])
+r_step = int(sys.argv[-2])
+n_mu = int(sys.argv[-1])
 
-result_orig = TwoPointCorrelationFunction.load(infile_name)
+# load first input file
+result_orig = TwoPointCorrelationFunction.load(infile_names[0])
 n_mu_orig = result_orig.shape[1]
 assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
 mu_factor = n_mu_orig // 2 // n_mu
-
 result = result_orig[::r_step, ::mu_factor] # rebin
+
+# load remaining input files if any
+for infile_name in infile_names[1:]:
+    result_tmp = TwoPointCorrelationFunction.load(infile_name)
+    assert result_tmp.shape == result_orig.shape, "Different shape in file %s" % infile_name
+    result += result_tmp[::r_step, ::mu_factor] # rebin and accumulate
 
 def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
     xi_RR = xi*RR
