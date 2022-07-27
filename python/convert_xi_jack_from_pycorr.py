@@ -54,7 +54,7 @@ def my_a2s(a, fmt='%.18e'):
 
 ## Write to file using numpy funs
 np.savetxt(binpairs_name, binpairs.reshape(-1, 1)) # this file must have 1 column
-header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1))
+header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1)[n_mu:])
 np.savetxt(xi_name, jack_xi, header=header, comments='')
 jack_numbers = np.array(result.realizations).reshape(-1, 1) # column of jackknife numbers, may be useless but needed for format compatibility
 np.savetxt(jackweights_name, np.hstack((jack_numbers, jack_weights)))

@@ -46,5 +46,5 @@ def my_a2s(a, fmt='%.18e'):
     return ' '.join([fmt % e for e in a])
 
 ## Write to file using numpy funs
-header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1))
+header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1)[n_mu:])
 np.savetxt(outfile_name, xi, header=header, comments='')
