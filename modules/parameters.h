@@ -28,7 +28,7 @@ public:
     const char default_radial_bin_file_cf[500] = "radial_binning_corr.csv";
 
     // Number of galaxies in first dataset
-    Float nofznorm = 13618156.0;
+    Float nofznorm = 3e6;
 
     // Output directory
     char *out_file = NULL;
@@ -42,7 +42,7 @@ public:
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
-	int nside = 151;
+	int nside = 61;
 
     // Whether or not we are using a periodic box
 	bool perbox = true;
@@ -189,7 +189,7 @@ public:
 	int make_random = 1;
 
 	// Will be number of particles in a random distribution, but gets overwritten if reading from a file.
-	int np = 13618156; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
+	int np = 3000000; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
 
 	// The index from which on to invert the sign of the weights
 	int rstart = 0;
