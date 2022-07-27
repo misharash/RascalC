@@ -6,7 +6,7 @@ import sys
 
 ## PARAMETERS
 if len(sys.argv) < 7:
-    print("Usage: python sample_cov_from_pycorr.py {INPUT_NPY_FILE1} {INPUT_NPY_FILE2} [{INPUT_NPY_FILE3} ...] {OUTPUT_COV_FILE} {OUTPUT_XI_FILE} {R_STEP} {R_SKIP} {N_MU}.")
+    print("Usage: python sample_cov_from_pycorr.py {INPUT_NPY_FILE1} {INPUT_NPY_FILE2} [{INPUT_NPY_FILE3} ...] {OUTPUT_COV_FILE} {OUTPUT_XI_FILE} {R_STEP} {N_MU}.")
     sys.exit()
 infile_names = sys.argv[1:-4]
 covfile_name = str(sys.argv[-4])
