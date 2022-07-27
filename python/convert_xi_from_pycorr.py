@@ -32,8 +32,8 @@ for infile_name in infile_names[1:]:
     data_size1_sum += result_tmp.D1D2.size1
     data_size2_sum += result_tmp.D1D2.size2
 
-print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6f}")
-print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6f}")
+print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6e}")
+print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6e}")
 
 def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
     xi_RR = xi*RR
