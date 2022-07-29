@@ -28,6 +28,9 @@ xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 30 # number of OMP threads to use
 maxloops = 60 # number of integration loops per filename
+N2 = 20 # number of secondary cells/particles per primary cell
+N3 = 40 # number of third cells/particles per secondary cell/particle
+N4 = 80 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
 nside = 101 # grid size for accelerating pair count
@@ -71,7 +74,7 @@ os.system(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax
 # Define command to run the C++ code
 code = "./cov"
 
-command = f"{code} -perbox {periodic} -boxsize {boxsize} -ngrid {ngrid} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf}"
+command = f"{code} -perbox {periodic} -boxsize {boxsize} -ngrid {ngrid} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf}"
 if jackknife:
     command += f" -jackknife {jackknife_weights_name}"
 
