@@ -138,12 +138,19 @@ for i, input_filename in enumerate(input_filenames):
             os.system(f"python python/create_jackknives_pycorr.py {data_ref_filename} {input_filename} {xyzwj_filename} {njack} | tee -a {logfile}")
             input_filename = xyzwj_filename
     # run code
-    os.system(f"{command} -in {input_filename} -output {os.path.join(outdir, str(i))}/ 2>&1 | tee -a {logfile}")
+    this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
+    this_outdir = os.path.join(this_outdir, "") # make sure there is a "/" in the end in any case
+    os.system(f"{command} -in {input_filename} -output {this_outdir} 2>&1 | tee -a {logfile}")
     print_and_log(f"Finished computation {i+1} of {nfiles}")
 # end for each random file/part
 
 print_and_log(datetime.now())
 
+# Concatenate samples
+if nfiles > 1:
+    print_and_log(f"Concatenating samples")
+    os.system(f"python python/cat_subsets_of_integrals.py {nbin} {mbin} " + " ".join([f"{os.path.join(outdir, str(i))} {maxloops}" for i in range(nfiles)]) + f" {outdir} | tee -a {logfile}")
+
 # Maybe post-processing will be here later
 
-print_and_log(f"Finished with computation.")
+print_and_log(f"Finished execution.")
