@@ -39,7 +39,7 @@ N3 = 40 # number of third cells/particles per secondary cell/particle
 N4 = 80 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
-ngrid = 101 # grid size for accelerating pair count
+nside = 101 # grid size for accelerating pair count
 boxsize = 2000 # only used if periodic=1
 
 # data processing steps
@@ -149,7 +149,7 @@ if create_jackknives and redshift_cut: # prepare reference file
     exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight}")
     data_ref_filename = rdzw_ref_filename
 
-command = f"./cov -boxsize {boxsize} -ngrid {ngrid} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf}"
+command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf}"
 if periodic:
     command += " -perbox"
 if jackknife:
