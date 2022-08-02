@@ -120,7 +120,7 @@ if convert_cf:
     ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
     if smoothen_cf:
         corname_old = corname
-        corname = f"xi/xi_n{nbin}_m{mbin}_11_smooth.dat"
+        corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
         exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
     os.makedirs(os.path.dirname(binned_pair_name), exist_ok=1) # make sure all dirs exist
     r_step = (rmax-rmin)//nbin
@@ -149,7 +149,7 @@ if create_jackknives and redshift_cut: # prepare reference file
     exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight}")
     data_ref_filename = rdzw_ref_filename
 
-command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf}"
+command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf} -mbin {mbin} -mbin_cf {mbin_cf}"
 if periodic:
     command += " -perbox"
 if jackknife:
