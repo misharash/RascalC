@@ -41,6 +41,16 @@ redshift_cut = 1
 FKP_weight = 1
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
+# CF options
+convert_cf = 1
+if convert_cf:
+    pycorr_filename = "allcounts_LRG_NScomb_0.4_1.1_default_FKP_lin_njack60_nran10.npy"
+    counts_factor = 10
+smoothen_cf = 1
+if smoothen_cf:
+    max_l = 8
+    radial_window_len = 5
+    radial_polyorder = 2
 
 # cosmology
 if convert_to_xyz:
@@ -58,10 +68,28 @@ corname = f"xi/xi_n{nbin}_m{mbin}_11.dat"
 binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
 if jackknife:
     jackknife_weights_name = f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat"
-workdir = os.getcwd()
-indir = workdir # input directory (see above for required contents)
-outdir = os.path.join(workdir, "out") # output file directory
-scriptname = "run_cov.py"
+    if convert_cf:
+        xi_jack_name = f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat"
+        jackknife_pairs_name = f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
+outdir = "out" # output file directory
+
+# CF conversion
+if convert_cf:
+    # full-survey CF
+    os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
+    r_step = (rmax_cf-rmin_cf)//nbin_cf
+    os.system(f"python python/convert_xi_from_pycorr.py {pycorr_filename} {corname} {r_step} {mbin_cf} | tee -a {logfile}")
+    if smoothen_cf:
+        corname_old = corname
+        corname = f"xi/xi_n{nbin}_m{mbin}_11_smooth.dat"
+        os.system(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname} | tee -a {logfile}")
+    os.makedirs(os.path.dirname(binned_pair_name), exist_ok=1) # make sure all dirs exist
+    if jackknife: # convert jackknife xi and all counts
+        for filename in (xi_jack_name, jackknife_weights_name, jackknife_pairs_name):
+            os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
+        os.system(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin_cf} {counts_factor} | tee -a {logfile}")
+    else: # only convert full, binned pair counts
+        os.system(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin_cf} {counts_factor} | tee -a {logfile}")
 
 # binning files to be created automatically
 binfile = "radial_binning_cov.csv"
@@ -82,7 +110,7 @@ if jackknife:
 os.makedirs(outdir, exist_ok=1)
 
 # Copy this script in for posterity
-os.system(f"cp {scriptname} {os.path.normpath(outdir)}")
+os.system(f"cp {__file__} {os.path.normpath(outdir)}")
 
 # Create an output file for errors
 logfilename = "log.txt"
@@ -109,7 +137,7 @@ if periodic and make_randoms:
     print_and_log(f"Generated random points")
 
 def change_extension(name, ext):
-    return ".".join(name.split(".")[:-1] + [ext])
+    return os.path.basename(".".join(name.split(".")[:-1] + [ext])) # change extension and switch to current dir
 
 if create_jackknives and redshift_cut: # prepare reference file
     print_and_log(f"Processing data file for jackknife reference")
@@ -139,7 +167,7 @@ for i, input_filename in enumerate(input_filenames):
             input_filename = xyzwj_filename
     # run code
     this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
-    this_outdir = os.path.join(this_outdir, "") # make sure there is a "/" in the end in any case
+    this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
     os.system(f"{command} -in {input_filename} -output {this_outdir} 2>&1 | tee -a {logfile}")
     print_and_log(f"Finished computation {i+1} of {nfiles}")
 # end for each random file/part
