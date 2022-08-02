@@ -13,7 +13,7 @@ def check_path(filename):
 
 ##################### INPUT PARAMETERS ###################
 
-periodic = 1 # whether to run with periodic boundary conditions (must also be set in Makefile)
+periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make any
 jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
 njack = 60 # number of jackknife regions
@@ -149,7 +149,9 @@ if create_jackknives and redshift_cut: # prepare reference file
     exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight}")
     data_ref_filename = rdzw_ref_filename
 
-command = f"./cov -perbox {periodic} -boxsize {boxsize} -ngrid {ngrid} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf}"
+command = f"./cov -boxsize {boxsize} -ngrid {ngrid} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf}"
+if periodic:
+    command += " -perbox"
 if jackknife:
     command += f" -jackknife {jackknife_weights_name}"
 print_and_log(f"Common command for C++ code: {command}")
