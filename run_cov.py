@@ -70,7 +70,7 @@ z_min, z_max = 0.4, 1.1 # for redshift cut
 data_ref_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_clustering.dat.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_{i}_clustering.ran.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
-corname = f"xi/xi_n{nbin}_m{mbin}_11.dat"
+corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat"
 binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
 if jackknife:
     jackknife_weights_name = f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat"
@@ -115,20 +115,21 @@ print("Starting Computation")
 if convert_cf:
     # full-survey CF
     os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
-    r_step = (rmax_cf-rmin_cf)//nbin_cf
-    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {pycorr_filename} {corname} {r_step} {mbin_cf}")
+    r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
+    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {pycorr_filename} {corname} {r_step_cf} {mbin_cf}")
     ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
     if smoothen_cf:
         corname_old = corname
         corname = f"xi/xi_n{nbin}_m{mbin}_11_smooth.dat"
         exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
     os.makedirs(os.path.dirname(binned_pair_name), exist_ok=1) # make sure all dirs exist
+    r_step = (rmax-rmin)//nbin
     if jackknife: # convert jackknife xi and all counts
         for filename in (xi_jack_name, jackknife_weights_name, jackknife_pairs_name):
             os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin_cf} {counts_factor}")
+        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor}")
     else: # only convert full, binned pair counts
-        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin_cf} {counts_factor}")
+        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor}")
 
 if periodic and make_randoms:
     # create random points
