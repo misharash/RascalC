@@ -5,6 +5,12 @@ import os
 from datetime import datetime
 import numpy as np
 
+def check_path(filename):
+    if os.path.isfile(filename): return filename
+    filename = os.path.basename(filename)
+    assert os.path.isfile(filename), f"{filename} missing"
+    return filename
+
 ##################### INPUT PARAMETERS ###################
 
 periodic = 1 # whether to run with periodic boundary conditions (must also be set in Makefile)
@@ -44,7 +50,7 @@ create_jackknives = jackknife and 1
 # CF options
 convert_cf = 1
 if convert_cf:
-    pycorr_filename = "/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10.npy"
+    pycorr_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10.npy")
     counts_factor = 10
 smoothen_cf = 1
 if smoothen_cf:
@@ -61,8 +67,8 @@ if convert_to_xyz:
 z_min, z_max = 0.4, 1.1 # for redshift cut
 
 # File names and directories
-data_ref_filename = "/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_clustering.dat.fits" # for jackknife reference only, has to have rdz contents
-input_filenames = [f"/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_{i}_clustering.ran.fits" for i in range(1)] # random filenames
+data_ref_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_clustering.dat.fits") # for jackknife reference only, has to have rdz contents
+input_filenames = [check_path(f"/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_{i}_clustering.ran.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
 corname = f"xi/xi_n{nbin}_m{mbin}_11.dat"
 binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
