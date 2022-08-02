@@ -87,13 +87,6 @@ os.system(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax
 
 ##########################################################
 
-# Define command to run the C++ code
-code = "./cov"
-
-command = f"{code} -perbox {periodic} -boxsize {boxsize} -ngrid {ngrid} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf}"
-if jackknife:
-    command += f" -jackknife {jackknife_weights_name}"
-
 # Create output directory
 os.makedirs(outdir, exist_ok=1)
 
@@ -111,7 +104,6 @@ print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
 
 print_and_log(datetime.now())
 print_and_log(f"Executing {__file__}")
-print_and_log(f"Common command for C++ code: {command}")
 
 def exec_print_and_log(commandline):
     print_and_log(f"Running command: {commandline}")
@@ -125,6 +117,7 @@ if convert_cf:
     os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
     r_step = (rmax_cf-rmin_cf)//nbin_cf
     exec_print_and_log(f"python python/convert_xi_from_pycorr.py {pycorr_filename} {corname} {r_step} {mbin_cf}")
+    ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
     if smoothen_cf:
         corname_old = corname
         corname = f"xi/xi_n{nbin}_m{mbin}_11_smooth.dat"
@@ -154,6 +147,11 @@ if create_jackknives and redshift_cut: # prepare reference file
     rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
     exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight}")
     data_ref_filename = rdzw_ref_filename
+
+command = f"./cov -perbox {periodic} -boxsize {boxsize} -ngrid {ngrid} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf}"
+if jackknife:
+    command += f" -jackknife {jackknife_weights_name}"
+print_and_log(f"Common command for C++ code: {command}")
 
 # for each random file/part
 for i, input_filename in enumerate(input_filenames):
