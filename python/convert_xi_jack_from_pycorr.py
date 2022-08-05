@@ -52,9 +52,6 @@ if split_above > 0: jack_pairs[:, nonsplit_mask] /= counts_factor # divide once 
 jack_pairs_sum = np.sum(jack_pairs, axis=0)
 assert np.allclose(jack_pairs_sum, binpairs), "Total counts mismatch"
 jack_weights = jack_pairs / binpairs[None, :]
-full_xi = fold_xi(result.corr, result.R1R2.wcounts).ravel()
-jack_xi_avg = np.average(jack_xi, weights=jack_weights, axis=0)
-assert np.allclose(full_xi, jack_xi_avg), "Total xi mismatch"
 
 ## Custom array to string function
 def my_a2s(a, fmt='%.18e'):
