@@ -34,7 +34,7 @@ with open(infile_name) as infile:
                 print(" %d%% done: Reading line %s of %s" %(percent_count,l,total_lines))
                 percent_count+=1
             split_line=line.split()
-            pix = int(subsampler.label(np.array([[float(s)] for s in split_line[:3]]), position_type='xyz'))
-            outfile.write(" ".join(split_line[:3])+" "+str(pix)+"\n")
+            pix = int(subsampler.label(np.array([[float(s)] for s in split_line[:3]]), position_type='xyz')) # 3 columns for coordinates
+            outfile.write(" ".join(split_line[:4])+" "+str(pix)+"\n") # 4 columns for coordinates AND weights
 end=time.time()-init
 print('Task completed in %.2f seconds' %end) 
