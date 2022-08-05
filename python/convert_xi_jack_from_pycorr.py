@@ -18,7 +18,7 @@ n_mu = int(sys.argv[7])
 counts_factor = 1
 if len(sys.argv) >= 9: counts_factor = float(sys.argv[8])
 split_above = 0
-if len(sys.argv) == 10: counts_factor = float(sys.argv[9])
+if len(sys.argv) >= 10: split_above = float(sys.argv[9])
 
 result_orig = TwoPointCorrelationFunction.load(infile_name)
 n_mu_orig = result_orig.shape[1]
