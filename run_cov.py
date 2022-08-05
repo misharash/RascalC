@@ -52,6 +52,7 @@ convert_cf = 1
 if convert_cf:
     pycorr_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10_split20.npy")
     counts_factor = 10
+    split_above = 20
 smoothen_cf = 1
 if smoothen_cf:
     max_l = 4
@@ -127,9 +128,9 @@ if convert_cf:
     if jackknife: # convert jackknife xi and all counts
         for filename in (xi_jack_name, jackknife_weights_name, jackknife_pairs_name):
             os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor}")
+        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
     else: # only convert full, binned pair counts
-        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor}")
+        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
 
 if periodic and make_randoms:
     # create random points

@@ -5,8 +5,8 @@ import numpy as np
 import sys
 
 ## PARAMETERS
-if len(sys.argv) not in (8, 9):
-    print("Usage: python convert_xi_jack_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_XI_JACK_FILE} {JACKKNIFE_WEIGHTS_FILE} {JACKKNIFE_PAIRCOUNTS_FILE} {BINNED_PAIRCOUNTS_FILE} {R_STEP} {N_MU} [{COUNTS_FACTOR}].")
+if len(sys.argv) not in (8, 9, 10):
+    print("Usage: python convert_xi_jack_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_XI_JACK_FILE} {JACKKNIFE_WEIGHTS_FILE} {JACKKNIFE_PAIRCOUNTS_FILE} {BINNED_PAIRCOUNTS_FILE} {R_STEP} {N_MU} [{COUNTS_FACTOR} [{SPLIT_ABOVE}]].")
     sys.exit()
 infile_name = str(sys.argv[1])
 xi_name = str(sys.argv[2])
@@ -16,7 +16,9 @@ binpairs_name = str(sys.argv[5])
 r_step = int(sys.argv[6])
 n_mu = int(sys.argv[7])
 counts_factor = 1
-if len(sys.argv) == 9: counts_factor = float(sys.argv[8])
+if len(sys.argv) >= 9: counts_factor = float(sys.argv[8])
+split_above = 0
+if len(sys.argv) == 10: counts_factor = float(sys.argv[9])
 
 result_orig = TwoPointCorrelationFunction.load(infile_name)
 n_mu_orig = result_orig.shape[1]
@@ -25,6 +27,8 @@ mu_factor = n_mu_orig // 2 // n_mu
 
 result = result_orig[::r_step, ::mu_factor] # rebin
 binpairs = (result.R1R2.wcounts[:, n_mu:] + result.R1R2.wcounts[:, n_mu-1::-1]).ravel() / counts_factor # total counts, just wrap around mu=0 and make 1D
+nonsplit_mask = (result.sepavg(axis=0) < split_above)
+if split_above > 0: binpairs[nonsplit_mask] /= counts_factor # divide once more below the splitting scale
 
 def jack_realization_rascalc(jack_estimator, i):
     # returns RascalC-framed jackknife realization, different from implemented in pycorr
@@ -44,6 +48,7 @@ def fold_xi(xi, RR): # proper folding of correlation function around mu=0: avera
 
 jack_xi = np.array([fold_xi(jack.corr, jack.R1R2.wcounts).ravel() for jack in results]) # wrap around mu=0
 jack_pairs = np.array([(jack.R1R2.wcounts[:, n_mu:] + jack.R1R2.wcounts[:, n_mu-1::-1]).ravel() for jack in results]) / counts_factor # wrap around mu=0
+if split_above > 0: jack_pairs[:, nonsplit_mask] /= counts_factor # divide once more below the splitting scale
 jack_pairs_sum = np.sum(jack_pairs, axis=0)
 assert np.allclose(jack_pairs_sum, binpairs), "Total counts mismatch"
 jack_weights = jack_pairs / binpairs[None, :]
