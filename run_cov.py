@@ -150,7 +150,7 @@ if create_jackknives and redshift_cut: # prepare reference file
     exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight}")
     data_ref_filename = rdzw_ref_filename
 
-command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf} -mbin {mbin} -mbin_cf {mbin_cf}"
+command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -cor {corname} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf} -mbin {mbin} -mbin_cf {mbin_cf}"
 if periodic:
     command += " -perbox"
 if jackknife:
