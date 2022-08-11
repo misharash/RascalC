@@ -130,7 +130,7 @@ if convert_cf:
             os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
         exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
     else: # only convert full, binned pair counts
-        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
+        exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
 
 if periodic and make_randoms:
     # create random points
