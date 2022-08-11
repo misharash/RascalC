@@ -28,11 +28,11 @@ nbin = 50 # radial bins for output cov
 mbin = 1 # angular (mu) bins for output cov
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
-nbin_cf = 200 # radial bins for input 2PCF
+nbin_cf = 100 # radial bins for input 2PCF
 mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
-nthread = 15 # number of OMP threads to use
+nthread = 30 # number of OMP threads to use
 maxloops = 30 # number of integration loops per filename
 N2 = 20 # number of secondary cells/particles per primary cell
 N3 = 40 # number of third cells/particles per secondary cell/particle
@@ -53,7 +53,7 @@ if convert_cf:
     pycorr_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10_split20.npy")
     counts_factor = 10
     split_above = 20
-smoothen_cf = 1
+smoothen_cf = 0
 if smoothen_cf:
     max_l = 4
     radial_window_len = 5
