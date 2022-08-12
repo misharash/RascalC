@@ -36,11 +36,11 @@ if len(sys.argv) >= 11:
 result = TwoPointCorrelationFunction.load(pycorr_file1)
 result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//n_mu_bins].normalize()
 result = result[r_bins_skip:]
-weight1 = (result.R1R2.wcounts[n_mu_bins:] + result.R1R2.wcounts[n_mu_bins-1::-1]).ravel()
+weight1 = (result.R1R2.wcounts[:, n_mu_bins:] + result.R1R2.wcounts[:, n_mu_bins-1::-1]).ravel()
 result = TwoPointCorrelationFunction.load(pycorr_file2)
 result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//n_mu_bins].normalize()
 result = result[r_bins_skip:]
-weight2 = (result.R1R2.wcounts[n_mu_bins:] + result.R1R2.wcounts[n_mu_bins-1::-1]).ravel()
+weight2 = (result.R1R2.wcounts[:, n_mu_bins:] + result.R1R2.wcounts[:, n_mu_bins-1::-1]).ravel()
 
 # Produce and save combined cov
 # following xi = (xi1 * weight1 + xi2 * weight2) / (weight1 + weight2)
