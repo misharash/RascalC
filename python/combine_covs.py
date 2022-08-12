@@ -23,10 +23,10 @@ if len(sys.argv) >= 11:
 # Read RascalC results
 with np.load(rascalc_results1) as f:
     cov1 = f['full_theory_covariance']
-    print(f"Max eigenvalue of bias correction matrix in 1st results is {np.max(np.linalg.eigvals(f['full_theory_D_matrix'])):.2e}")
+    print(f"Max abs eigenvalue of bias correction matrix in 1st results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 with np.load(rascalc_results2) as f:
     cov2 = f['full_theory_covariance']
-    print(f"Max eigenvalue of bias correction matrix in 2nd results is {np.max(np.linalg.eigvals(f['full_theory_D_matrix'])):.2e}")
+    print(f"Max abs eigenvalue of bias correction matrix in 2nd results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 # Save to their files if any
 if len(sys.argv) >= 11:
     np.savetxt(output_cov_file1, cov1)
@@ -34,11 +34,11 @@ if len(sys.argv) >= 11:
 
 # Read pycorr files to figure out weights
 result = TwoPointCorrelationFunction.load(pycorr_file1)
-result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//n_mu_bins].normalize()
+result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].normalize()
 result = result[r_bins_skip:]
 weight1 = (result.R1R2.wcounts[:, n_mu_bins:] + result.R1R2.wcounts[:, n_mu_bins-1::-1]).ravel()
 result = TwoPointCorrelationFunction.load(pycorr_file2)
-result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//n_mu_bins].normalize()
+result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].normalize()
 result = result[r_bins_skip:]
 weight2 = (result.R1R2.wcounts[:, n_mu_bins:] + result.R1R2.wcounts[:, n_mu_bins-1::-1]).ravel()
 
