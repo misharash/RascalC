@@ -13,28 +13,21 @@ infile_name = str(sys.argv[2])
 outfile_name = str(sys.argv[3])
 njack=int(sys.argv[4])
 
+import time
+init=time.time()
+
+print("Reading reference positions from %s" % reffile_name)
 ref_positions = np.loadtxt(reffile_name, usecols=range(3)).T # only read positions
+print("Initializing a K-means subsampler")
 subsampler = KMeansSubsampler('angular', positions=ref_positions, nsamples=njack, nside=512, random_state=42, position_type='rdd')
 
-# First count number of lines
-print('Counting number of lines')
-with open(infile_name) as f:
-    for i, l in enumerate(f):
-        pass
-total_lines = i + 1
-print('Found %s lines in input file' %total_lines)
-
-import time
-percent_count=0
-init=time.time()
-with open(infile_name) as infile:
-    with open(outfile_name, "w") as outfile:
-        for l,line in enumerate(infile):
-            if 100*l/total_lines>=percent_count:
-                print(" %d%% done: Reading line %s of %s" %(percent_count,l,total_lines))
-                percent_count+=1
-            split_line=line.split()
-            pix = int(subsampler.label(np.array([[float(s)] for s in split_line[:3]]), position_type='xyz'))
-            outfile.write(" ".join(split_line[:3])+" "+str(pix)+"\n")
+print("Reading positions and weights from %s" % infile_name)
+pos_weights = np.loadtxt(infile_name, usecols=range(4)).T
+positions = pos_weights[:3]
+print("Assigning jackknives")
+jackknives = subsampler.label(positions, position_type='xyz')
+print("Saving to %s" % outfile_name)
+pos_weights_jack = np.vstack((pos_weights, jackknives))
+np.savetxt(outfile_name, pos_weights_jack.T)
 end=time.time()-init
 print('Task completed in %.2f seconds' %end) 

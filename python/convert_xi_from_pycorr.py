@@ -34,6 +34,7 @@ for infile_name in infile_names[1:]:
 
 print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6e}")
 print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6e}")
+np.savetxt(outfile_name + ".ndata", np.array((data_size1_sum, data_size2_sum)) / len(infile_names)) # save them for later
 
 def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
     xi_RR = xi*RR
