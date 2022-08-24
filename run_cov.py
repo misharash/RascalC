@@ -54,7 +54,8 @@ create_jackknives = jackknife and 1
 # CF options
 convert_cf = 1
 if convert_cf:
-    pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/HOD_tests/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}_HOD7.npy") for i in range(25)]
+    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/HOD_tests/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}_HOD7.npy") for i in range(25)]
+    pycorr_filename = pycorr_filenames[0]
     counts_factor = 1
     split_above = 0
 smoothen_cf = 0
@@ -76,7 +77,7 @@ data_ref_filename = None # for jackknife reference only, has to have rdz content
 input_filenames = ["randoms.xyzw"] # random filenames
 nfiles = len(input_filenames)
 corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat"
-binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
+binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat"
 if jackknife:
     jackknife_weights_name = f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat"
     if convert_cf:
@@ -191,9 +192,9 @@ for i, input_filename in enumerate(input_filenames):
     this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
     if legendre: # need correction function
-        exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0]} {radial_binning_cov} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_name}")
+        exec_print_and_log(f"python python/compute_correction_function.py {input_filename} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_name}")
     # run code
-    exec_print_and_log(f"{command} -in {input_filename} -output {this_outdir} 2>&1" + legendre * f" -phi_file {os.path.join(this_outdir, phi_name)}")
+    exec_print_and_log(f"{command} -in {input_filename} -output {this_outdir} 2>&1" + (f" -phi_file {os.path.join(this_outdir, phi_name)}" if legendre else ""))
     print_and_log(f"Finished computation {i+1} of {nfiles}")
 # end for each random file/part
 
