@@ -64,10 +64,10 @@ public:
 
     //-------- LEGENDRE PARAMETERS -------------------------------------------
 
-    int max_l = 2; // max Legendre moment (must be even unless computing 3PCF)
+    int max_l = 4; // max Legendre moment (must be even unless computing 3PCF)
 
     char *phi_file = NULL; // Survey correction function coefficient file
-    const char default_phi_file[500] = "/home/oliverphilcox/eBOSS_MockChallenge/BinCorrectionFactor_n25_periodic_11.txt";
+    const char default_phi_file[500] = "BinCorrectionFactor_n50_periodic_11.txt";
 
     //-------- POWER PARAMETERS (not yet publicly released) ------------------
 
