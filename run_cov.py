@@ -33,7 +33,7 @@ mbin = 1 # angular (mu) bins for output cov
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
 nbin_cf = 200 # radial bins for input 2PCF
-mbin_cf = 10 # angular (mu) bins for input 2PCF
+mbin_cf = 20 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 30 # number of OMP threads to use
@@ -52,11 +52,11 @@ FKP_weight = 0
 convert_to_xyz = 0
 create_jackknives = jackknife and 1
 # CF options
-convert_cf = 0
+convert_cf = 1
 if convert_cf:
-    pycorr_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10_split20.npy")
-    counts_factor = 10
-    split_above = 20
+    pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/HOD_tests/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}_HOD7.npy") for i in range(25)]
+    counts_factor = 1
+    split_above = 0
 smoothen_cf = 0
 if smoothen_cf:
     max_l = 4
@@ -123,7 +123,7 @@ if convert_cf:
     # full-survey CF
     os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
     r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
-    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {pycorr_filename} {corname} {r_step_cf} {mbin_cf}")
+    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames)} {corname} {r_step_cf} {mbin_cf}")
     ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
     if smoothen_cf:
         corname_old = corname
