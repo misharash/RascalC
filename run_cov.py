@@ -18,7 +18,7 @@ make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make
 jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
-legendre = 1
+legendre = 0
 if legendre:
     max_l = 4
 
@@ -52,6 +52,9 @@ redshift_cut = 1
 FKP_weight = 1
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
+do_jack_counts = 0 # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
+if do_jack_counts:
+    cat_randoms_file = "LRG_N_0-9_clustering.ran.xyzwj"
 # CF options
 convert_cf = 1
 if convert_cf:
@@ -120,26 +123,6 @@ def exec_print_and_log(commandline):
 
 print("Starting Computation")
 
-# CF conversion
-if convert_cf:
-    # full-survey CF
-    os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
-    r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
-    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames)} {corname} {r_step_cf} {mbin_cf}")
-    ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
-    if smoothen_cf:
-        corname_old = corname
-        corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
-        exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
-    os.makedirs(os.path.dirname(binned_pair_name), exist_ok=1) # make sure all dirs exist
-    r_step = (rmax-rmin)//nbin
-    if jackknife: # convert jackknife xi and all counts
-        for filename in (xi_jack_name, jackknife_weights_name, jackknife_pairs_name):
-            os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-        exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
-    else: # only convert full, binned pair counts
-        exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
-
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
@@ -169,9 +152,9 @@ if jackknife:
     command += f" -jackknife {jackknife_weights_name}"
 print_and_log(f"Common command for C++ code: {command}")
 
-# for each random file/part
+# processing steps for each random file
 for i, input_filename in enumerate(input_filenames):
-    print_and_log(f"Starting computation {i+1} of {nfiles}")
+    print_and_log(f"Starting preparation {i+1} of {nfiles}")
     print_and_log(datetime.now())
     if periodic and make_randoms: # just save randoms to this file
         input_filename = change_extension(input_filename, "xyzw")
@@ -189,6 +172,49 @@ for i, input_filename in enumerate(input_filenames):
             xyzwj_filename = change_extension(input_filename, "xyzwj")
             exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {input_filename} {xyzwj_filename} {njack}")
             input_filename = xyzwj_filename
+    input_filenames[i] = input_filename # save final input filename for next loop
+    print_and_log(f"Finished preparation {i+1} of {nfiles}")
+# end processing steps for each random file
+
+# CF conversion
+if convert_cf:
+    # full-survey CF
+    os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
+    r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
+    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames)} {corname} {r_step_cf} {mbin_cf}")
+    ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
+    if smoothen_cf:
+        corname_old = corname
+        corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
+        exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
+    os.makedirs(os.path.dirname(binned_pair_name), exist_ok=1) # make sure all dirs exist
+    r_step = (rmax-rmin)//nbin
+    if jackknife: # convert jackknife xi and all counts
+        for filename in (xi_jack_name, jackknife_weights_name, jackknife_pairs_name):
+            os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
+        if do_jack_counts: # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
+            # concatenate randoms
+            exec_print_and_log(f"cat {' '.join(input_filenames)} > {cat_randoms_file}")
+            # continue processing of data file - from redshift-cut rdzw to xyzw and xyzwj
+            data_filename = data_ref_filename
+            xyzw_filename = change_extension(data_filename, "xyzw")
+            exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight}")
+            data_filename = xyzw_filename
+            xyzwj_filename = change_extension(data_filename, "xyzwj")
+            exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {data_filename} {xyzwj_filename} {njack}")
+            data_filename = xyzwj_filename
+            # run RascalC own xi jack estimator
+            exec_print_and_log(f"python xi_estimator_jack.py {data_filename} {cat_randoms_file} {cat_randoms_file} {binfile} 1 {mbin} {nthread} {periodic} weights/")
+            # reload full counts from pycorr, override jackknives
+            exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
+        else:
+            exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
+    else: # only convert full, binned pair counts
+        exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
+
+# running main code for each random file/part
+for i, input_filename in enumerate(input_filenames):
+    print_and_log(f"Starting main computation {i+1} of {nfiles}")
     # define output subdirectory
     this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
@@ -196,8 +222,8 @@ for i, input_filename in enumerate(input_filenames):
         exec_print_and_log(f"python python/compute_correction_function.py {input_filename} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_name}")
     # run code
     exec_print_and_log(f"{command} -in {input_filename} -output {this_outdir} 2>&1" + (f" -phi_file {os.path.join(this_outdir, phi_name)}" if legendre else ""))
-    print_and_log(f"Finished computation {i+1} of {nfiles}")
-# end for each random file/part
+    print_and_log(f"Finished main computation {i+1} of {nfiles}")
+# end running main code for each random file/part
 
 print_and_log(datetime.now())
 
