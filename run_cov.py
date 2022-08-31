@@ -37,7 +37,7 @@ mbin_cf = 20 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 30 # number of OMP threads to use
-maxloops = 30 # number of integration loops per filename
+maxloops = 120 # number of integration loops per filename
 N2 = 20 # number of secondary cells/particles per primary cell
 N3 = 40 # number of third cells/particles per secondary cell/particle
 N4 = 80 # number of fourth cells/particles per third cell/particle
@@ -54,7 +54,7 @@ create_jackknives = jackknife and 1
 # CF options
 convert_cf = 1
 if convert_cf:
-    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/HOD_tests/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}_HOD7.npy") for i in range(25)]
+    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 1
     split_above = 0
