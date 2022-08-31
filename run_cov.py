@@ -23,6 +23,7 @@ if legendre:
     max_l = 4
 
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
+assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
 
 ndata = 3e6 # number of data points
 
