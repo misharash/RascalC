@@ -16,7 +16,11 @@ def check_path(filename):
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make any
 jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
-njack = 60 # number of jackknife regions
+if jackknife:
+    njack = 60 # number of jackknife regions
+legendre = 1
+if legendre:
+    max_l = 4
 
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
 
@@ -50,7 +54,8 @@ create_jackknives = jackknife and 1
 # CF options
 convert_cf = 1
 if convert_cf:
-    pycorr_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10_split20.npy")
+    pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10_split20.npy")]
+    pycorr_filename = pycorr_filenames[0]
     counts_factor = 10
     split_above = 20
 smoothen_cf = 0
@@ -72,12 +77,14 @@ data_ref_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA0
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_{i}_clustering.ran.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
 corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat"
-binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
+binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat"
 if jackknife:
     jackknife_weights_name = f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat"
     if convert_cf:
         xi_jack_name = f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat"
         jackknife_pairs_name = f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
+if legendre:
+    phi_name = f"BinCorrectionFactor_n{nbin}_periodic_11.txt"
 outdir = "out" # output file directory
 
 # binning files to be created automatically
@@ -117,7 +124,7 @@ if convert_cf:
     # full-survey CF
     os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
     r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
-    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {pycorr_filename} {corname} {r_step_cf} {mbin_cf}")
+    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames)} {corname} {r_step_cf} {mbin_cf}")
     ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
     if smoothen_cf:
         corname_old = corname
@@ -135,9 +142,9 @@ if convert_cf:
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
-    ndata = int(ndata) # no harm since already used for command generation
+    nrandoms = int(ndata)
     np.random.seed(42) # for reproducibility
-    randoms = np.append(np.random.rand(nfiles, ndata, 3) * boxsize, np.ones((nfiles, Nrandoms, 1)), axis=-1)
+    randoms = np.append(np.random.rand(nfiles, nrandoms, 3) * boxsize, np.ones((nfiles, nrandoms, 1)), axis=-1)
     # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to unity
     print_and_log(f"Generated random points")
 
@@ -150,7 +157,11 @@ if create_jackknives and redshift_cut: # prepare reference file
     exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight}")
     data_ref_filename = rdzw_ref_filename
 
-command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -cor {corname} -RRbin {binned_pair_name} -binfile {binfile} -binfile_cf {binfile_cf} -mbin {mbin} -mbin_cf {mbin_cf}"
+command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -cor {corname} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}"
+if legendre:
+    command += f" -max_l {max_l} -phi_file {phi_name}"
+else:
+    command += f" -RRbin {binned_pair_name} -mbin {mbin}"
 if periodic:
     command += " -perbox"
 if jackknife:
@@ -177,10 +188,13 @@ for i, input_filename in enumerate(input_filenames):
             xyzwj_filename = change_extension(input_filename, "xyzwj")
             exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {input_filename} {xyzwj_filename} {njack}")
             input_filename = xyzwj_filename
-    # run code
+    # define output subdirectory
     this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
-    exec_print_and_log(f"{command} -in {input_filename} -output {this_outdir} 2>&1")
+    if legendre: # need correction function
+        exec_print_and_log(f"python python/compute_correction_function.py {input_filename} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_name}")
+    # run code
+    exec_print_and_log(f"{command} -in {input_filename} -output {this_outdir} 2>&1" + (f" -phi_file {os.path.join(this_outdir, phi_name)}" if legendre else ""))
     print_and_log(f"Finished computation {i+1} of {nfiles}")
 # end for each random file/part
 
