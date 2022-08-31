@@ -18,7 +18,7 @@ make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make
 jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
-legendre = 1
+legendre = 0
 if legendre:
     max_l = 4
 
@@ -53,7 +53,7 @@ FKP_weight = 0
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
 do_jack_counts = 1 # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
-if redo_jack_counts:
+if do_jack_counts:
     cat_randoms_file = "LRG_z0.800_cutsky_seed1_S100-1000_random.xyzw"
 # CF options
 convert_cf = 1
