@@ -54,7 +54,7 @@ convert_to_xyz = 1
 create_jackknives = jackknife and 1
 do_jack_counts = 1 # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
 if do_jack_counts:
-    cat_randoms_file = "LRG_z0.800_cutsky_seed1_S100-1000_random.xyzw"
+    cat_randoms_file = "LRG_z0.800_cutsky_seed1_S100-1000_random.xyzwj"
 # CF options
 convert_cf = 1
 if convert_cf:
@@ -192,7 +192,7 @@ if convert_cf:
     if jackknife: # convert jackknife xi and all counts
         for filename in (xi_jack_name, jackknife_weights_name, jackknife_pairs_name):
             os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-        if do_jack_counts:
+        if do_jack_counts: # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
             # concatenate randoms
             exec_print_and_log(f"cat {' '.join(input_filenames)} > {cat_randoms_file}")
             # continue processing of data file - from redshift-cut rdzw to xyzw and xyzwj
@@ -203,9 +203,11 @@ if convert_cf:
             xyzwj_filename = change_extension(data_filename, "xyzwj")
             exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {data_filename} {xyzwj_filename} {njack}")
             data_filename = xyzwj_filename
+            # compute jackknife weights
+            exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} weights/") # 1. is max mu, weights/ is output dir
             # run RascalC own xi jack estimator
-            exec_print_and_log(f"python xi_estimator_jack.py {data_filename} {cat_randoms_file} {cat_randoms_file} {binfile} 1 {mbin} {nthread} {periodic} weights/")
-            # reload full counts from pycorr, override jackknives
+            exec_print_and_log(f"python python/xi_estimator_jack.py {data_filename} {cat_randoms_file} {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} xi/ {jackknife_pairs_name}") # 1. is max mu, xi/ is output dir
+            # reload full counts from pycorr, override jackknives - to prevent normalization issues
             exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
         else:
             exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
