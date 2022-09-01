@@ -206,7 +206,7 @@ if convert_cf:
             # compute jackknife weights
             exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} weights/") # 1. is max mu, weights/ is output dir
             # run RascalC own xi jack estimator
-            exec_print_and_log(f"python python/xi_estimator_jack.py {data_filename} {cat_randoms_file} {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} xi/ {jackknife_pairs_name}") # 1. is max mu, xi/ is output dir
+            exec_print_and_log(f"python python/xi_estimator_jack.py {data_filename} {cat_randoms_file} {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_name)}/ {jackknife_pairs_name}") # 1. is max mu
             # reload full counts from pycorr, override jackknives - to prevent normalization issues
             exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
         else:
