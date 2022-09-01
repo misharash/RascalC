@@ -232,7 +232,7 @@ print_and_log(datetime.now())
 # Concatenate samples
 if nfiles > 1:
     print_and_log(f"Concatenating samples")
-    exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {mbin} " + " ".join([f"{os.path.join(outdir, str(i))} {maxloops}" for i in range(nfiles)]) + f" {outdir}")
+    exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {maxloops}" for i in range(nfiles)]) + f" {outdir}")
 
 # Maybe post-processing will be here later
 
