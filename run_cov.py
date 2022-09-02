@@ -40,11 +40,11 @@ xicutoff = 250 # beyond this assume xi/2PCF=0
 nthread = 30 # number of OMP threads to use
 maxloops = 30 # number of integration loops per filename
 N2 = 20 # number of secondary cells/particles per primary cell
-N3 = 40 # number of third cells/particles per secondary cell/particle
-N4 = 80 # number of fourth cells/particles per third cell/particle
+N3 = 80 # number of third cells/particles per secondary cell/particle
+N4 = 160 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
-nside = 101 # grid size for accelerating pair count
+nside = 201 # grid size for accelerating pair count
 boxsize = 2000 # only used if periodic=1
 
 # data processing steps
@@ -90,7 +90,7 @@ if jackknife:
         jackknife_pairs_name = f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
 if legendre:
     phi_name = f"BinCorrectionFactor_n{nbin}_periodic_11.txt"
-outdir = "out" # output file directory
+outdir = "out_seed1/run3" # output file directory
 
 # binning files to be created automatically
 binfile = "radial_binning_cov.csv"
@@ -180,6 +180,7 @@ for i, input_filename in enumerate(input_filenames):
 if cat_randoms: # concatenate randoms
     exec_print_and_log(f"cat {' '.join(input_filenames)} > {cat_randoms_file}")
     input_filenames = [cat_randoms_file] # now it is the only file
+    nfiles = 1
 
 # CF conversion
 if convert_cf:
