@@ -52,8 +52,9 @@ redshift_cut = 1
 FKP_weight = 0
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
-do_jack_counts = 1 # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
-if do_jack_counts:
+do_jack_counts = 1 # (re)compute jackknife weights/xi (and pair counts too) with RascalC script, will concatenate randoms
+cat_randoms = 1 # concatenate random files for RascalC input
+if do_jack_counts or cat_randoms:
     cat_randoms_file = "LRG_z0.800_cutsky_seed1_S100-1000_random.xyzwj"
 # CF options
 convert_cf = 1
@@ -176,6 +177,10 @@ for i, input_filename in enumerate(input_filenames):
     print_and_log(f"Finished preparation {i+1} of {nfiles}")
 # end processing steps for each random file
 
+if cat_randoms: # concatenate randoms
+    exec_print_and_log(f"cat {' '.join(input_filenames)} > {cat_randoms_file}")
+    input_filenames = [cat_randoms_file] # now it is the only file
+
 # CF conversion
 if convert_cf:
     # full-survey CF
@@ -193,8 +198,8 @@ if convert_cf:
         for filename in (xi_jack_name, jackknife_weights_name, jackknife_pairs_name):
             os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
         if do_jack_counts: # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
-            # concatenate randoms
-            exec_print_and_log(f"cat {' '.join(input_filenames)} > {cat_randoms_file}")
+            if not cat_randoms: # concatenate randoms now
+                exec_print_and_log(f"cat {' '.join(input_filenames)} > {cat_randoms_file}")
             # continue processing of data file - from redshift-cut rdzw to xyzw and xyzwj
             data_filename = data_ref_filename
             xyzw_filename = change_extension(data_filename, "xyzw")
@@ -207,8 +212,8 @@ if convert_cf:
             exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} weights/") # 1. is max mu, weights/ is output dir
             # run RascalC own xi jack estimator
             exec_print_and_log(f"python python/xi_estimator_jack.py {data_filename} {cat_randoms_file} {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_name)}/ {jackknife_pairs_name}") # 1. is max mu
-            # reload full counts from pycorr, override jackknives - to prevent normalization issues
-            exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
+            if not cat_randoms: # reload full counts from pycorr, override jackknives - to prevent normalization issues
+                exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
         else:
             exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
     else: # only convert full, binned pair counts
