@@ -54,7 +54,7 @@ create_jackknives = jackknife and 1
 # CF options
 convert_cf = 1
 if convert_cf:
-    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]
+    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/BGS/Xi/Pre/epaillas/BGS_Mr-21_z0.2_ph{i:03d}.Xi.npy") for i in range(25)]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 1
     split_above = 0
