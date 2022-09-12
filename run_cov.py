@@ -33,8 +33,8 @@ nbin = 50 # radial bins for output cov
 mbin = 1 # angular (mu) bins for output cov
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
-nbin_cf = 100 # radial bins for input 2PCF
-mbin_cf = 10 # angular (mu) bins for input 2PCF
+nbin_cf = 200 # radial bins for input 2PCF
+mbin_cf = 20 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 30 # number of OMP threads to use
@@ -50,11 +50,11 @@ boxsize = 2000 # only used if periodic=1
 # data processing steps
 redshift_cut = 1
 FKP_weight = 1
-mask = 0xff
+mask = 0b1010 # from the end and numbering from 0: bit 1 - object in Y5 footprint, bit 3 - subsampling matching LRG_main n(z) distribution based on DA02 results
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
-do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
-cat_randoms = 0 # concatenate random files for RascalC input
+do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
+cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_file = "cutsky_LRG_random_S100-1000_10X.xyzwj"
 # CF options
