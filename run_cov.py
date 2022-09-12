@@ -15,7 +15,7 @@ def check_path(filename):
 
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make any
-jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
+jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
 legendre = 0
@@ -55,11 +55,11 @@ convert_to_xyz = 1
 create_jackknives = jackknife and 1
 do_jack_counts = 0 # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
 if do_jack_counts:
-    cat_randoms_file = "LRG_N_0-9_clustering.ran.xyzwj"
+    cat_randoms_file = "cutsky_LRG_random_S100-1000_10X.xyzwj"
 # CF options
 convert_cf = 1
 if convert_cf:
-    pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10_split20.npy")]
+    pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 10
     split_above = 20
@@ -78,8 +78,9 @@ if convert_to_xyz:
 z_min, z_max = 0.4, 1.1 # for redshift cut
 
 # File names and directories
-data_ref_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_clustering.dat.fits") # for jackknife reference only, has to have rdz contents
-input_filenames = [check_path(f"/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_{i}_clustering.ran.fits") for i in range(10)] # random filenames
+if jackknife:
+    data_ref_filename = check_path("/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_z0.800_AbacusSummit_base_c000_ph000.fits") # for jackknife reference only, has to have rdz contents
+input_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_random_S{i+1}00_1X.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
 corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat"
 binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat"
