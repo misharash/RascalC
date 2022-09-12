@@ -15,15 +15,9 @@ import sys
 import numpy as np
 
 # Check number of parameters
-if len(sys.argv) not in (5, 6):
-    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} {Z_MIN} {Z_MAX} [{USE_FKP_WEIGHTS}]")
+if len(sys.argv) not in (5, 6, 7):
+    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} {Z_MIN} {Z_MAX} [{USE_FKP_WEIGHTS} [{MASK}]]")
     sys.exit()
-
-# Determine whether to use FKP weights, only applies to (DESI) FITS files
-if len(sys.argv)==6:
-    use_FKP_weights = bool(sys.argv[5])
-else:
-    use_FKP_weights = False
           
 # Load file names
 input_file = str(sys.argv[1])
@@ -33,6 +27,12 @@ print("\nUsing input file %s in Ra,Dec,z coordinates\n"%input_file)
 # Load min and max redshifts
 z_min = float(sys.argv[3])
 z_max = float(sys.argv[4])
+
+# Determine whether to use FKP weights, only applies to (DESI) FITS files
+use_FKP_weights = bool(sys.argv[5]) if len(sys.argv) >= 6 else False
+# Load mask to take STATUS & MASK. Also only applies to (DESI) FITS files
+mask = int(sys.argv[6]) if len(sys.argv) >= 7 else 0xff # default mask is a byte full of 1 to give always True
+filt = True # default pre-filter is true
 
 if input_file.endswith(".fits"):
     # read fits file, correct for DESI format
@@ -46,6 +46,7 @@ if input_file.endswith(".fits"):
     all_w = data["WEIGHT"]
     if use_FKP_weights:
         all_w *= data["WEIGHT_FKP"]
+    filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
 else:
     # read text file
     # Load in data:
@@ -67,7 +68,7 @@ else:
         all_w[n]=split_line[3];
 
 # perform redshift cut
-filt = np.logical_and(z_min <= all_z, all_z < z_max) # filtering condition
+filt = np.logical_and(filt, np.logical_and(z_min <= all_z, all_z < z_max)) # full filtering condition
 all_ra = all_ra[filt]
 all_dec = all_dec[filt]
 all_z = all_z[filt]

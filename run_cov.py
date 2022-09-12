@@ -50,6 +50,7 @@ boxsize = 2000 # only used if periodic=1
 # data processing steps
 redshift_cut = 1
 FKP_weight = 1
+mask = 0xff
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
 do_jack_counts = 0 # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
@@ -138,7 +139,7 @@ def change_extension(name, ext):
 if create_jackknives and redshift_cut: # prepare reference file
     print_and_log(f"Processing data file for jackknife reference")
     rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-    exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight}")
+    exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {mask}")
     data_ref_filename = rdzw_ref_filename
 
 command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -cor {corname} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}"
@@ -162,7 +163,7 @@ for i, input_filename in enumerate(input_filenames):
     else: # (potentially) run through all data processing steps
         if redshift_cut:
             rdzw_filename = change_extension(input_filename, "rdzw")
-            exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight}")
+            exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight} {mask}")
             input_filename = rdzw_filename
         if convert_to_xyz:
             xyzw_filename = change_extension(input_filename, "xyzw")
