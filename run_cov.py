@@ -76,7 +76,7 @@ if convert_to_xyz:
     Omega_k = 0
     w_dark_energy = -1
 
-z_min, z_max = 0.4, 1.1 # for redshift cut
+z_min, z_max = 0.4, 0.6 # for redshift cut
 
 # File names and directories
 if jackknife:
@@ -92,7 +92,7 @@ if jackknife:
         jackknife_pairs_name = f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
 if legendre:
     phi_name = f"BinCorrectionFactor_n{nbin}_periodic_11.txt"
-outdir = "out" # output file directory
+outdir = "z0.4-0.6" # output file directory
 
 # binning files to be created automatically
 binfile = "radial_binning_cov.csv"
