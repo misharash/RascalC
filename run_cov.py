@@ -49,7 +49,7 @@ boxsize = 2000 # only used if periodic=1
 
 # data processing steps
 redshift_cut = 1
-FKP_weight = 1
+FKP_weight = 0
 mask = 0b1010 # from the end and numbering from 0: bit 1 - object in Y5 footprint, bit 3 - subsampling matching LRG_main n(z) distribution based on DA02 results
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
@@ -60,7 +60,7 @@ if do_counts or cat_randoms:
 # CF options
 convert_cf = 1
 if convert_cf:
-    pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]
+    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 10
     split_above = 20
