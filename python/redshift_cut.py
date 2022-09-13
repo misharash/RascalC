@@ -37,7 +37,7 @@ if manual_FKP:
     P0 = float(arg_FKP_split[0])
     NZ_name = arg_FKP_split[1]
 # Load mask to take STATUS & MASK. Also only applies to (DESI) FITS files
-mask = int(sys.argv[6]) if len(sys.argv) >= 7 else 0xff # default mask is a byte full of 1 to give always True
+mask = int(sys.argv[6]) if len(sys.argv) >= 7 else -1 # default mask is -1 which is as many 1 bits as needed
 filt = True # default pre-filter is true
 
 if input_file.endswith(".fits"):
@@ -53,7 +53,7 @@ if input_file.endswith(".fits"):
     if use_FKP_weights:
         all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
     if "WEIGHT" not in data.keys() and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
-    filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
+    if mask != -1: filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
 else:
     # read text file
     # Load in data:
