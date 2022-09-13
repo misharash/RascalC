@@ -16,7 +16,7 @@ import numpy as np
 
 # Check number of parameters
 if len(sys.argv) not in (5, 6, 7):
-    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} {Z_MIN} {Z_MAX} [{USE_FKP_WEIGHTS} [{MASK}]]")
+    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} {Z_MIN} {Z_MAX} [{USE_FKP_WEIGHTS or P0,NZ_name} [{MASK}]]")
     sys.exit()
           
 # Load file names
@@ -30,6 +30,12 @@ z_max = float(sys.argv[4])
 
 # Determine whether to use FKP weights, only applies to (DESI) FITS files
 use_FKP_weights = bool(sys.argv[5]) if len(sys.argv) >= 6 else False
+# determine if it actually has P0,NZ_name format. Such strings should give True above.
+arg_FKP_split = sys.argv[5].split(",")
+manual_FKP = (len(arg_FKP_split) == 2) # whether to compute FKP weights manually
+if manual_FKP:
+    P0 = float(arg_FKP_split[0])
+    NZ_name = arg_FKP_split[1]
 # Load mask to take STATUS & MASK. Also only applies to (DESI) FITS files
 mask = int(sys.argv[6]) if len(sys.argv) >= 7 else 0xff # default mask is a byte full of 1 to give always True
 filt = True # default pre-filter is true
@@ -43,9 +49,10 @@ if input_file.endswith(".fits"):
     all_ra = data["RA"]
     all_dec = data["DEC"]
     all_z = data["Z"]
-    all_w = data["WEIGHT"]
+    all_w = data["WEIGHT"] if "WEIGHT" in data.keys() else np.ones_like(all_z)
     if use_FKP_weights:
-        all_w *= data["WEIGHT_FKP"]
+        all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
+    if "WEIGHT" not in data.keys() and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
     filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
 else:
     # read text file
