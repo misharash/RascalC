@@ -44,16 +44,17 @@ if input_file.endswith(".fits"):
     # read fits file, correct for DESI format
     from astropy.io import fits
     print("Reading in data")
-    f = fits.open(input_file)
-    data = f[1].data
-    all_ra = data["RA"]
-    all_dec = data["DEC"]
-    all_z = data["Z"]
-    all_w = data["WEIGHT"] if "WEIGHT" in data.keys() else np.ones_like(all_z)
-    if use_FKP_weights:
-        all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
-    if "WEIGHT" not in data.keys() and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
-    if mask != -1: filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
+    with fits.open(input_file) as f:
+        data = f[1].data
+        all_ra = data["RA"]
+        all_dec = data["DEC"]
+        all_z = data["Z"]
+        colnames = data.columns.names
+        all_w = data["WEIGHT"] if "WEIGHT" in colnames else np.ones_like(all_z)
+        if use_FKP_weights:
+            all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
+        if "WEIGHT" not in colnames and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
+        if mask != -1: filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
 else:
     # read text file
     # Load in data:
