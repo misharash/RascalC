@@ -35,7 +35,7 @@ w_dark_energy = float(sys.argv[5]) if len(sys.argv) >= 6 else -1
 print("\nUsing cosmological parameters as Omega_m = %.2f, Omega_k = %.2f, w = %.2f" %(omega_m,omega_k,w_dark_energy))
 
 # Determine whether to use FKP weights, only applies to (DESI) FITS files
-use_FKP_weights = bool(sys.argv[6]) if len(sys.argv) >= 7 else False
+use_FKP_weights = (sys.argv[6].lower() not in ("0", "false")) if len(sys.argv) >= 7 else False # bool(string) is True for non-empty string, so need to be more specific to allow explicit False from a command-line argument
 # determine if it actually has P0,NZ_name format. Such strings should give True above.
 arg_FKP_split = sys.argv[6].split(",")
 manual_FKP = (len(arg_FKP_split) == 2) # whether to compute FKP weights manually
