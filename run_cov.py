@@ -7,7 +7,7 @@ import numpy as np
 
 def check_path(filename):
     if os.path.isfile(filename): return filename
-    filename = os.path.basename(filename)
+    filename = os.path.join(fallback_dir, os.path.basename(filename))
     assert os.path.isfile(filename), f"{filename} missing"
     return filename
 
@@ -50,15 +50,17 @@ boxsize = 2000 # only used if periodic=1
 # data processing steps
 redshift_cut = 1
 FKP_weight = 0
+mask = -1 # default, basically no mask
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
-do_jack_counts = 1 # (re)compute jackknife weights/xi (and pair counts too) with RascalC script, will concatenate randoms
+do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
-if do_jack_counts or cat_randoms:
+if do_counts or cat_randoms:
     cat_randoms_file = "LRG_z0.800_cutsky_seed1_S100-1000_random.xyzwj"
 # CF options
 convert_cf = 1
 if convert_cf:
+    fallback_dir = "."
     pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Xi/xi_ez_LRG_cutsky_seed1_z0.4_1.1.npy")]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 10
@@ -78,19 +80,22 @@ if convert_to_xyz:
 z_min, z_max = 0.4, 1.1 # for redshift cut
 
 # File names and directories
-data_ref_filename = check_path("/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Mocks/LRG_z0.800_cutsky_seed1_data.fits") # for jackknife reference only, has to have rdz contents
+fallback_dir = "."
+if jackknife:
+    data_ref_filename = check_path("/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Mocks/LRG_z0.800_cutsky_seed1_data.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Mocks/LRG_z0.800_cutsky_S{i+1}00_random.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
-corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat"
-binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat"
+outdir = "out_seed1/run4" # output file directory
+tmpdir = outdir # directory to write intermediate files, mainly data processing steps
+corname = os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat")
+binned_pair_name = os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat")
 if jackknife:
-    jackknife_weights_name = f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat"
+    jackknife_weights_name = os.path.join(tmpdir, f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat")
     if convert_cf:
-        xi_jack_name = f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat"
-        jackknife_pairs_name = f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
+        xi_jack_name = os.path.join(tmpdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat")
+        jackknife_pairs_name = os.path.join(tmpdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat")
 if legendre:
-    phi_name = f"BinCorrectionFactor_n{nbin}_periodic_11.txt"
-outdir = "out_seed1/run3" # output file directory
+    phi_name = os.path.join(tmpdir, f"BinCorrectionFactor_n{nbin}_periodic_11.txt")
 
 # binning files to be created automatically
 binfile = "radial_binning_cov.csv"
@@ -99,6 +104,9 @@ os.system(f"python python/write_binning_file_linear.py {nbin} {rmin} {rmax} {bin
 os.system(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax_cf} {binfile_cf}")
 
 ##########################################################
+
+# Create intermediate directory
+os.makedirs(tmpdir, exist_ok=1)
 
 # Create output directory
 os.makedirs(outdir, exist_ok=1)
@@ -134,12 +142,12 @@ if periodic and make_randoms:
     print_and_log(f"Generated random points")
 
 def change_extension(name, ext):
-    return os.path.basename(".".join(name.split(".")[:-1] + [ext])) # change extension and switch to current dir
+    return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
 if create_jackknives and redshift_cut: # prepare reference file
     print_and_log(f"Processing data file for jackknife reference")
     rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-    exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight}")
+    exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {mask}")
     data_ref_filename = rdzw_ref_filename
 
 command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -cor {corname} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}"
@@ -163,7 +171,7 @@ for i, input_filename in enumerate(input_filenames):
     else: # (potentially) run through all data processing steps
         if redshift_cut:
             rdzw_filename = change_extension(input_filename, "rdzw")
-            exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight}")
+            exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight} {mask}")
             input_filename = rdzw_filename
         if convert_to_xyz:
             xyzw_filename = change_extension(input_filename, "xyzw")
@@ -198,7 +206,7 @@ if convert_cf:
     if jackknife: # convert jackknife xi and all counts
         for filename in (xi_jack_name, jackknife_weights_name, jackknife_pairs_name):
             os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-        if do_jack_counts: # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
+        if do_counts: # (re)compute jackknife weights/xi (and pair counts too) with RascalC script
             if not cat_randoms: # concatenate randoms now
                 exec_print_and_log(f"cat {' '.join(input_filenames)} > {cat_randoms_file}")
             # continue processing of data file - from redshift-cut rdzw to xyzw and xyzwj
@@ -217,8 +225,11 @@ if convert_cf:
                 exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
         else:
             exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
-    else: # only convert full, binned pair counts
-        exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
+    else: # only need full, binned pair counts
+        if cat_randoms and do_counts: # compute counts with our own script
+            exec_print_and_log(f"python python/RR_counts.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} weights/ 0") # 1. is max mu, weights/ is output dir, 0 means not normed
+        else: # convert full, binned pair counts
+            exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
 
 # running main code for each random file/part
 for i, input_filename in enumerate(input_filenames):

@@ -15,15 +15,9 @@ import sys
 import numpy as np
 
 # Check number of parameters
-if len(sys.argv) not in (5, 6):
-    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} {Z_MIN} {Z_MAX} [{USE_FKP_WEIGHTS}]")
+if len(sys.argv) not in (5, 6, 7):
+    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} {Z_MIN} {Z_MAX} [{USE_FKP_WEIGHTS or P0,NZ_name} [{MASK}]]")
     sys.exit()
-
-# Determine whether to use FKP weights, only applies to (DESI) FITS files
-if len(sys.argv)==6:
-    use_FKP_weights = bool(sys.argv[5])
-else:
-    use_FKP_weights = False
           
 # Load file names
 input_file = str(sys.argv[1])
@@ -34,18 +28,33 @@ print("\nUsing input file %s in Ra,Dec,z coordinates\n"%input_file)
 z_min = float(sys.argv[3])
 z_max = float(sys.argv[4])
 
+# Determine whether to use FKP weights, only applies to (DESI) FITS files
+use_FKP_weights = (sys.argv[5].lower() not in ("0", "false")) if len(sys.argv) >= 6 else False # bool(string) is True for non-empty string, so need to be more specific to allow explicit False from a command-line argument
+# determine if it actually has P0,NZ_name format. Such strings should give True above.
+arg_FKP_split = sys.argv[5].split(",")
+manual_FKP = (len(arg_FKP_split) == 2) # whether to compute FKP weights manually
+if manual_FKP:
+    P0 = float(arg_FKP_split[0])
+    NZ_name = arg_FKP_split[1]
+# Load mask to take STATUS & MASK. Also only applies to (DESI) FITS files
+mask = int(sys.argv[6]) if len(sys.argv) >= 7 else -1 # default mask is -1 which is as many 1 bits as needed
+filt = True # default pre-filter is true
+
 if input_file.endswith(".fits"):
     # read fits file, correct for DESI format
     from astropy.io import fits
     print("Reading in data")
-    f = fits.open(input_file)
-    data = f[1].data
-    all_ra = data["RA"]
-    all_dec = data["DEC"]
-    all_z = data["Z"]
-    all_w = data["WEIGHT"]
-    if use_FKP_weights:
-        all_w *= data["WEIGHT_FKP"]
+    with fits.open(input_file) as f:
+        data = f[1].data
+        all_ra = data["RA"]
+        all_dec = data["DEC"]
+        all_z = data["Z"]
+        colnames = data.columns.names
+        all_w = data["WEIGHT"] if "WEIGHT" in colnames else np.ones_like(all_z)
+        if use_FKP_weights:
+            all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
+        if "WEIGHT" not in colnames and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
+        if mask != -1: filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
 else:
     # read text file
     # Load in data:
@@ -67,7 +76,7 @@ else:
         all_w[n]=split_line[3];
 
 # perform redshift cut
-filt = np.logical_and(z_min <= all_z, all_z < z_max) # filtering condition
+filt = np.logical_and(filt, np.logical_and(z_min <= all_z, all_z < z_max)) # full filtering condition
 all_ra = all_ra[filt]
 all_dec = all_dec[filt]
 all_z = all_z[filt]
