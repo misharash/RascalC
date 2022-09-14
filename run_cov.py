@@ -92,6 +92,7 @@ if jackknife:
 if legendre:
     phi_name = f"BinCorrectionFactor_n{nbin}_periodic_11.txt"
 outdir = "out" # output file directory
+tmpdir = "." # directory to write intermediate files, mainly data processing steps
 
 # binning files to be created automatically
 binfile = "radial_binning_cov.csv"
@@ -100,6 +101,9 @@ os.system(f"python python/write_binning_file_linear.py {nbin} {rmin} {rmax} {bin
 os.system(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax_cf} {binfile_cf}")
 
 ##########################################################
+
+# Create intermediate directory
+os.makedirs(tmpdir, exist_ok=1)
 
 # Create output directory
 os.makedirs(outdir, exist_ok=1)
@@ -135,7 +139,7 @@ if periodic and make_randoms:
     print_and_log(f"Generated random points")
 
 def change_extension(name, ext):
-    return os.path.basename(".".join(name.split(".")[:-1] + [ext])) # change extension and switch to current dir
+    return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
 if create_jackknives and redshift_cut: # prepare reference file
     print_and_log(f"Processing data file for jackknife reference")
