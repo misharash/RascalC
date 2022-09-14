@@ -7,7 +7,7 @@ import numpy as np
 
 def check_path(filename):
     if os.path.isfile(filename): return filename
-    filename = os.path.basename(filename)
+    filename = os.path.join(fallback_dir, os.path.basename(filename))
     assert os.path.isfile(filename), f"{filename} missing"
     return filename
 
@@ -60,6 +60,7 @@ if do_counts or cat_randoms:
 # CF options
 convert_cf = 1
 if convert_cf:
+    fallback_dir = "."
     pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10_split20.npy")]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 10
@@ -79,6 +80,7 @@ if convert_to_xyz:
 z_min, z_max = 0.4, 1.1 # for redshift cut
 
 # File names and directories
+fallback_dir = "."
 data_ref_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_clustering.dat.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_{i}_clustering.ran.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
