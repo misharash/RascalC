@@ -82,17 +82,17 @@ z_min, z_max = 0.4, 1.1 # for redshift cut
 data_ref_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_clustering.dat.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_{i}_clustering.ran.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
-corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat"
-binned_pair_name = "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat"
-if jackknife:
-    jackknife_weights_name = f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat"
-    if convert_cf:
-        xi_jack_name = f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat"
-        jackknife_pairs_name = f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
-if legendre:
-    phi_name = f"BinCorrectionFactor_n{nbin}_periodic_11.txt"
 outdir = "out" # output file directory
 tmpdir = "." # directory to write intermediate files, mainly data processing steps
+corname = os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat")
+binned_pair_name = os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat")
+if jackknife:
+    jackknife_weights_name = os.path.join(tmpdir, f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat")
+    if convert_cf:
+        xi_jack_name = os.path.join(tmpdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat")
+        jackknife_pairs_name = os.path.join(tmpdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat")
+if legendre:
+    phi_name = os.path.join(tmpdir, f"BinCorrectionFactor_n{nbin}_periodic_11.txt")
 
 # binning files to be created automatically
 binfile = "radial_binning_cov.csv"
