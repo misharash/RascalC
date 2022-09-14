@@ -7,7 +7,7 @@ import numpy as np
 
 def check_path(filename):
     if os.path.isfile(filename): return filename
-    filename = os.path.basename(filename)
+    filename = os.path.join(fallback_dir, os.path.basename(filename))
     assert os.path.isfile(filename), f"{filename} missing"
     return filename
 
@@ -60,6 +60,7 @@ if do_counts or cat_randoms:
 # CF options
 convert_cf = 1
 if convert_cf:
+    fallback_dir = "."
     pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 10
@@ -79,20 +80,22 @@ if convert_to_xyz:
 z_min, z_max = 0.4, 0.6 # for redshift cut
 
 # File names and directories
+fallback_dir = "."
 if jackknife:
     data_ref_filename = check_path("/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_z0.800_AbacusSummit_base_c000_ph000.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_random_S{i+1}00_1X.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
-corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat"
-binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat"
-if jackknife:
-    jackknife_weights_name = f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat"
-    if convert_cf:
-        xi_jack_name = f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat"
-        jackknife_pairs_name = f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat"
-if legendre:
-    phi_name = f"BinCorrectionFactor_n{nbin}_periodic_11.txt"
 outdir = "z0.4-0.6" # output file directory
+tmpdir = outdir # directory to write intermediate files, mainly data processing steps
+corname = os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat")
+binned_pair_name = os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat")
+if jackknife:
+    jackknife_weights_name = os.path.join(tmpdir, f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat")
+    if convert_cf:
+        xi_jack_name = os.path.join(tmpdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat")
+        jackknife_pairs_name = os.path.join(tmpdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat")
+if legendre:
+    phi_name = os.path.join(tmpdir, f"BinCorrectionFactor_n{nbin}_periodic_11.txt")
 
 # binning files to be created automatically
 binfile = "radial_binning_cov.csv"
@@ -101,6 +104,9 @@ os.system(f"python python/write_binning_file_linear.py {nbin} {rmin} {rmax} {bin
 os.system(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax_cf} {binfile_cf}")
 
 ##########################################################
+
+# Create intermediate directory
+os.makedirs(tmpdir, exist_ok=1)
 
 # Create output directory
 os.makedirs(outdir, exist_ok=1)
@@ -136,7 +142,7 @@ if periodic and make_randoms:
     print_and_log(f"Generated random points")
 
 def change_extension(name, ext):
-    return os.path.basename(".".join(name.split(".")[:-1] + [ext])) # change extension and switch to current dir
+    return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
 if create_jackknives and redshift_cut: # prepare reference file
     print_and_log(f"Processing data file for jackknife reference")
