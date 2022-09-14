@@ -83,7 +83,7 @@ data_ref_filename = check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA0
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_{i}_clustering.ran.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
 corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat"
-binned_pair_name = f"weights/binned_pair_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat"
+binned_pair_name = "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat"
 if jackknife:
     jackknife_weights_name = f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_11.dat"
     if convert_cf:
