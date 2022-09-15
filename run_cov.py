@@ -50,7 +50,7 @@ boxsize = 2000 # only used if periodic=1
 # data processing steps
 redshift_cut = 1
 FKP_weight = 1
-mask = -1 # default, basically no mask
+mask = 0 # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
