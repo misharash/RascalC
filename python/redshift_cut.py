@@ -36,8 +36,8 @@ manual_FKP = (len(arg_FKP_split) == 2) # whether to compute FKP weights manually
 if manual_FKP:
     P0 = float(arg_FKP_split[0])
     NZ_name = arg_FKP_split[1]
-# Load mask to take STATUS & MASK. Also only applies to (DESI) FITS files
-mask = int(sys.argv[6]) if len(sys.argv) >= 7 else -1 # default mask is -1 which is as many 1 bits as needed
+# Load mask to select STATUS that has all 1-bits set in mask. Also only applies to (DESI) FITS files
+mask = int(sys.argv[6]) if len(sys.argv) >= 7 else 0 # default is 0 - no filtering
 filt = True # default pre-filter is true
 
 if input_file.endswith(".fits"):
@@ -54,7 +54,7 @@ if input_file.endswith(".fits"):
         if use_FKP_weights:
             all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
         if "WEIGHT" not in colnames and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
-        if mask != -1: filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
+        filt = (data["STATUS"] & mask == mask) # all 1-bits from mask have to be set in STATUS
 else:
     # read text file
     # Load in data:

@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 import numpy as np
 
-def check_path(filename):
+def check_path(filename, fallback_dir=""):
     if os.path.isfile(filename): return filename
     filename = os.path.join(fallback_dir, os.path.basename(filename))
     assert os.path.isfile(filename), f"{filename} missing"
@@ -25,7 +25,7 @@ if legendre:
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
 assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
 
-ndata = 3e6 # number of data points
+ndata = None # number of data points; set None to make sure it is overwritten before any usage and see an error otherwise
 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
@@ -50,7 +50,7 @@ boxsize = 2000 # only used if periodic=1
 # data processing steps
 redshift_cut = 1
 FKP_weight = 0
-mask = 0b1010 # from the end and numbering from 0: bit 1 - object in Y5 footprint, bit 3 - subsampling matching LRG_main n(z) distribution based on DA02 results
+mask = 0b1010 # from the end and numbering from 0: bit 1 - object in Y5 footprint, bit 3 - subsampling matching LRG_main n(z) distribution based on DA02 results; both need to be set
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
 do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
@@ -60,7 +60,6 @@ if do_counts or cat_randoms:
 # CF options
 convert_cf = 1
 if convert_cf:
-    fallback_dir = "."
     pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 10
@@ -80,7 +79,6 @@ if convert_to_xyz:
 z_min, z_max = 0.4, 0.6 # for redshift cut
 
 # File names and directories
-fallback_dir = "."
 if jackknife:
     data_ref_filename = check_path("/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_z0.800_AbacusSummit_base_c000_ph000.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_random_S{i+1}00_1X.fits") for i in range(10)] # random filenames
@@ -131,6 +129,17 @@ def exec_print_and_log(commandline):
     os.system(f"{commandline} | tee -a {logfile}")
 
 print("Starting Computation")
+
+# full-survey CF conversion, will also load number of data points from pycorr
+if convert_cf:
+    os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
+    r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
+    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames)} {corname} {r_step_cf} {mbin_cf}")
+    ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
+    if smoothen_cf:
+        corname_old = corname
+        corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
+        exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
 
 if periodic and make_randoms:
     # create random points
@@ -190,17 +199,7 @@ if cat_randoms: # concatenate randoms
     input_filenames = [cat_randoms_file] # now it is the only file
     nfiles = 1
 
-# CF conversion
-if convert_cf:
-    # full-survey CF
-    os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
-    r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
-    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames)} {corname} {r_step_cf} {mbin_cf}")
-    ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
-    if smoothen_cf:
-        corname_old = corname
-        corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
-        exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
+if convert_cf: # this is really for pair counts and jackknives
     os.makedirs(os.path.dirname(binned_pair_name), exist_ok=1) # make sure all dirs exist
     r_step = (rmax-rmin)//nbin
     if jackknife: # convert jackknife xi and all counts
@@ -218,7 +217,7 @@ if convert_cf:
             exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {data_filename} {xyzwj_filename} {njack}")
             data_filename = xyzwj_filename
             # compute jackknife weights
-            exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} weights/") # 1. is max mu, weights/ is output dir
+            exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_name)}/") # 1. is max mu
             # run RascalC own xi jack estimator
             exec_print_and_log(f"python python/xi_estimator_jack.py {data_filename} {cat_randoms_file} {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_name)}/ {jackknife_pairs_name}") # 1. is max mu
             if not cat_randoms: # reload full counts from pycorr, override jackknives - to prevent normalization issues
@@ -227,7 +226,7 @@ if convert_cf:
             exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
     else: # only need full, binned pair counts
         if cat_randoms and do_counts: # compute counts with our own script
-            exec_print_and_log(f"python python/RR_counts.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} weights/ 0") # 1. is max mu, weights/ is output dir, 0 means not normed
+            exec_print_and_log(f"python python/RR_counts.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_name)}/ 0") # 1. is max mu, 0 means not normed
         else: # convert full, binned pair counts
             exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
 
