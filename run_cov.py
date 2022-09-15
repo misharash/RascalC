@@ -218,7 +218,7 @@ if convert_cf:
             exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {data_filename} {xyzwj_filename} {njack}")
             data_filename = xyzwj_filename
             # compute jackknife weights
-            exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} weights/") # 1. is max mu, weights/ is output dir
+            exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_name)}/") # 1. is max mu
             # run RascalC own xi jack estimator
             exec_print_and_log(f"python python/xi_estimator_jack.py {data_filename} {cat_randoms_file} {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_name)}/ {jackknife_pairs_name}") # 1. is max mu
             if not cat_randoms: # reload full counts from pycorr, override jackknives - to prevent normalization issues
@@ -227,7 +227,7 @@ if convert_cf:
             exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filename} {xi_jack_name} {jackknife_weights_name} {jackknife_pairs_name} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
     else: # only need full, binned pair counts
         if cat_randoms and do_counts: # compute counts with our own script
-            exec_print_and_log(f"python python/RR_counts.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} weights/ 0") # 1. is max mu, weights/ is output dir, 0 means not normed
+            exec_print_and_log(f"python python/RR_counts.py {cat_randoms_file} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_name)}/ 0") # 1. is max mu, 0 means not normed
         else: # convert full, binned pair counts
             exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filename} {binned_pair_name} {r_step} {mbin} {counts_factor} {split_above}")
 
