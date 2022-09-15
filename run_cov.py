@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 import numpy as np
 
-def check_path(filename):
+def check_path(filename, fallback_dir=""):
     if os.path.isfile(filename): return filename
     filename = os.path.join(fallback_dir, os.path.basename(filename))
     assert os.path.isfile(filename), f"{filename} missing"
@@ -50,7 +50,7 @@ boxsize = 2000 # only used if periodic=1
 # data processing steps
 redshift_cut = 1
 FKP_weight = 0
-mask = -1 # default, basically no mask
+mask = 0 # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
 do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
@@ -60,7 +60,6 @@ if do_counts or cat_randoms:
 # CF options
 convert_cf = 1
 if convert_cf:
-    fallback_dir = "."
     pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Xi/xi_ez_LRG_cutsky_seed2_z0.4_1.1.npy")]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 10
@@ -80,7 +79,6 @@ if convert_to_xyz:
 z_min, z_max = 0.4, 1.1 # for redshift cut
 
 # File names and directories
-fallback_dir = "."
 if jackknife:
     data_ref_filename = check_path("/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Mocks/LRG_z0.800_cutsky_seed2_data.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Mocks/LRG_z0.800_cutsky_S{i+1}00_random.fits") for i in range(10)] # random filenames
