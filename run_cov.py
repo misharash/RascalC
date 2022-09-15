@@ -56,12 +56,12 @@ create_jackknives = jackknife and 1
 do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
-    cat_randoms_file = "LRG_z0.800_cutsky_seed1_S100-1000_random.xyzwj"
+    cat_randoms_file = "LRG_z0.800_cutsky_seed2_S100-1000_random.xyzwj"
 # CF options
 convert_cf = 1
 if convert_cf:
     fallback_dir = "."
-    pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Xi/xi_ez_LRG_cutsky_seed1_z0.4_1.1.npy")]
+    pycorr_filenames = [check_path("/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Xi/xi_ez_LRG_cutsky_seed2_z0.4_1.1.npy")]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 10
     split_above = np.inf
@@ -82,10 +82,10 @@ z_min, z_max = 0.4, 1.1 # for redshift cut
 # File names and directories
 fallback_dir = "."
 if jackknife:
-    data_ref_filename = check_path("/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Mocks/LRG_z0.800_cutsky_seed1_data.fits") # for jackknife reference only, has to have rdz contents
+    data_ref_filename = check_path("/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Mocks/LRG_z0.800_cutsky_seed2_data.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/LRG/Mocks/LRG_z0.800_cutsky_S{i+1}00_random.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
-outdir = "out_seed1/run4" # output file directory
+outdir = "out_seed2" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 corname = os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat")
 binned_pair_name = os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat")
