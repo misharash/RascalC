@@ -25,7 +25,7 @@ if legendre:
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
 assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
 
-ndata = 3e6 # number of data points
+ndata = None # number of data points; set None to make sure it is overwritten before any usage and see an error otherwise
 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
@@ -132,6 +132,17 @@ def exec_print_and_log(commandline):
 
 print("Starting Computation")
 
+# full-survey CF conversion, will also load number of data points from pycorr
+if convert_cf:
+    os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
+    r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
+    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames)} {corname} {r_step_cf} {mbin_cf}")
+    ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
+    if smoothen_cf:
+        corname_old = corname
+        corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
+        exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
+
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
@@ -190,17 +201,7 @@ if cat_randoms: # concatenate randoms
     input_filenames = [cat_randoms_file] # now it is the only file
     nfiles = 1
 
-# CF conversion
-if convert_cf:
-    # full-survey CF
-    os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
-    r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
-    exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames)} {corname} {r_step_cf} {mbin_cf}")
-    ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
-    if smoothen_cf:
-        corname_old = corname
-        corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
-        exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
+if convert_cf: # this is really for pair counts and jackknives
     os.makedirs(os.path.dirname(binned_pair_name), exist_ok=1) # make sure all dirs exist
     r_step = (rmax-rmin)//nbin
     if jackknife: # convert jackknife xi and all counts
