@@ -44,7 +44,7 @@ N3 = 40 # number of third cells/particles per secondary cell/particle
 N4 = 80 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
-nside = 301 # grid size for accelerating pair count
+nside = 349 # grid size for accelerating pair count
 boxsize = 2000 # only used if periodic=1
 
 # data processing steps
@@ -76,14 +76,14 @@ if convert_to_xyz:
     Omega_k = 0
     w_dark_energy = -1
 
-z_min, z_max = 0.4, 0.6 # for redshift cut
+z_min, z_max = 0.6, 0.8 # for redshift cut
 
 # File names and directories
 if jackknife:
     data_ref_filename = check_path("/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_z0.800_AbacusSummit_base_c000_ph000.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_random_S{i+1}00_1X.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
-outdir = "z0.4-0.6" # output file directory
+outdir = f"z{z_min}-{z_max}" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 corname = os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat")
 binned_pair_name = os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat")
@@ -141,7 +141,7 @@ if convert_cf:
         corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
         exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
 
-ndata = 1948648.28 # override average number of data points, because it is not consistent with pycorr files here
+ndata = 3020957.2 # override average number of data points, because it is not consistent with pycorr files here
 
 if periodic and make_randoms:
     # create random points
