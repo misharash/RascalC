@@ -54,7 +54,7 @@ if input_file.endswith(".fits"):
         if use_FKP_weights:
             all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
         if "WEIGHT" not in colnames and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
-        filt = (data["STATUS"] & mask == mask) # all 1-bits from mask have to be set in STATUS
+        if mask: filt = (data["STATUS"] & mask == mask) # all 1-bits from mask have to be set in STATUS; skip if mask=0
 else:
     # read text file
     # Load in data:
