@@ -141,6 +141,8 @@ if convert_cf:
         corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
         exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
 
+ndata = 1948648.28 # override average number of data points, because it is not consistent with pycorr files here
+
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
