@@ -44,7 +44,7 @@ N3 = 40 # number of third cells/particles per secondary cell/particle
 N4 = 80 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
-nside = 349 # grid size for accelerating pair count
+nside = 401 # grid size for accelerating pair count
 boxsize = 2000 # only used if periodic=1
 
 # data processing steps
@@ -76,7 +76,7 @@ if convert_to_xyz:
     Omega_k = 0
     w_dark_energy = -1
 
-z_min, z_max = 0.6, 0.8 # for redshift cut
+z_min, z_max = 0.8, 1.1 # for redshift cut
 
 # File names and directories
 if jackknife:
@@ -144,7 +144,7 @@ if convert_cf:
         corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
         exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
 
-ndata = 3020957.2 # override average number of data points, because it is not consistent with pycorr files here
+ndata = 3223302.28 # override average number of data points, because it is not consistent with pycorr files here
 
 if periodic and make_randoms:
     # create random points
