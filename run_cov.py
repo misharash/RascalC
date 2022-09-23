@@ -95,6 +95,9 @@ if jackknife:
 if legendre:
     phi_name = os.path.join(tmpdir, f"BinCorrectionFactor_n{nbin}_periodic_11.txt")
 
+if do_counts or cat_randoms: # move concatenated randoms file to tmpdir as well
+    cat_randoms_file = os.path.join(tmpdir, cat_randoms_file)
+
 # binning files to be created automatically
 binfile = "radial_binning_cov.csv"
 binfile_cf = "radial_binning_corr.csv"
