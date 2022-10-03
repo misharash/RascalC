@@ -93,7 +93,7 @@ if jackknife:
         xi_jack_name = os.path.join(tmpdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat")
         jackknife_pairs_name = os.path.join(tmpdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_11.dat")
 if legendre:
-    phi_name = os.path.join(tmpdir, f"BinCorrectionFactor_n{nbin}_periodic_11.txt")
+    phi_name = os.path.join(tmpdir, f"BinCorrectionFactor_n{nbin}_" + ("periodic" if periodic else f'm{mbin}') + "_11.txt")
 
 if do_counts or cat_randoms: # move concatenated randoms file to tmpdir as well
     cat_randoms_file = os.path.join(tmpdir, cat_randoms_file)
