@@ -18,7 +18,7 @@ make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make
 jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
-legendre = 0
+legendre = 1
 if legendre:
     max_l = 4
 
@@ -83,7 +83,7 @@ if jackknife:
     data_ref_filename = check_path("/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_z0.800_AbacusSummit_base_c000_ph000.fits") # for jackknife reference only, has to have rdz contents
 input_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_random_S{i+1}00_1X.fits") for i in range(10)] # random filenames
 nfiles = len(input_filenames)
-outdir = "z0.4-0.6" # output file directory
+outdir = f"z{z_min}-{z_max}_legendre" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 corname = os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat")
 binned_pair_name = os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat")
