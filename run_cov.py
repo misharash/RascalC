@@ -166,7 +166,7 @@ if create_jackknives and redshift_cut: # prepare reference file
 
 command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -cor {corname} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}"
 if legendre:
-    command += f" -max_l {max_l} -phi_file {phi_name}"
+    command += f" -max_l {max_l}"
 else:
     command += f" -RRbin {binned_pair_name} -mbin {mbin}"
 if periodic:
