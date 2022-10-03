@@ -56,7 +56,7 @@ create_jackknives = jackknife and 1
 do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
-    cat_randoms_file = "cutsky_LRG_random_S100-1000_10X.xyzwj"
+    cat_randoms_file = "cutsky_LRG_random_S100-1000_10X.xyzw"
 # CF options
 convert_cf = 1
 if convert_cf:
