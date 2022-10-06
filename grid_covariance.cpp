@@ -195,6 +195,13 @@ int main(int argc, char *argv[]) {
         all_weights[1].rescale(all_grid[1].norm,all_grid[1].norm);
         all_weights[2].rescale(all_grid[0].norm,all_grid[1].norm);
     }
+#else
+    // Now rescale correction functions based on number of particles - in the same fasion as with RR counts aboveß
+    all_survey[0].rescale(all_grid[0].norm,all_grid[0].norm);
+    if(par.multi_tracers==true){
+        all_survey[1].rescale(all_grid[1].norm,all_grid[1].norm);
+        all_survey[2].rescale(all_grid[0].norm,all_grid[1].norm);
+    }
 #endif
 
     // Now define all possible correlation functions and random draws:
