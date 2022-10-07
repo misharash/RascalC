@@ -51,8 +51,8 @@ boxsize = 2000 # only used if periodic=1
 
 suffixes_tracer_all = ("", "2") # all supported tracer suffixes
 suffixes_tracer = suffixes_tracer_all[:ntracers]
-indices_corr_all = ("11", "22", "12") # all supported 2PCF indices
-suffixes_corr_all = ("", "2", "12") # all supported 2PCF suffixes
+indices_corr_all = ("11", "12", "22") # all supported 2PCF indices
+suffixes_corr_all = ("", "12", "2") # all supported 2PCF suffixes
 ncorr = ntracers*(ntracers+1)//2 # number of correlation functions
 indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
@@ -212,7 +212,7 @@ for t, (input_filenames, nfiles) in enumerate(zip(input_filenames, nfiles)):
                 input_filename = xyzw_filename
             if create_jackknives:
                 xyzwj_filename = change_extension(input_filename, "xyzwj")
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {input_filename} {xyzwj_filename} {njack}")
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {input_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
                 input_filename = xyzwj_filename
         input_filenames[i] = input_filename # save final input filename for next loop
         print_and_log(f"Finished preparing file {i+1} of {nfiles}")
@@ -235,6 +235,8 @@ if convert_cf: # this is really for pair counts and jackknives
             # compute jackknife weights
             if ntracers == 1:
                 exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
+            elif ntracers == 2:
+                exec_print_and_log(f"python python/jackknife_weights_cross.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             else:
                 print("Number of tracers not supported for this operation (yet)")
                 sys.exit(1)
@@ -245,11 +247,13 @@ if convert_cf: # this is really for pair counts and jackknives
                 exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight}")
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_filename} {data_filename} {xyzwj_filename} {njack}")
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_filename} {data_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
                 data_ref_filenames[t] = xyzwj_filename
             # run RascalC own xi jack estimator
             if ntracers == 1:
                 exec_print_and_log(f"python python/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]}") # 1. is max mu
+            elif ntracers == 2:
+                exec_print_and_log(f"python python/xi_estimator_jack_cross.py {' '.join(data_ref_filenames)} {' '.join(cat_randoms_files)} {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {' '.join(jackknife_pairs_names)}") # 1. is max mu
             else:
                 print("Number of tracers not supported for this operation (yet)")
                 sys.exit(1)
@@ -261,6 +265,8 @@ if convert_cf: # this is really for pair counts and jackknives
             if cat_randoms: # compute counts with our own script
                 if ntracers == 1:
                     exec_print_and_log(f"python python/RR_counts.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
+                elif ntracers == 2:
+                    exec_print_and_log(f"python python/RR_counts_multi.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
                 else:
                     print("Number of tracers not supported for this operation (yet)")
                     sys.exit(1)
@@ -287,6 +293,8 @@ for i in range(nfiles):
     if legendre: # need correction function
         if ntracers == 1:
             exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
+        elif ntracers == 2:
+            exec_print_and_log(f"python python/compute_correction_function_multi.py {' '.join(input_filenames)} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {' '.join(binned_pair_names)}")
         else:
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
