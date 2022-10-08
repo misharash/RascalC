@@ -6,7 +6,7 @@ import sys,os
 
 # PARAMETERS
 if len(sys.argv) not in (8, 10):
-    print("Usage: python correct_disconnected.py {N_R_BINS} {mN_MU_BINS/lMAX_L} {COVARIANCE_INPUT_DIR} {N_SAMPLES} {COVARIANCE_OUTPUT_DIR} {NRANDOMS1} {NDATA1} [{NRANDOMS2} {NDATA2}]")
+    print("Usage: python correct_legendre_norm.py {N_R_BINS} {mN_MU_BINS/lMAX_L} {COVARIANCE_INPUT_DIR} {N_SAMPLES} {COVARIANCE_OUTPUT_DIR} {NRANDOMS1} {NDATA1} [{NRANDOMS2} {NDATA2}]")
     sys.exit()
 
 n = int(sys.argv[1])
@@ -17,7 +17,7 @@ output_root = str(sys.argv[5])
 norm1 = float(sys.argv[6]) / float(sys.argv[7]) # nrandoms1/ndata1, like in the C++ code
 norm2 = float(sys.argv[8]) / float(sys.argv[9]) if len(sys.argv) >= 10 else 1 # nrandoms2/ndata2 if present, default 1
 
-norm = [norm1, norm2]
+norm = {1: norm1, 2: norm2}
 
 input_root_all = os.path.join(input_root, 'CovMatricesAll/')
 input_root_jack = os.path.join(input_root, 'CovMatricesJack/')
