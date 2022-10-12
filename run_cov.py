@@ -199,10 +199,10 @@ if jackknife:
 print_and_log(f"Common command for C++ code: {command}")
 
 # processing steps for each random file
-for t, (input_filenames_t, nfiles) in enumerate(zip(input_filenames, nfiles)):
-    print_and_log(f"Starting preparing tracer {t+1} of {nfiles}")
+for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
+    print_and_log(f"Starting preparing tracer {t+1} of {ntracers}")
     for i, input_filename in enumerate(input_filenames_t):
-        print_and_log(f"Starting preparing file {i+1} of {nfiles}")
+        print_and_log(f"Starting preparing file {i+1} of {nfiles_t}")
         print_and_log(datetime.now())
         if periodic and make_randoms: # just save randoms to this file
             input_filename = change_extension(input_filename, "xyzw")
@@ -221,7 +221,7 @@ for t, (input_filenames_t, nfiles) in enumerate(zip(input_filenames, nfiles)):
                 exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {input_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
                 input_filename = xyzwj_filename
         input_filenames[t][i] = input_filename # save final input filename for next loop
-        print_and_log(f"Finished preparing file {i+1} of {nfiles}")
+        print_and_log(f"Finished preparing file {i+1} of {nfiles_t}")
 # end processing steps for each random file
 
 if cat_randoms: # concatenate randoms
