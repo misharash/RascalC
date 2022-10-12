@@ -13,7 +13,7 @@ def check_path(filename, fallback_dir=""):
 
 ##################### INPUT PARAMETERS ###################
 
-ntracers = 1 # number of tracers
+ntracers = 2 # number of tracers
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make any
 jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
@@ -57,6 +57,11 @@ ncorr = ntracers*(ntracers+1)//2 # number of correlation functions
 indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 
+reg = "N" # region for filenames
+tlabels = ("LRG", "ELG_LOPnotqso") # tracer labels for filenames
+assert len(tlabels) == ntracers, "Need label for each tracer"
+nrandoms = 10
+
 # data processing steps
 redshift_cut = 1
 FKP_weight = 1
@@ -66,14 +71,14 @@ create_jackknives = jackknife and 1
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
-    cat_randoms_files = ["LRG_N_0-9_clustering.ran.xyzwj"]
+    cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jacknknife else "") for tlabel in tlabels]
 # CF options
 convert_cf = 1
 if convert_cf:
     # first index is correlation function index
-    pycorr_filenames = [[check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/xi/smu/allcounts_LRG_N_0.4_1.1_default_FKP_lin_njack60_nran10_split20.npy")]]
-    counts_factor = 10
+    counts_factor = nrandoms
     split_above = 20
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/xi/da02/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 60}_nran{nrandoms}_split{split_above}.npy")] for corlabel in ("LRG", "LRG_ELG_LOPnotqso", "ELG_LOPnotqso")]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -87,20 +92,20 @@ if convert_to_xyz:
     Omega_k = 0
     w_dark_energy = -1
 
-z_min, z_max = 0.4, 1.1 # for redshift cut
+z_min, z_max = 0.8, 1.1 # for redshift cut
 
 # File names and directories
 if jackknife:
-    data_ref_filenames = [check_path("/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_clustering.dat.fits")] # for jackknife reference only, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/survey/catalogs/DA02/LSS/guadalupe/LSScats/EDAbeta/LRG_N_{i}_clustering.ran.fits") for i in range(10)]] # random filenames
+input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = "out" # output file directory
-tmpdir = "." # directory to write intermediate files, mainly data processing steps
+outdir = reg # output file directory
+tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
 if jackknife:
