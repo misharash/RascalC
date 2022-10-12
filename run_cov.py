@@ -72,6 +72,9 @@ do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC
 cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jacknknife else "") for tlabel in tlabels]
+
+z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
+
 # CF options
 convert_cf = 1
 if convert_cf:
@@ -91,8 +94,6 @@ if convert_to_xyz:
     Omega_m = 0.31519
     Omega_k = 0
     w_dark_energy = -1
-
-z_min, z_max = 0.8, 1.1 # for redshift cut
 
 # File names and directories
 if jackknife:
