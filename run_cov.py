@@ -78,7 +78,8 @@ if convert_to_xyz:
 z_min, z_max = 0.4, 1.1 # for redshift cut
 
 # File names and directories
-data_ref_filename = None # for jackknife reference only, has to have rdz contents
+if jackknife:
+    data_ref_filename = None # for jackknife reference only, has to have rdz contents
 input_filenames = ["randoms.xyzw"] # random filenames
 nfiles = len(input_filenames)
 outdir = "out" # output file directory
