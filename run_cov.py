@@ -59,7 +59,7 @@ if do_counts or cat_randoms:
 # CF options
 convert_cf = 1
 if convert_cf:
-    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]
+    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/ELG/Xi/Pre/HOD/antoine/AbacusSummit_base_c000_ph{i:03d}_hod0.npy") for i in range(25)]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 1
     split_above = 0
@@ -82,8 +82,8 @@ if jackknife:
     data_ref_filename = None # for jackknife reference only, has to have rdz contents
 input_filenames = ["randoms.xyzw"] # random filenames
 nfiles = len(input_filenames)
-outdir = "out" # output file directory
-tmpdir = "." # directory to write intermediate files, mainly data processing steps
+outdir = "antoine-HOD0" # output file directory
+tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 corname = os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_11.dat")
 binned_pair_name = os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + "_11.dat")
 if jackknife:
