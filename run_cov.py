@@ -185,7 +185,7 @@ command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread 
 if legendre:
     command += f" -max_l {max_l}"
 else:
-    command += "".join([f" -RRbin{suffixes_corr[c]} {binned_pair_names[c]}" for c in range(ncorr)]) + f"-mbin {mbin}"
+    command += "".join([f" -RRbin{suffixes_corr[c]} {binned_pair_names[c]}" for c in range(ncorr)]) + f" -mbin {mbin}"
 if periodic:
     command += " -perbox"
 if jackknife:
