@@ -16,31 +16,32 @@ Output file format has (x,y,z,w) coordinates in Mpc/h units
 import sys
 import numpy as np
 
-# Determine whether to use FKP weights, only applies to (DESI) FITS files
-if len(sys.argv)==7:
-    use_FKP_weights = bool(sys.argv[6])
-else:
-    use_FKP_weights = False
 
-# Read in optional cosmology parameters
-if len(sys.argv) in (6, 7):
-    omega_m = float(sys.argv[3])
-    omega_k = float(sys.argv[4])
-    w_dark_energy = float(sys.argv[5])
-elif len(sys.argv)==3: # use defaults (from the BOSS DR12 2016 clustering paper assuming LCDM)
-    omega_m = 0.31
-    omega_k = 0.
-    w_dark_energy = -1.
-else:
-    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} [{OMEGA_M} {OMEGA_K} {W_DARK_ENERGY} [{USE_FKP_WEIGHTS}]]")
+if len(sys.argv) not in (3, 4, 5, 6, 7):
+    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} [{OMEGA_M} {OMEGA_K} {W_DARK_ENERGY} [{USE_FKP_WEIGHTS or P0,NZ_name}]]")
     sys.exit()
-
-print("\nUsing cosmological parameters as Omega_m = %.2f, Omega_k = %.2f, w = %.2f" %(omega_m,omega_k,w_dark_energy))
           
 # Load file names
 input_file = str(sys.argv[1])
 output_file = str(sys.argv[2])
 print("\nUsing input file %s in Ra,Dec,z coordinates\n"%input_file)
+
+# Read in optional cosmology parameters
+omega_m = float(sys.argv[3]) if len(sys.argv) >= 4 else 0.31
+omega_k = float(sys.argv[4]) if len(sys.argv) >= 5 else 0
+w_dark_energy = float(sys.argv[5]) if len(sys.argv) >= 6 else -1
+# defaults are from the BOSS DR12 2016 clustering paper assuming LCDM
+
+print("\nUsing cosmological parameters as Omega_m = %.2f, Omega_k = %.2f, w = %.2f" %(omega_m,omega_k,w_dark_energy))
+
+# Determine whether to use FKP weights, only applies to (DESI) FITS files
+use_FKP_weights = (sys.argv[6].lower() not in ("0", "false")) if len(sys.argv) >= 7 else False # bool(string) is True for non-empty string, so need to be more specific to allow explicit False from a command-line argument
+# determine if it actually has P0,NZ_name format. Such strings should give True above.
+arg_FKP_split = sys.argv[6].split(",")
+manual_FKP = (len(arg_FKP_split) == 2) # whether to compute FKP weights manually
+if manual_FKP:
+    P0 = float(arg_FKP_split[0])
+    NZ_name = arg_FKP_split[1]
 
 # Load the wcdm module from Daniel Eisenstein
 import os
@@ -52,14 +53,17 @@ if input_file.endswith(".fits"):
     # read fits file, correct for DESI format
     from astropy.io import fits
     print("Reading in data")
-    f = fits.open(input_file)
-    data = f[1].data
-    all_ra = data["RA"]
-    all_dec = data["DEC"]
-    all_z = data["Z"]
-    all_w = data["WEIGHT"]
-    if use_FKP_weights:
-        all_w *= data["WEIGHT_FKP"]
+    with fits.open(input_file) as f:
+        data = f[1].data
+        all_ra = data["RA"]
+        all_dec = data["DEC"]
+        all_z = data["Z"]
+        colnames = data.columns.names
+        all_w = data["WEIGHT"] if "WEIGHT" in colnames else np.ones_like(all_z)
+        if use_FKP_weights:
+            all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
+        if "WEIGHT" not in colnames and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
+        if mask != -1: filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
 else:
     # read text file
     # Load in data:
