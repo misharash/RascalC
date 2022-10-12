@@ -16,7 +16,7 @@ def check_path(filename, fallback_dir=""):
 ntracers = 2 # number of tracers
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make any
-jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
+jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
 legendre = 0
