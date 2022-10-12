@@ -187,14 +187,15 @@ if create_jackknives and redshift_cut: # prepare reference file
         exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {mask}")
         data_ref_filenames[i] = rdzw_ref_filename
 
-command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -cor {corname} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}"
-if legendre:
+command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
+command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
+if legendre: # only provide max multipole l for now
     command += f" -max_l {max_l}"
-else:
+else: # provide binned pair counts files and number of mu bin
     command += "".join([f" -RRbin{suffixes_corr[c]} {binned_pair_names[c]}" for c in range(ncorr)]) + f" -mbin {mbin}"
-if periodic:
+if periodic: # append periodic flag
     command += " -perbox"
-if jackknife:
+if jackknife: # provide jackknife weight files for all correlations
     command += "".join([f" -jackknife{suffixes_corr[c]} {jackknife_weights_names[c]}" for c in range(ncorr)])
 print_and_log(f"Common command for C++ code: {command}")
 
