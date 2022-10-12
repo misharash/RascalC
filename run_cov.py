@@ -27,7 +27,7 @@ assert ntracers in (1, 2), "Only single- and two-tracer modes are currently supp
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
 assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
 
-ndata = None # number of data points; set None to make sure it is overwritten before any usage and see an error otherwise
+ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
@@ -53,9 +53,12 @@ suffixes_tracer_all = ("", "2") # all supported tracer suffixes
 suffixes_tracer = suffixes_tracer_all[:ntracers]
 indices_corr_all = ("11", "12", "22") # all supported 2PCF indices
 suffixes_corr_all = ("", "12", "2") # all supported 2PCF suffixes
+tracer1_corr_all = (0, 0, 1)
+tracer2_corr_all = (0, 1, 1)
 ncorr = ntracers*(ntracers+1)//2 # number of correlation functions
 indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
+tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
 reg = "N" # region for filenames
 tlabels = ("LRG", "ELG_LOPnotqso") # tracer labels for filenames
@@ -157,16 +160,16 @@ print("Starting Computation")
 
 # full-survey CF conversion, will also load number of data points from pycorr
 if convert_cf:
-    for i, corname in enumerate(cornames):
+    r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
+    for c, corname in enumerate(cornames):
         os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
-        r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
-        exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames[i])} {corname} {r_step_cf} {mbin_cf}")
-        ndata = np.loadtxt(corname + ".ndata")[0] # override ndata
+        exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames[c])} {corname} {r_step_cf} {mbin_cf}")
+        ndata[tracer2_corr[c]] = np.loadtxt(corname + ".ndata")[1] # override ndata for second tracer, so that autocorrelations are prioritized
         if smoothen_cf:
             corname_old = corname
             corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
             exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
-            cornames[i] = corname # save outside of the loop
+            cornames[c] = corname # save outside of the loop
 
 if periodic and make_randoms:
     # create random points
@@ -187,7 +190,8 @@ if create_jackknives and redshift_cut: # prepare reference file
         exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {mask}")
         data_ref_filenames[i] = rdzw_ref_filename
 
-command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -norm {ndata} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
+command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
+command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
 command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
 if legendre: # only provide max multipole l for now
     command += f" -max_l {max_l}"
