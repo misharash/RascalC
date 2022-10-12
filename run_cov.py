@@ -59,7 +59,7 @@ if do_counts or cat_randoms:
 # CF options
 convert_cf = 1
 if convert_cf:
-    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/ELG/Xi/Pre/HOD/antoine/AbacusSummit_base_c000_ph{i:03d}_hod0.npy") for i in range(25)]
+    pycorr_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/ELG/Xi/Pre/HOD/antoine/AbacusSummit_base_c000_ph{i:03d}_hod0.npy", fallback_dir="antoine") for i in range(25)]
     pycorr_filename = pycorr_filenames[0]
     counts_factor = 1
     split_above = 0
