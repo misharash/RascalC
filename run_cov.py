@@ -236,7 +236,7 @@ if cat_randoms: # concatenate randoms
     nfiles = 1
 else:
     nfiles = nfiles[0]
-# now the number of files to process in the same for sure
+# now the number of files to process is the same for sure
 
 if convert_cf: # this is really for pair counts and jackknives
     if do_counts: # redo counts
