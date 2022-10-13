@@ -5,8 +5,8 @@ import numpy as np
 import sys,os
 
 # PARAMETERS
-if len(sys.argv)!=7:
-    print("Usage: python post_process_jackknife.py {XI_JACKKNIFE_FILE} {WEIGHTS_DIR} {COVARIANCE_DIR} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR}")
+if len(sys.argv) not in (7, 8):
+    print("Usage: python post_process_jackknife.py {XI_JACKKNIFE_FILE} {WEIGHTS_DIR} {COVARIANCE_DIR} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SKIP_R_BINS}]")
     sys.exit()
         
 jackknife_file = str(sys.argv[1])
@@ -15,6 +15,9 @@ file_root = str(sys.argv[3])
 m = int(sys.argv[4])
 n_samples = int(sys.argv[5])
 outdir = str(sys.argv[6])
+skip_bins = 0
+if len(sys.argv) == 8:
+    skip_bins = int(sys.argv[7]) * m # convert from radial to total number of bins right away
 
 # Create output directory
 if not os.path.exists(outdir):
@@ -22,16 +25,16 @@ if not os.path.exists(outdir):
 
 # Load jackknife xi estimates from data
 print("Loading correlation function jackknife estimates from %s"%jackknife_file)
-xi_jack = np.loadtxt(jackknife_file,skiprows=2)
+xi_jack = np.loadtxt(jackknife_file,skiprows=2)[:, skip_bins:]
 n_bins = xi_jack.shape[1] # total bins
 n_jack = xi_jack.shape[0] # total jackknives
-n = n_bins//m # radial bins
+n = (n_bins+skip_bins)//m # radial bins
 
 weight_file = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_11.dat'%(n,m,n_jack))
 RR_file = os.path.join(weight_dir, 'binned_pair_counts_n%d_m%d_j%d_11.dat'%(n,m,n_jack))
 
 print("Loading weights file from %s"%weight_file)
-weights = np.loadtxt(weight_file)[:,1:]
+weights = np.loadtxt(weight_file)[:, 1+skip_bins:]
 
 # First exclude any dodgy jackknife regions
 good_jk = np.where(np.all(np.isfinite(xi_jack), axis=1))[0] # all xi in jackknife have to be normal numbers
@@ -49,7 +52,7 @@ denom = np.matmul(weights.T,weights)
 data_cov /= (np.ones_like(denom)-denom)
 
 print("Loading weights file from %s"%RR_file)
-RR=np.loadtxt(RR_file)
+RR=np.loadtxt(RR_file)[skip_bins:]
 
 def load_matrices(index,jack=True):
     """Load intermediate or full covariance matrices"""
@@ -57,14 +60,14 @@ def load_matrices(index,jack=True):
         cov_root = os.path.join(file_root, 'CovMatricesJack/')
     else:
         cov_root = os.path.join(file_root, 'CovMatricesAll/')
-    c2 = np.diag(np.loadtxt(cov_root+'c2_n%d_m%d_11_%s.txt'%(n,m,index)))
-    c3 = np.loadtxt(cov_root+'c3_n%d_m%d_1,11_%s.txt'%(n,m,index))
-    c4 = np.loadtxt(cov_root+'c4_n%d_m%d_11,11_%s.txt'%(n,m,index))
+    c2 = np.diag(np.loadtxt(cov_root+'c2_n%d_m%d_11_%s.txt'%(n,m,index))[skip_bins:])
+    c3 = np.loadtxt(cov_root+'c3_n%d_m%d_1,11_%s.txt'%(n,m,index))[skip_bins:, skip_bins:]
+    c4 = np.loadtxt(cov_root+'c4_n%d_m%d_11,11_%s.txt'%(n,m,index))[skip_bins:, skip_bins:]
     if jack:
-        EEaA1 = np.loadtxt(cov_root+'EE1_n%d_m%d_11_%s.txt' %(n,m,index))
-        EEaA2 = np.loadtxt(cov_root+'EE2_n%d_m%d_11_%s.txt' %(n,m,index))
-        RRaA1 = np.loadtxt(cov_root+'RR1_n%d_m%d_11_%s.txt' %(n,m,index))
-        RRaA2 = np.loadtxt(cov_root+'RR2_n%d_m%d_11_%s.txt' %(n,m,index))
+        EEaA1 = np.loadtxt(cov_root+'EE1_n%d_m%d_11_%s.txt' %(n,m,index))[:, skip_bins:]
+        EEaA2 = np.loadtxt(cov_root+'EE2_n%d_m%d_11_%s.txt' %(n,m,index))[:, skip_bins:]
+        RRaA1 = np.loadtxt(cov_root+'RR1_n%d_m%d_11_%s.txt' %(n,m,index))[:, skip_bins:]
+        RRaA2 = np.loadtxt(cov_root+'RR2_n%d_m%d_11_%s.txt' %(n,m,index))[:, skip_bins:]
     
         # Compute disconnected term
         w_aA1 = RRaA1/np.sum(RRaA1,axis=0)
@@ -89,6 +92,7 @@ eig_c4 = eigvalsh(c4j)
 eig_c2 = eigvalsh(c2j)
 if min(eig_c4)<-1.*min(eig_c2):
     print("Jackknife 4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
     sys.exit()
 
 # Load in partial jackknife theoretical matrices
@@ -141,6 +145,7 @@ eig_c4f = eigvalsh(c4f)
 eig_c2f = eigvalsh(c2f)
 if min(eig_c4f)<min(eig_c2f)*-1.:
     print("Full 4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4f), min(eig_c2f)))
     sys.exit()
 
 # Compute full precision matrix
