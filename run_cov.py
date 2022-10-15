@@ -303,9 +303,9 @@ for i in range(nfiles):
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
     if legendre: # need correction function
         if ntracers == 1:
-            exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
+            exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
         elif ntracers == 2:
-            exec_print_and_log(f"python python/compute_correction_function_multi.py {' '.join(input_filenames)} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {' '.join(binned_pair_names)}")
+            exec_print_and_log(f"python python/compute_correction_function_multi.py {' '.join([names[i] for names in input_filenames])} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {' '.join(binned_pair_names)}")
         else:
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
