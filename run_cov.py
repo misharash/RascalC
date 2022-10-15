@@ -25,6 +25,7 @@ if legendre:
 
 assert ntracers in (1, 2), "Only single- and two-tracer modes are currently supported"
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
+assert not (make_randoms and not periodic), "Non-periodic randoms not supported"
 assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
@@ -174,10 +175,9 @@ if convert_cf:
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
-    nrandoms = int(ndata)
     np.random.seed(42) # for reproducibility
-    randoms = np.append(np.random.rand(ntracers, nfiles[0], nrandoms, 3) * boxsize, np.ones((ntracers, nfiles[0], nrandoms, 1)), axis=-1)
-    # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to unity
+    randoms = [np.append(np.random.rand(nfiles_t, int(ndata_t), 3) * boxsize, np.ones((nfiles_t, int(ndata_t), 1)), axis=-1) for nfiles_t, ndata_t in zip(nfiles, ndata)]
+    # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to unity. List of array; list index is tracer number, first array index is file number and the second is number of point. Keep number of points roughly equal to number of data for each tracer
     print_and_log(f"Generated random points")
 
 def change_extension(name, ext):
@@ -211,7 +211,7 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
         print_and_log(datetime.now())
         if periodic and make_randoms: # just save randoms to this file
             input_filename = change_extension(input_filename, "xyzw")
-            np.savetxt(input_filename, randoms[t, i])
+            np.savetxt(input_filename, randoms[t][i])
         else: # (potentially) run through all data processing steps
             if redshift_cut:
                 rdzw_filename = change_extension(input_filename, "rdzw")
