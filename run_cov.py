@@ -76,7 +76,7 @@ cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jacknknife else "") for tlabel in tlabels]
 
-z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
+z_min, z_max = 0.4, 1.1 # for redshift cut and filenames
 
 # CF options
 convert_cf = 1
