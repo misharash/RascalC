@@ -75,7 +75,7 @@ create_jackknives = jackknife and 1
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
-    cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jacknknife else "") for tlabel in tlabels]
+    cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
 z_min, z_max = 0.4, 1.1 # for redshift cut and filenames
 
