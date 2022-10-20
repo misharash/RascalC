@@ -64,11 +64,11 @@ tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 nseed = 3
 tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 10
+nrandoms = 20
 
 # data processing steps
 redshift_cut = 1
-FKP_weight = 0
+FKP_weight = 1
 mask = 0 # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
@@ -85,7 +85,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = nrandoms
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/{corlabel}/Xi/xi_ez_{corlabel}_cutsky_seed{nseed}_z{z_min}_{z_max}.npy")] for corlabel in ["LRG"]]
+    pycorr_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/jeongin/2PCF/DA02/EZ{corlabel}/2PCF_multipoles_IFTreciso_EZ{corlabel}_z{z_min}_{z_max}_default_fkp_seed{nseed}_nran{nrandoms}.npy")] for corlabel in ["LRG"]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -101,9 +101,9 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife:
-    data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/{tlabel}/Mocks/{tlabel}_z0.800_cutsky_seed{nseed}_data.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_data.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/{tlabel}/Mocks/{tlabel}_z0.800_cutsky_S{i+1}00_random.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_random_S{i+1}00.fits.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
