@@ -16,6 +16,17 @@ class CorrelationFunction{
         gsl_interp2d* interp_2d;
         gsl_spline* corfu1d;
         bool interp_setup = 0;
+
+        double smooth_transition(double x, double x1, double x2, double f1, double f2) {
+            // Smooth transition for f(x) given f(x1) = v1 and f(x2) = f2, assuming x2 > x1
+            if (x > x2) return f2;
+            if (x < x1) return f1;
+            double weight1 = sin((x-x1)/(x2-x1)*M_PI/2.);
+            weight1 *= weight1; // square the above, so that it's sin^2 having zero derivative at both ends
+            double weight2 = 1 - weight1;
+            return weight1 * f1 + weight2 * f2;
+        }
+
     public:
         double xi(double r, double mu){
             // 2D correlation function in radius and angular bins
@@ -31,7 +42,7 @@ class CorrelationFunction{
                 }
                 else if(r<rmin){
                     double tmu = fmin(fmax(mu,mumin),mumax);
-                    return gsl_interp2d_eval_extrap(interp_2d,y,x,z,tmu,rmin, xa, ya)/pow(rmin,2);
+                    return smooth_transition(r, rmin/2., rmin, gsl_interp2d_eval_extrap(interp_2d, y, x, z, tmu, rmin/2., xa, ya)/pow(rmin/2., 2), gsl_interp2d_eval_extrap(interp_2d, y, x, z, tmu, r, xa, ya)/pow(r, 2)); // this ensures xi goes as constant below rmin/2 (rmin is the middle of smallest bin) and not as 1/r which might cause problems, and the transition is smooth
                 }
                 if(mu<mumin){
                     double tr = fmin(fmax(r,rmin),rmax);
@@ -56,7 +67,7 @@ class CorrelationFunction{
             }
             else{
                 if(r<rmin){
-                    return gsl_spline_eval(corfu1d,rmin,x1a)/pow(rmin,2);
+                    return smooth_transition(r, rmin/2., rmin, gsl_spline_eval(corfu1d, rmin/2., x1a)/pow(rmin/2., 2), gsl_spline_eval(corfu1d, r, x1a)/pow(r, 2)); // this ensures xi goes as some constant below rmin/2 (rmin is the middle of smallest bin) and not as 1/r which might cause problems, and the transition is smooth
                 }
                 else
                     return gsl_spline_eval(corfu1d,r, x1a)/pow(r,2);
@@ -285,7 +296,7 @@ class CorrelationFunction{
         }
 
         mudim=!(mbin==1&&dmu==1.);
-        rmin=x[0];
+        rmin=x[1];
         rmax=x[xsize-1];
         // Mu range hardcoded to be between 0 and 1
         mumin=0.;
@@ -330,8 +341,8 @@ class CorrelationFunction{
         }
         assert(ct==nbin*mbin);
 
-        // Define r ranges (including zero)
-        rmin=x[0];
+        // Define r ranges (excluding zero)
+        rmin=x[1];
         rmax=x[xsize-1];
 
         for(int j=0;j<ysize;j++) y[j]=mu_array[j];
