@@ -236,6 +236,8 @@ if cat_randoms: # concatenate randoms
     nfiles = 1
 else:
     nfiles = nfiles[0]
+    for t in range(1, ntracers):
+        input_filenames[t] = input_filenames[t][t:] + input_filenames[t][:t] # shift the filename list cyclically by number of tracer, this makes sure files with different numbers for different tracers are fed to the C++ code, otherwise overlapping positions are likely at least between LRG and ELG
 # now the number of files to process is the same for sure
 
 if convert_cf: # this is really for pair counts and jackknives
