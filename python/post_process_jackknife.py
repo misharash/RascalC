@@ -15,9 +15,7 @@ file_root = str(sys.argv[3])
 m = int(sys.argv[4])
 n_samples = int(sys.argv[5])
 outdir = str(sys.argv[6])
-skip_bins = 0
-if len(sys.argv) == 8:
-    skip_bins = int(sys.argv[7]) * m # convert from radial to total number of bins right away
+skip_bins = int(sys.argv[7]) * m if len(sys.argv) >= 8 else 0 # convert from radial to total number of bins right away
 
 # Create output directory
 if not os.path.exists(outdir):
