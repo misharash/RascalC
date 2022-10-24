@@ -6,8 +6,8 @@ import numpy as np
 import sys,os
 
 # PARAMETERS
-if len(sys.argv)!=9:
-    print("Usage: python post_process_jackknife_multi.py {XI_JACKKNIFE_FILE_11} {XI_JACKKNIFE_FILE_12} {XI_JACKKNIFE_FILE_22} {WEIGHTS_DIR} {COVARIANCE_DIR} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR}")
+if len(sys.argv) not in (9, 10):
+    print("Usage: python post_process_jackknife_multi.py {XI_JACKKNIFE_FILE_11} {XI_JACKKNIFE_FILE_12} {XI_JACKKNIFE_FILE_22} {WEIGHTS_DIR} {COVARIANCE_DIR} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SKIP_R_BINS}]")
     sys.exit()
 
 jackknife_file_11 = str(sys.argv[1])
@@ -18,6 +18,7 @@ file_root = str(sys.argv[5])
 m = int(sys.argv[6])
 n_samples = int(sys.argv[7])
 outdir = str(sys.argv[8])
+skip_bins = int(sys.argv[9]) * m if len(sys.argv) >= 10 else 0 # convert from radial to total number of bins right away
 
 if n_samples<2:
     print("Need more than 1 subsample for matrix inversion; exiting.")
@@ -29,14 +30,14 @@ if not os.path.exists(outdir):
 
 ## First load jackknife xi estimates from data:
 print("Loading correlation function jackknife estimates")
-xi_jack_11 = np.loadtxt(jackknife_file_11,skiprows=2)
-xi_jack_12 = np.loadtxt(jackknife_file_12,skiprows=2)
-xi_jack_22 = np.loadtxt(jackknife_file_22,skiprows=2)
-assert xi_jack_11.shape==xi_jack_22.shape==xi_jack_12.shape,'Must have the same number of jackknifes for each field.'
+xi_jack_11 = np.loadtxt(jackknife_file_11,skiprows=2)[:, skip_bins:]
+xi_jack_12 = np.loadtxt(jackknife_file_12,skiprows=2)[:, skip_bins:]
+xi_jack_22 = np.loadtxt(jackknife_file_22,skiprows=2)[:, skip_bins:]
+assert xi_jack_11.shape == xi_jack_22.shape == xi_jack_12.shape, 'Must have the same number of jackknifes for each field.'
 
 n_bins = xi_jack_11.shape[1] # total bins
 n_jack = xi_jack_11.shape[0] # total jackknives
-n = n_bins//m # radial bins
+n = (n_bins+skip_bins)//m # radial bins
 xi_jack_all = [xi_jack_11,xi_jack_22]
 
 # First exclude any dodgy jackknife regions
@@ -58,9 +59,9 @@ xi_all[:,2*n_bins:]=xi_jack_22[good_jk]
 weight_file11 = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_11.dat'%(n,m,n_jack))
 weight_file12 = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_12.dat'%(n,m,n_jack))
 weight_file22 = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_22.dat'%(n,m,n_jack))
-weights11 = np.loadtxt(weight_file11)[:,1:]
-weights12 = np.loadtxt(weight_file12)[:,1:]
-weights22 = np.loadtxt(weight_file22)[:,1:]
+weights11 = np.loadtxt(weight_file11)[:, 1+skip_bins:]
+weights12 = np.loadtxt(weight_file12)[:, 1+skip_bins:]
+weights22 = np.loadtxt(weight_file22)[:, 1+skip_bins:]
 weights_all[:,:n_bins]=weights11[good_jk]
 weights_all[:,n_bins:2*n_bins]=weights12[good_jk]
 weights_all[:,2*n_bins:]=weights22[good_jk]
@@ -87,14 +88,14 @@ def load_matrices(index,field,jack=True):
     suffix2 = '_n%d_m%d_%s%s_%s.txt'%(n,m,field,field,index)
     suffix3 = '_n%d_m%d_%s,%s%s_%s.txt'%(n,m,field,field,field,index)
     suffix4 = '_n%d_m%d_%s%s,%s%s_%s.txt'%(n,m,field,field,field,field,index)
-    c2 = np.diag(np.loadtxt(cov_root+'c2'+suffix2))
-    c3 = np.loadtxt(cov_root+'c3'+suffix3)
-    c4 = np.loadtxt(cov_root+'c4'+suffix4)
+    c2 = np.diag(np.loadtxt(cov_root+'c2'+suffix2)[skip_bins:])
+    c3 = np.loadtxt(cov_root+'c3'+suffix3)[skip_bins:, skip_bins:]
+    c4 = np.loadtxt(cov_root+'c4'+suffix4)[skip_bins:, skip_bins:]
     if jack:
-        EEaA1 = np.loadtxt(cov_root+'EE1'+suffix2)
-        EEaA2 = np.loadtxt(cov_root+'EE2'+suffix2)
-        RRaA1 = np.loadtxt(cov_root+'RR1'+suffix2)
-        RRaA2 = np.loadtxt(cov_root+'RR2'+suffix2)
+        EEaA1 = np.loadtxt(cov_root+'EE1'+suffix2)[:, skip_bins:]
+        EEaA2 = np.loadtxt(cov_root+'EE2'+suffix2)[:, skip_bins:]
+        RRaA1 = np.loadtxt(cov_root+'RR1'+suffix2)[:, skip_bins:]
+        RRaA2 = np.loadtxt(cov_root+'RR2'+suffix2)[:, skip_bins:]
 
         # Compute disconnected term
         w_aA1 = RRaA1/np.sum(RRaA1,axis=0)
@@ -124,9 +125,9 @@ for i,index in enumerate(indices):
     RR_file = os.path.join(weight_dir, 'binned_pair_counts_n%d_m%d_j%d_%s.dat'%(n,m,n_jack,index))
     weight_file = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_%s.dat'%(n,m,n_jack,index))
     print("Loading weights file from %s"%weight_file)
-    weights = np.loadtxt(weight_file)[:,1:]
+    weights = np.loadtxt(weight_file)[:, 1+skip_bins:]
     print("Loading weights file from %s"%RR_file)
-    RR=np.loadtxt(RR_file)
+    RR=np.loadtxt(RR_file)[skip_bins:]
 
     # Filter out bad jackknifes
     xi_jack = xi_jack_all[i][good_jk]
@@ -148,25 +149,25 @@ for i,index in enumerate(indices):
         sys.exit()
 
     # Load in partial jackknife theoretical matrices
-    c2s,c3s,c4s=[],[],[]
+    c2s, c3s, c4s = [], [], []
     for j in range(n_samples):
         print("Loading field %d jackknife subsample %d of %d"%(i+1,j+1,n_samples))
         c2,c3,c4=load_matrices(j,i+1)
         c2s.append(c2)
         c3s.append(c3)
         c4s.append(c4)
+    c2s, c3s, c4s = [np.array(a) for a in (c2s, c3s, c4s)]
 
     # Compute inverted matrix
     def Psi(alpha):
         """Compute precision matrix from covariance matrix, removing quadratic order bias terms."""
         c_tot = c2j*alpha**2.+c3j*alpha+c4j
-        partial_cov=[]
-        for i in range(n_samples):
-            partial_cov.append(alpha**2.*c2s[i]+alpha*c3s[i]+c4s[i])
+        partial_cov = alpha**2 * c2s + alpha * c3s + c4s
+        sum_partial_cov = np.sum(partial_cov, axis=0)
         tmp=0.
         for i in range(n_samples):
-            c_excl_i = np.mean(partial_cov[:i]+partial_cov[i+1:],axis=0)
-            tmp+=np.matmul(np.linalg.inv(c_excl_i),partial_cov[i])
+            c_excl_i = (sum_partial_cov - partial_cov[i]) / (n_samples - 1)
+            tmp+=np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
         D_est=(n_samples-1.)/n_samples * (-1.*np.eye(n_bins) + tmp/n_samples)
         Psi = np.matmul(np.eye(n_bins)-D_est,np.linalg.inv(c_tot))
         return Psi
@@ -198,11 +199,11 @@ def matrix_readin(suffix='full'):
     """Read in multi-field covariance matrices. This returns lists of full and jackknife covariance matrices"""
 
     ## Define arrays for covariance matrices
-    c2s,c2js=[np.zeros([2,2,n*m,n*m]) for _ in range(2)]
+    c2s,c2js=[np.zeros([2, 2, n_bins, n_bins]) for _ in range(2)]
     RRs=np.zeros([2,2,n*m])
-    diff1s,diff2s,JK_weights=[np.zeros([2,2,n_jack,n*m]) for _ in range(3)]
-    c3s,c3js=[np.zeros([2,2,2,n*m,n*m]) for _ in range(2)]
-    c4s,c4js=[np.zeros([2,2,2,2,n*m,n*m]) for _ in range(2)]
+    diff1s,diff2s,JK_weights=[np.zeros([2, 2, n_jack, n_bins]) for _ in range(3)]
+    c3s,c3js=[np.zeros([2, 2, 2 , n_bins, n_bins]) for _ in range(2)]
+    c4s,c4js=[np.zeros([2, 2, 2, 2, n_bins, n_bins]) for _ in range(2)]
 
     for ii in range(len(I1)):
         index4="%d%d,%d%d"%(I1[ii],I2[ii],I3[ii],I4[ii])
@@ -229,26 +230,26 @@ def matrix_readin(suffix='full'):
             print("Reading in integral components for C_{%s}, iteration %s"%(index4,suffix))
 
         # Load jackknife weights
-        weights=np.loadtxt(weights_file)[:,1:]
+        weights=np.loadtxt(weights_file)[:, 1+skip_bins:]
 
         # Load pair counts
-        rr_true = np.loadtxt(rr_true_file)
+        rr_true = np.loadtxt(rr_true_file)[skip_bins:]
 
         # Load full integrals
-        c2=np.diag(np.loadtxt(file_root_all+'c2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix)))
-        c3=np.loadtxt(file_root_all+'c3_n%d_m%d_%s_%s.txt' %(n,m,index3,suffix))
-        c4=np.loadtxt(file_root_all+'c4_n%d_m%d_%s_%s.txt' %(n,m,index4,suffix))
+        c2=np.diag(np.loadtxt(file_root_all+'c2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[skip_bins:])
+        c3=np.loadtxt(file_root_all+'c3_n%d_m%d_%s_%s.txt' %(n,m,index3,suffix))[skip_bins:, skip_bins:]
+        c4=np.loadtxt(file_root_all+'c4_n%d_m%d_%s_%s.txt' %(n,m,index4,suffix))[skip_bins:, skip_bins:]
 
         # Load jackknife integrals
-        c2j=np.diag(np.loadtxt(file_root_jack+'c2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix)))
-        c3j=np.loadtxt(file_root_jack+'c3_n%d_m%d_%s_%s.txt' %(n,m,index3,suffix))
-        c4j=np.loadtxt(file_root_jack+'c4_n%d_m%d_%s_%s.txt' %(n,m,index4,suffix))
+        c2j=np.diag(np.loadtxt(file_root_jack+'c2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[skip_bins:])
+        c3j=np.loadtxt(file_root_jack+'c3_n%d_m%d_%s_%s.txt' %(n,m,index3,suffix))[skip_bins:, skip_bins:]
+        c4j=np.loadtxt(file_root_jack+'c4_n%d_m%d_%s_%s.txt' %(n,m,index4,suffix))[skip_bins:, skip_bins:]
 
         # Define cxj components
-        EEaA1 = np.loadtxt(file_root_jack+'EE1_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))
-        EEaA2 = np.loadtxt(file_root_jack+'EE2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))
-        RRaA1 = np.loadtxt(file_root_jack+'RR1_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))
-        RRaA2 = np.loadtxt(file_root_jack+'RR2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))
+        EEaA1 = np.loadtxt(file_root_jack+'EE1_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[:, skip_bins:]
+        EEaA2 = np.loadtxt(file_root_jack+'EE2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[:, skip_bins:]
+        RRaA1 = np.loadtxt(file_root_jack+'RR1_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[:, skip_bins:]
+        RRaA2 = np.loadtxt(file_root_jack+'RR2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[:, skip_bins:]
         w_aA1 = RRaA1/np.sum(RRaA1,axis=0)
         w_aA2 = RRaA2/np.sum(RRaA2,axis=0)
         EEa1 = np.sum(EEaA1,axis=0)
@@ -353,11 +354,12 @@ for i in range(n_samples):
 # Now compute all precision matrices
 iden = np.eye(len(c_comb))
 
-def compute_precision(entire_matrix,subsamples):
+def compute_precision(entire_matrix, subsamples):
     summ=0.
+    sum_subsamples = np.sum(subsamples, axis=0)
     for i in range(n_samples):
-        c_excl_i = np.mean(subsamples[:i]+subsamples[i+1:],axis=0)
-        summ+=np.matmul(np.linalg.inv(c_excl_i),subsamples[i])
+        c_excl_i = (sum_subsamples - subsamples[i]) / (n_samples - 1)
+        summ+=np.matmul(np.linalg.inv(c_excl_i), subsamples[i])
     D_est = (summ/n_samples-iden)*(n_samples-1.)/n_samples
     logdetD = np.linalg.slogdet(D_est)
     if logdetD[0]<0:
