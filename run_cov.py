@@ -16,7 +16,7 @@ def check_path(filename, fallback_dir=""):
 ntracers = 1 # number of tracers
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make any
-jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
+jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
 legendre = 0
@@ -61,7 +61,7 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
-nseed = 3
+nseed = None
 tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 20
@@ -72,8 +72,8 @@ FKP_weight = 1
 mask = 0 # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS
 convert_to_xyz = 1
 create_jackknives = jackknife and 1
-do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
-cat_randoms = 1 # concatenate random files for RascalC input
+do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
+cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_z0.800_cutsky_seed{nseed}_S100-{nrandoms}00_random.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
@@ -85,7 +85,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = nrandoms
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/jeongin/2PCF/DA02/EZ{corlabel}/2PCF_multipoles_IFTreciso_EZ{corlabel}_z{z_min}_{z_max}_default_fkp_seed{nseed}_nran{nrandoms}.npy")] for corlabel in ["LRG"]]
+    pycorr_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/jeongin/2PCF/DA02/EZ{corlabel}/2PCF_multipoles_IFTreciso_EZ{corlabel}_z{z_min}_{z_max}_default_fkp_seed{nseed}_nran{nrandoms}.npy", fallback_dir="pycorr") for nseed in range(1, 1000)] for corlabel in ["LRG"]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
