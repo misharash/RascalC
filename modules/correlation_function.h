@@ -19,9 +19,9 @@ class CorrelationFunction{
 
         double smooth_transition(double x, double x1, double x2, double f1, double f2) {
             // Smooth transition for f(x) given f(x1) = v1 and f(x2) = f2, assuming x2 > x1
-            if (x > x2) return f2;
-            if (x < x1) return f1;
-            double weight1 = sin((x-x1)/(x2-x1)*M_PI/2.);
+            if (x >= x2) return f2;
+            if (x <= x1) return f1;
+            double weight1 = sin((x2-x)/(x2-x1)*M_PI/2.); // will be used for f1's weight, 1 at x1, 0 at x2
             weight1 *= weight1; // square the above, so that it's sin^2 having zero derivative at both ends
             double weight2 = 1 - weight1;
             return weight1 * f1 + weight2 * f2;
