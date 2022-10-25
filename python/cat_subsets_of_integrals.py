@@ -17,7 +17,7 @@ input_roots = [str(s) for s in sys.argv[3:-1:2]]
 ns_samples = [int(s) for s in sys.argv[4:-1:2]]
 output_root = str(sys.argv[-1])
 collapse_factor = int(input_roots.pop()) if len(input_roots) > len(ns_samples) else 1 # recover the collapse factor if present
-assert len(ns_samples) == len(output_root), "Number of input dirs and subsamples to use from them must be the same"
+assert len(ns_samples) == len(input_roots), "Number of input dirs and subsamples to use from them must be the same"
 
 n_samples_tot = sum(ns_samples)
 assert n_samples_tot % collapse_factor == 0, "Collapse factor must divide the total number of samples"
