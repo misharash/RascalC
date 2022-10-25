@@ -5,8 +5,8 @@ import numpy as np
 import sys,os
 
 # PARAMETERS
-if len(sys.argv) not in (6, 8):
-    print("Usage: python post_process_legendre_multi.py {COVARIANCE_DIR} {N_R_BINS} {MAX_L} {N_SUBSAMPLES} {OUTPUT_DIR} [{SHOT_NOISE_RESCALING_1} {SHOT_NOISE_RESCALING_2}]")
+if len(sys.argv) not in (6, 8, 9, 10):
+    print("Usage: python post_process_legendre_multi.py {COVARIANCE_DIR} {N_R_BINS} {MAX_L} {N_SUBSAMPLES} {OUTPUT_DIR} [{SHOT_NOISE_RESCALING_1} {SHOT_NOISE_RESCALING_2} [{SKIP_R_BINS} [{SKIP_L}]]]")
     sys.exit()
 
 file_root = str(sys.argv[1])
@@ -17,7 +17,10 @@ n_samples = int(sys.argv[4])
 outdir = str(sys.argv[5])
 alpha_1 = float(sys.argv[6]) if len(sys.argv) >= 7 else 1
 alpha_2 = float(sys.argv[7]) if len(sys.argv) >= 8 else 1
+skip_r_bins = int(sys.argv[7]) if len(sys.argv) >= 9 else 0
+skip_l = int(sys.argv[8]) if len(sys.argv) >= 10 else 0
 
+n_bins = (n - skip_r_bins) * (m - skip_l)
 alphas = [alpha_1, alpha_2]
 
 # Create output directory
@@ -34,9 +37,9 @@ def matrix_readin(suffix='full'):
     """Read in multi-field Legendre covariance matrices. This returns lists of covariance matrices and a combined covariance matrix."""
 
     ## Define arrays for covariance matrices
-    c2s=np.zeros([2,2,n*m,n*m])
-    c3s=np.zeros([2,2,2,n*m,n*m])
-    c4s=np.zeros([2,2,2,2,n*m,n*m])
+    c2s=np.zeros([2, 2, n_bins, n_bins])
+    c3s=np.zeros([2, 2, 2, n_bins, n_bins])
+    c4s=np.zeros([2, 2, 2, 2, n_bins, n_bins])
 
     for ii in range(len(I1)):
         index4="%d%d,%d%d"%(I1[ii],I2[ii],I3[ii],I4[ii])
@@ -62,6 +65,14 @@ def matrix_readin(suffix='full'):
         c2=np.loadtxt(file_root_all+'c2_n%d_l%d_%s_%s.txt' %(n,max_l,index2,suffix))
         c3=np.loadtxt(file_root_all+'c3_n%d_l%d_%s_%s.txt' %(n,max_l,index3,suffix))
         c4=np.loadtxt(file_root_all+'c4_n%d_l%d_%s_%s.txt' %(n,max_l,index4,suffix))
+
+        N = len(c2)
+        assert N % n == 0, "Number of bins mismatch"
+        n_l = N // n # number of multipoles present
+        assert n_l == m, "Number of multipoles mismatch"
+        l_mask = (np.arange(n_l) < n_l - skip_l) # this mask skips last skip_l multipoles
+        full_mask = np.append(np.zeros(skip_r_bins * n_l, dtype=bool), np.repeat(l_mask, n - skip_r_bins)) # start with zeros and then repeat the l_mask since cov terms are first ordered by r and then by l
+        c2, c3, c4 = (a[full_mask][:, full_mask] for a in (c2, c3, c4)) # select rows and columns
 
         # Add input symmetries
         if(j1==j2):
@@ -139,11 +150,12 @@ for i in range(n_samples):
 # Now compute all precision matrices
 iden = np.eye(len(c_comb))
 
-def compute_precision(entire_matrix,subsamples):
+def compute_precision(entire_matrix, subsamples):
     summ=0.
+    sum_subsamples = np.sum(subsamples, axis=0)
     for i in range(n_samples):
-        c_excl_i = np.mean(subsamples[:i]+subsamples[i+1:],axis=0)
-        summ+=np.matmul(np.linalg.inv(c_excl_i),subsamples[i])
+        c_excl_i = (sum_subsamples - subsamples[i]) / (n_samples - 1)
+        summ+=np.matmul(np.linalg.inv(c_excl_i), subsamples[i])
     D_est = (summ/n_samples-iden)*(n_samples-1.)/n_samples
     logdetD = np.linalg.slogdet(D_est)
     if logdetD[0]<0:

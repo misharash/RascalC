@@ -14,12 +14,8 @@ n = int(sys.argv[2])
 m = int(sys.argv[3])
 n_samples = int(sys.argv[4])
 outdir = str(sys.argv[5])
-alpha = 1
-if len(sys.argv) >= 7:
-    alpha = float(sys.argv[6])
-skip_bins = 0
-if len(sys.argv) == 8:
-    skip_bins = int(sys.argv[7]) * m # convert from radial to total number of bins right away
+alpha = float(sys.argv[6]) if len(sys.argv) >= 7 else 1
+skip_bins = int(sys.argv[7]) * m if len(sys.argv) >= 8 else 0 # convert from radial to total number of bins right away
 
 # Create output directory
 if not os.path.exists(outdir):
@@ -62,13 +58,13 @@ for i in range(n_samples):
     c2s.append(c2)
     c3s.append(c3)
     c4s.append(c4)
-partial_cov=[]
-for i in range(n_samples):
-    partial_cov.append(alpha**2.*c2s[i]+alpha*c3s[i]+c4s[i])
+c2s, c3s, c4s = [np.array(a) for a in (c2s, c3s, c4s)]
+partial_cov = alpha**2 * c2s + alpha * c3s + c4s
+sum_partial_cov = np.sum(partial_cov, axis=0)
 tmp=0.
 for i in range(n_samples):
-    c_excl_i = np.mean(partial_cov[:i]+partial_cov[i+1:],axis=0)
-    tmp+=np.matmul(np.linalg.inv(c_excl_i),partial_cov[i])
+    c_excl_i = (sum_partial_cov - partial_cov[i]) / (n_samples - 1)
+    tmp += np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
 full_D_est=(n_samples-1.)/n_samples * (-1.*np.eye(n_bins) + tmp/n_samples)
 full_prec = np.matmul(np.eye(n_bins)-full_D_est,np.linalg.inv(full_cov))
 print("Full precision matrix estimate computed")
