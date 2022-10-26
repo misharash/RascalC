@@ -321,10 +321,10 @@ def matrix_readin(suffix='full'):
     # Index in ordering (P_11,P_12,P_22)
     cov_indices = [[0,0],[0,1],[1,1]]
 
-    c_tot = np.zeros([3,3,n*m,n*m]) # array with each individual covariance accessible
-    cj_tot = np.zeros([3,3,n*m,n*m])
-    c_comb = np.zeros([3*n*m,3*n*m]) # full array suitable for inversion
-    cj_comb = np.zeros([3*n*m,3*n*m])
+    c_tot = np.zeros([3, 3, n_bins, n_bins]) # array with each individual covariance accessible
+    cj_tot = np.zeros([3, 3, n_bins, n_bins])
+    c_comb = np.zeros([3*n_bins, 3*n_bins]) # full array suitable for inversion
+    cj_comb = np.zeros([3*n_bins, 3*n_bins])
 
     for j1 in range(3):
         ind1,ind2 = cov_indices[j1]
@@ -332,10 +332,10 @@ def matrix_readin(suffix='full'):
         for j2 in range(3):
             ind3,ind4 = cov_indices[j2]
             tmp,tmpj=construct_fields(ind1,ind2,ind3,ind4,alpha_1,alpha_2)
-            c_tot[j1,j2] = tmp
-            cj_tot[j1,j2] = tmpj
-            c_comb[j1*n*m:(j1+1)*n*m,j2*n*m:(j2+1)*n*m] = tmp
-            cj_comb[j1*n*m:(j1+1)*n*m,j2*n*m:(j2+1)*n*m] = tmpj
+            c_tot[j1, j2] = tmp
+            cj_tot[j1, j2] = tmpj
+            c_comb[j1*n_bins:(j1+1)*n_bins, j2*n_bins:(j2+1)*n_bins] = tmp
+            cj_comb[j1*n_bins:(j1+1)*n_bins, j2*n_bins:(j2+1)*n_bins] = tmpj
 
     return c_tot,0.5*(c_comb+c_comb.T), cj_tot, 0.5*(cj_comb+cj_comb.T) # add all remaining symmetries
 
