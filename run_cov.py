@@ -157,7 +157,7 @@ print_and_log(f"Executing {__file__}")
 
 def exec_print_and_log(commandline):
     print_and_log(f"Running command: {commandline}")
-    os.system(f"{commandline} | tee -a {logfile}")
+    os.system(f"{commandline} 2>&1 | tee -a {logfile}")
 
 print("Starting Computation")
 
@@ -314,7 +314,7 @@ for i in range(nfiles):
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
     # run code
-    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir} 2>&1" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre else ""))
+    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre else ""))
     print_and_log(f"Finished main computation {i+1} of {nfiles}")
 # end running main code for each random file/part
 
