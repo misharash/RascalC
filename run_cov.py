@@ -184,11 +184,11 @@ def change_extension(name, ext):
     return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
 if create_jackknives and redshift_cut: # prepare reference file
-    for i, data_ref_filename in data_ref_filenames:
+    for t, data_ref_filename in enumerate(data_ref_filenames):
         print_and_log(f"Processing data file for jackknife reference")
         rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
         exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {mask}")
-        data_ref_filenames[i] = rdzw_ref_filename
+        data_ref_filenames[t] = rdzw_ref_filename
 
 command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
 command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
@@ -223,7 +223,7 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
                 input_filename = xyzw_filename
             if create_jackknives:
                 xyzwj_filename = change_extension(input_filename, "xyzwj")
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {input_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {input_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
                 input_filename = xyzwj_filename
         input_filenames[t][i] = input_filename # save final input filename for next loop
         print_and_log(f"Finished preparing file {i+1} of {nfiles_t}")
