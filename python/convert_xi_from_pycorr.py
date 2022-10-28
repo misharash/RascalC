@@ -47,11 +47,11 @@ np.savetxt(outfile_name + ".ndata", np.array((data_size1_sum, data_size2_sum)) /
 
 def fold_counts(counts): # utility function for correct folding, used in several places
     return counts[:, n_mu:] + counts[:, n_mu-1::-1] # first term is positive mu bins, second is negative mu bins in reversed order
+    
+def fold_input_xi(xi, RR, SS): # proper folding of correlation function around mu=0
+    return fold_counts(xi*RR) / fold_counts(SS) # usual folded counts from above divided by S1S2 as seems more proper for RascalC sampling in post-recon case; in pre-recon case S=R so it should work too
 
-def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
-    return fold_counts(xi*RR) / fold_counts(RR)
-
-xi = fold_xi(result.corr, result.R1R2.wcounts) # wrap around zero
+xi = fold_input_xi(result.corr, result.R1R2.wcounts, result.S1S2.wcounts) # wrap around zero
 
 ## Custom array to string function
 def my_a2s(a, fmt='%.18e'):
