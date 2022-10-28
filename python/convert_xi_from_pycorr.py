@@ -37,11 +37,11 @@ print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6e}")
 print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6e}")
 np.savetxt(outfile_name + ".ndata", np.array((data_size1_sum, data_size2_sum)) / len(infile_names)) # save them for later
 
-def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
-    xi_RR = xi*RR
-    return (xi_RR[:, n_mu:] + xi_RR[:, n_mu-1::-1]) / (RR[:, n_mu:] + RR[:, n_mu-1::-1])
+def fold_input_xi(xi, RR, SS): # proper folding of correlation function around mu=0
+    xi_RR = xi*RR # this gives D1D2 - D1S2 - S1D2 + S1S2; in pre-recon case S=R
+    return (xi_RR[:, n_mu:] + xi_RR[:, n_mu-1::-1]) / (SS[:, n_mu:] + SS[:, n_mu-1::-1]) # folded counts from above divided by S1S2 as seems more proper for RascalC sampling in post-recon case; in pre-recon case S=R so it should work too
 
-xi = fold_xi(result.corr, result.R1R2.wcounts) # wrap around zero
+xi = fold_input_xi(result.corr, result.R1R2.wcounts, result.S1S2.wcounts) # wrap around zero
 
 ## Custom array to string function
 def my_a2s(a, fmt='%.18e'):
