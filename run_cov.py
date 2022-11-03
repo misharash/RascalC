@@ -36,7 +36,7 @@ nbin = 50 # radial bins for output cov
 mbin = 1 # angular (mu) bins for output cov
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
-nbin_cf = 100 # radial bins for input 2PCF
+nbin_cf = 50 # radial bins for input 2PCF
 mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
@@ -164,7 +164,7 @@ print("Starting Computation")
 # full-survey CF conversion, will also load number of data points from pycorr
 if convert_cf:
     r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
-    r_step_cf //= 4 # fast fix for this case
+    r_step_cf = 1 # fast fix for this case
     for c, corname in enumerate(cornames):
         os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
         exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames[c])} {corname} {r_step_cf} {mbin_cf}")
