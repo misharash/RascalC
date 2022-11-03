@@ -5,8 +5,8 @@ import numpy as np
 import sys,os
 
 # PARAMETERS
-if len(sys.argv) not in (6, 8):
-    print("Usage: python post_process_default_multi.py {COVARIANCE_DIR} {N_R_BINS} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SHOT_NOISE_RESCALING_1} {SHOT_NOISE_RESCALING_2}]")
+if len(sys.argv) not in (6, 8, 9):
+    print("Usage: python post_process_default_multi.py {COVARIANCE_DIR} {N_R_BINS} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SHOT_NOISE_RESCALING_1} {SHOT_NOISE_RESCALING_2} [{SKIP_R_BINS}]]")
     sys.exit()
 
 file_root = str(sys.argv[1])
@@ -16,6 +16,8 @@ n_samples = int(sys.argv[4])
 outdir = str(sys.argv[5])
 alpha_1 = float(sys.argv[6]) if len(sys.argv) >= 7 else 1
 alpha_2 = float(sys.argv[7]) if len(sys.argv) >= 8 else 1
+skip_bins = int(sys.argv[8]) * m if len(sys.argv) >= 9 else 0 # convert from radial to total number of bins right away
+n_bins = n * m - skip_bins
 
 alphas = [alpha_1, alpha_2]
 
@@ -34,9 +36,9 @@ def matrix_readin(suffix='full'):
     """Read in multi-field covariance matrices. This returns lists of covariance matrices and a combined covariance matrix."""
 
     ## Define arrays for covariance matrices
-    c2s=np.zeros([2,2,n*m,n*m])
-    c3s=np.zeros([2,2,2,n*m,n*m])
-    c4s=np.zeros([2,2,2,2,n*m,n*m])
+    c2s=np.zeros([2, 2, n_bins, n_bins])
+    c3s=np.zeros([2, 2, 2, n_bins, n_bins])
+    c4s=np.zeros([2, 2, 2, 2, n_bins, n_bins])
 
     for ii in range(len(I1)):
         index4="%d%d,%d%d"%(I1[ii],I2[ii],I3[ii],I4[ii])
@@ -61,9 +63,9 @@ def matrix_readin(suffix='full'):
             #print("Reading in integral components for C_{%s}, iteration %s"%(index4,suffix))
 
         # Load full integrals
-        c2=np.diag(np.loadtxt(file_root_all+'c2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix)))
-        c3=np.loadtxt(file_root_all+'c3_n%d_m%d_%s_%s.txt' %(n,m,index3,suffix))
-        c4=np.loadtxt(file_root_all+'c4_n%d_m%d_%s_%s.txt' %(n,m,index4,suffix))
+        c2=np.diag(np.loadtxt(file_root_all+'c2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[skip_bins:])
+        c3=np.loadtxt(file_root_all+'c3_n%d_m%d_%s_%s.txt' %(n,m,index3,suffix))[skip_bins:, skip_bins:]
+        c4=np.loadtxt(file_root_all+'c4_n%d_m%d_%s_%s.txt' %(n,m,index4,suffix))[skip_bins:, skip_bins:]
 
         # Add input symmetries
         if(j1==j2):
@@ -114,8 +116,8 @@ def matrix_readin(suffix='full'):
     # Index in ordering (P_11,P_12,P_22)
     cov_indices = [[0,0],[0,1],[1,1]]
 
-    c_tot = np.zeros([3,3,n*m,n*m]) # array with each individual covariance accessible
-    c_comb = np.zeros([3*n*m,3*n*m]) # full array suitable for inversion
+    c_tot = np.zeros([3, 3, n_bins, n_bins]) # array with each individual covariance accessible
+    c_comb = np.zeros([3*n_bins, 3*n_bins]) # full array suitable for inversion
 
     for j1 in range(3):
         ind1,ind2 = cov_indices[j1]
@@ -123,8 +125,8 @@ def matrix_readin(suffix='full'):
         for j2 in range(3):
             ind3,ind4 = cov_indices[j2]
             tmp = construct_fields(ind1, ind2, ind3, ind4, alpha1, alpha2)
-            c_tot[j1,j2] = tmp
-            c_comb[j1*n*m:(j1+1)*n*m,j2*n*m:(j2+1)*n*m] = tmp
+            c_tot[j1, j2] = tmp
+            c_comb[j1*n_bins:(j1+1)*n_bins, j2*n_bins:(j2+1)*n_bins] = tmp
 
     return c_tot,0.5*(c_comb+c_comb.T) # add all remaining symmetries
 
@@ -137,6 +139,7 @@ c_subsamples=[]
 for i in range(n_samples):
     _,tmp=matrix_readin(i)
     c_subsamples.append(tmp)
+c_subsamples = np.array(c_subsamples)
 
 # Now compute all precision matrices
 iden = np.eye(len(c_comb))
@@ -144,11 +147,12 @@ iden = np.eye(len(c_comb))
 N_eff = np.zeros([2,2,2,2])
 D_est = np.zeros_like(c_tot)
 
-def compute_precision(entire_matrix,subsamples):
+def compute_precision(entire_matrix, subsamples):
     summ=0.
+    sum_subsamples = np.sum(subsamples, axis=0)
     for i in range(n_samples):
-        c_excl_i = np.mean(subsamples[:i]+subsamples[i+1:],axis=0)
-        summ+=np.matmul(np.linalg.inv(c_excl_i),subsamples[i])
+        c_excl_i = (sum_subsamples - subsamples[i]) / (n_samples - 1)
+        summ+=np.matmul(np.linalg.inv(c_excl_i), subsamples[i])
     D_est = (summ/n_samples-iden)*(n_samples-1.)/n_samples
     logdetD = np.linalg.slogdet(D_est)
     if logdetD[0]<0:
@@ -160,7 +164,7 @@ def compute_precision(entire_matrix,subsamples):
     return precision,N_eff_D,D_est
 
 print("Computing precision matrices and N_eff")
-prec_comb,N_eff,D_est = compute_precision(c_comb,c_subsamples)
+prec_comb,N_eff,D_est = compute_precision(c_comb, c_subsamples)
 
 output_name =os.path.join(outdir, 'Rescaled_Multi_Field_Covariance_Matrices_Default_n%d_m%d.npz'%(n,m))
 np.savez(output_name,full_theory_covariance=c_comb,
