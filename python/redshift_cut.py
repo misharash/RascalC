@@ -17,7 +17,7 @@ import sys
 import numpy as np
 
 # Check number of parameters
-if len(sys.argv) not in (5, 6, 7):
+if len(sys.argv) not in (5, 6, 7, 8):
     print("Usage: python redshift_cut.py {INFILE} {OUTFILE} {Z_MIN} {Z_MAX} [{USE_FKP_WEIGHTS or P0,NZ_name} [{MASK} [{USE_WEIGHTS}]]]")
     sys.exit()
           
