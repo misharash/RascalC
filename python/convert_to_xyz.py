@@ -10,6 +10,8 @@ Output file format has (x,y,z,w) coordinates in Mpc/h units
         W_DARK_ENERGY = Dark Energy equation of state parameter (default -1.)
         ---FURTHER OPTIONAL---
         USE_FKP_WEIGHTS = whether to use FKP weights column (default False/0; only applies to (DESI) FITS files)
+        MASK = sets bins that all must be set in STATUS for the particle to be selected (default 0, only applies to (DESI) FITS files)
+        USE_WEIGHTS = whether to use WEIGHTS column, if not, set unit weights (default True/1)
 
 """
 
@@ -17,8 +19,8 @@ import sys
 import numpy as np
 
 
-if len(sys.argv) not in (3, 4, 5, 6, 7):
-    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} [{OMEGA_M} {OMEGA_K} {W_DARK_ENERGY} [{USE_FKP_WEIGHTS or P0,NZ_name}]]")
+if len(sys.argv) not in (3, 4, 5, 6, 7, 8, 9):
+    print("Usage: python convert_to_xyz.py {INFILE} {OUTFILE} [{OMEGA_M} {OMEGA_K} {W_DARK_ENERGY} [{USE_FKP_WEIGHTS or P0,NZ_name} [{MASK} [{USE_WEIGHTS}]]]]")
     sys.exit()
           
 # Load file names
@@ -42,6 +44,9 @@ manual_FKP = (len(arg_FKP_split) == 2) # whether to compute FKP weights manually
 if manual_FKP:
     P0 = float(arg_FKP_split[0])
     NZ_name = arg_FKP_split[1]
+mask = int(sys.argv[7]) if len(sys.argv) >= 8 else 0 # default is 0 - no filtering
+use_weights = (sys.argv[8].lower() not in ("0", "false")) if len(sys.argv) >= 9 else True # use weights by default
+filt = True # default pre-filter is true
 
 # Load the wcdm module from Daniel Eisenstein
 import os
@@ -59,11 +64,11 @@ if input_file.endswith(".fits"):
         all_dec = data["DEC"]
         all_z = data["Z"]
         colnames = data.columns.names
-        all_w = data["WEIGHT"] if "WEIGHT" in colnames else np.ones_like(all_z)
+        all_w = data["WEIGHT"] if "WEIGHT" in colnames and use_weights else np.ones_like(all_z)
         if use_FKP_weights:
             all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
         if "WEIGHT" not in colnames and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
-        if mask != -1: filt = data["STATUS"] & mask # STATUS (bitwise and) mask, zero will be False, nonzero -- True
+        if mask: filt = (data["STATUS"] & mask == mask) # all 1-bits from mask have to be set in STATUS; skip if mask=0
 else:
     # read text file
     # Load in data:
