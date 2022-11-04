@@ -186,7 +186,7 @@ public:
 	int qinvert = 0, qbalance = 0;
 
 	// If set, we'll just throw random periodic points instead of reading the file
-	int make_random = 1;
+	int make_random = 0;
 
 	// Will be number of particles in a random distribution, but gets overwritten if reading from a file.
 	int np = 500000; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
