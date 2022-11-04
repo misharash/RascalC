@@ -15,6 +15,7 @@ n_mu = int(sys.argv[-1])
 
 # load first input file
 result_orig = TwoPointCorrelationFunction.load(infile_names[0])
+print("Read 2PCF shaped", result_orig.shape)
 n_mu_orig = result_orig.shape[1]
 assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
 mu_factor = n_mu_orig // 2 // n_mu

@@ -25,6 +25,7 @@ if legendre:
 
 assert ntracers in (1, 2), "Only single- and two-tracer modes are currently supported"
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
+assert not (make_randoms and not periodic), "Non-periodic randoms not supported"
 assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
@@ -67,16 +68,18 @@ nrandoms = 10
 
 # data processing steps
 redshift_cut = 1
-FKP_weight = 1
-mask = 0 # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS
 convert_to_xyz = 1
+if redshift_cut or convert_to_xyz:
+    FKP_weight = 1
+    mask = 0 # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS
+    use_weights = 1
 create_jackknives = jackknife and 1
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
-    cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jacknknife else "") for tlabel in tlabels]
+    cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
-z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
+z_min, z_max = 0.4, 1.1 # for redshift cut and filenames
 
 # CF options
 convert_cf = 1
@@ -174,21 +177,20 @@ if convert_cf:
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
-    nrandoms = int(ndata)
     np.random.seed(42) # for reproducibility
-    randoms = np.append(np.random.rand(ntracers, nfiles[0], nrandoms, 3) * boxsize, np.ones((ntracers, nfiles[0], nrandoms, 1)), axis=-1)
-    # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to unity
+    randoms = [np.append(np.random.rand(nfiles_t, int(ndata_t), 3) * boxsize, np.ones((nfiles_t, int(ndata_t), 1)), axis=-1) for nfiles_t, ndata_t in zip(nfiles, ndata)]
+    # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to unity. List of array; list index is tracer number, first array index is file number and the second is number of point. Keep number of points roughly equal to number of data for each tracer
     print_and_log(f"Generated random points")
 
 def change_extension(name, ext):
     return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
 if create_jackknives and redshift_cut: # prepare reference file
-    for i, data_ref_filename in data_ref_filenames:
+    for t, data_ref_filename in enumerate(data_ref_filenames):
         print_and_log(f"Processing data file for jackknife reference")
         rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-        exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {mask}")
-        data_ref_filenames[i] = rdzw_ref_filename
+        exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {mask} {use_weights}")
+        data_ref_filenames[t] = rdzw_ref_filename
 
 command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
 command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
@@ -211,19 +213,19 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
         print_and_log(datetime.now())
         if periodic and make_randoms: # just save randoms to this file
             input_filename = change_extension(input_filename, "xyzw")
-            np.savetxt(input_filename, randoms[t, i])
+            np.savetxt(input_filename, randoms[t][i])
         else: # (potentially) run through all data processing steps
             if redshift_cut:
                 rdzw_filename = change_extension(input_filename, "rdzw")
-                exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight} {mask}")
+                exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight} {mask} {use_weights}")
                 input_filename = rdzw_filename
             if convert_to_xyz:
                 xyzw_filename = change_extension(input_filename, "xyzw")
-                exec_print_and_log(f"python python/convert_to_xyz.py {input_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight}")
+                exec_print_and_log(f"python python/convert_to_xyz.py {input_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {mask} {use_weights}")
                 input_filename = xyzw_filename
             if create_jackknives:
                 xyzwj_filename = change_extension(input_filename, "xyzwj")
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filename} {input_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {input_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
                 input_filename = xyzwj_filename
         input_filenames[t][i] = input_filename # save final input filename for next loop
         print_and_log(f"Finished preparing file {i+1} of {nfiles_t}")
@@ -236,7 +238,9 @@ if cat_randoms: # concatenate randoms
     nfiles = 1
 else:
     nfiles = nfiles[0]
-# now the number of files to process in the same for sure
+    for t in range(1, ntracers):
+        input_filenames[t] = input_filenames[t][t:] + input_filenames[t][:t] # shift the filename list cyclically by number of tracer, this makes sure files with different numbers for different tracers are fed to the C++ code, otherwise overlapping positions are likely at least between LRG and ELG
+# now the number of files to process is the same for sure
 
 if convert_cf: # this is really for pair counts and jackknives
     if do_counts: # redo counts
@@ -255,7 +259,7 @@ if convert_cf: # this is really for pair counts and jackknives
             for t in range(ntracers):
                 data_filename = data_ref_filenames[t]
                 xyzw_filename = change_extension(data_filename, "xyzw")
-                exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight}")
+                exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {mask} {use_weights}")
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
                 exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_filename} {data_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
@@ -303,9 +307,9 @@ for i in range(nfiles):
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
     if legendre: # need correction function
         if ntracers == 1:
-            exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
+            exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
         elif ntracers == 2:
-            exec_print_and_log(f"python python/compute_correction_function_multi.py {' '.join(input_filenames)} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {' '.join(binned_pair_names)}")
+            exec_print_and_log(f"python python/compute_correction_function_multi.py {' '.join([names[i] for names in input_filenames])} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {' '.join(binned_pair_names)}")
         else:
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
