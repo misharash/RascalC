@@ -23,8 +23,11 @@ mu_factor = n_mu_orig // 2 // n_mu
 
 if r_max_bin: result_orig = result_orig[:r_max_bin] # cut to max bin
 
+def fold_counts(counts): # utility function for correct folding, used in several places
+    return counts[:, n_mu:] + counts[:, n_mu-1::-1] # first term is positive mu bins, second is negative mu bins in reversed order
+
 result = result_orig[::r_step, ::mu_factor] # rebin
-paircounts = (result.R1R2.wcounts[:, n_mu:] + result.R1R2.wcounts[:, n_mu-1::-1]) / counts_factor # wrap around zero
+paircounts = fold_counts(result.R1R2.wcounts) / counts_factor # wrap around zero
 nonsplit_mask = (result.sepavg(axis=0) < split_above)
 if split_above > 0: paircounts[nonsplit_mask] /= counts_factor # divide once more below the splitting scale
 

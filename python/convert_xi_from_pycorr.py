@@ -37,9 +37,11 @@ print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6e}")
 print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6e}")
 np.savetxt(outfile_name + ".ndata", np.array((data_size1_sum, data_size2_sum)) / len(infile_names)) # save them for later
 
+def fold_counts(counts): # utility function for correct folding, used in several places
+    return counts[:, n_mu:] + counts[:, n_mu-1::-1] # first term is positive mu bins, second is negative mu bins in reversed order
+
 def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
-    xi_RR = xi*RR
-    return (xi_RR[:, n_mu:] + xi_RR[:, n_mu-1::-1]) / (RR[:, n_mu:] + RR[:, n_mu-1::-1])
+    return fold_counts(xi*RR) / fold_counts(RR)
 
 xi = fold_xi(result.corr, result.R1R2.wcounts) # wrap around zero
 

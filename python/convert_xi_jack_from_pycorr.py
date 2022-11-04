@@ -26,8 +26,11 @@ mu_factor = n_mu_orig // 2 // n_mu
 
 if r_max_bin: result_orig = result_orig[:r_max_bin] # cut to max bin
 
+def fold_counts(counts): # utility function for correct folding, used in several places
+    return counts[:, n_mu:] + counts[:, n_mu-1::-1] # first term is positive mu bins, second is negative mu bins in reversed order
+
 result = result_orig[::r_step, ::mu_factor] # rebin
-binpairs = (result.R1R2.wcounts[:, n_mu:] + result.R1R2.wcounts[:, n_mu-1::-1]).ravel() / counts_factor # total counts, just wrap around mu=0 and make 1D
+binpairs = fold_counts(result.R1R2.wcounts).ravel() / counts_factor # total counts, just wrap around mu=0 and make 1D
 nonsplit_mask = (result.sepavg(axis=0) < split_above)
 if split_above > 0: binpairs[nonsplit_mask] /= counts_factor # divide once more below the splitting scale
 
@@ -44,11 +47,10 @@ def jack_realization_rascalc(jack_estimator, i):
 results = [jack_realization_rascalc(result, i) for i in result.realizations]
 
 def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
-    xi_RR = xi*RR
-    return (xi_RR[:, n_mu:] + xi_RR[:, n_mu-1::-1]) / (RR[:, n_mu:] + RR[:, n_mu-1::-1])
+    return fold_counts(xi*RR) / fold_counts(RR)
 
 jack_xi = np.array([fold_xi(jack.corr, jack.R1R2.wcounts).ravel() for jack in results]) # wrap around mu=0
-jack_pairs = np.array([(jack.R1R2.wcounts[:, n_mu:] + jack.R1R2.wcounts[:, n_mu-1::-1]).ravel() for jack in results]) / counts_factor # wrap around mu=0
+jack_pairs = np.array([fold_counts(jack.R1R2.wcounts).ravel() for jack in results]) / counts_factor # wrap around mu=0
 if split_above > 0: jack_pairs[:, nonsplit_mask] /= counts_factor # divide once more below the splitting scale
 jack_pairs_sum = np.sum(jack_pairs, axis=0)
 assert np.allclose(jack_pairs_sum, binpairs), "Total counts mismatch"
