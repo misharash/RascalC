@@ -31,12 +31,12 @@ assert not (jackknife and legendre), "Jackknife and Legendre modes are incompati
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
 
 rmin = 0 # minimum output cov radius in Mpc/h
-rmax = 166 # maximum output cov radius in Mpc/h
-nbin = 83 # radial bins for output cov
+rmax = 164 # maximum output cov radius in Mpc/h
+nbin = 41 # radial bins for output cov
 mbin = 1 # angular (mu) bins for output cov
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 166 # maximum input 2PCF radius in Mpc/h
-nbin_cf = 166 # radial bins for input 2PCF
+nbin_cf = 83 # radial bins for input 2PCF
 mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
