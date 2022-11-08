@@ -19,6 +19,14 @@ print("Read 2PCF shaped", result_orig.shape)
 n_mu_orig = result_orig.shape[1]
 assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
 mu_factor = n_mu_orig // 2 // n_mu
+
+# determine the radius step in pycorr
+r_steps_orig = np.diff(result_orig.edges[0])
+r_step_orig = int(np.around(np.mean(r_steps_orig)))
+assert np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3), "Binnings other than linear with integer step are not supported"
+assert r_step % r_step_orig == 0, "Radial rebinning not possible"
+r_step //= r_step_orig
+
 result = result_orig[::r_step, ::mu_factor] # rebin
 # retrieve data sizes
 data_size1_sum = result_orig.D1D2.size1
