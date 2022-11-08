@@ -164,7 +164,6 @@ print("Starting Computation")
 # full-survey CF conversion, will also load number of data points from pycorr
 if convert_cf:
     r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
-    r_step_cf = 1 # fast fix for this case
     for c, corname in enumerate(cornames):
         os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
         exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames[c])} {corname} {r_step_cf} {mbin_cf}")
