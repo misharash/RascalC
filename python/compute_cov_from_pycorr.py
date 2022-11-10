@@ -63,12 +63,5 @@ for i in range(1, n_files):
     weights[i_sample, i_corr*n_bins:(i_corr+1)*n_bins] = fold_counts(result.R1R2.wcounts).ravel()
     xi[i_sample, i_corr*n_bins:(i_corr+1)*n_bins] = fold_xi(result.corr, result.R1R2.wcounts).ravel()
 
-# compute cov
-def sample_cov(x, weights):
-    weights /= np.sum(weights, axis=0)
-    mean_x = np.average(x, weights=weights, axis=0)
-    tmp = weights * (x - mean_x)
-    weight_prod = np.matmul(weights.T, weights)
-    return np.matmul(tmp.T, tmp) / (np.ones_like(weight_prod) - weight_prod)
-
-np.savetxt(outfile_name, sample_cov(xi, weights))
+cov = np.cov(xi.T, aweights=np.sum(weights, axis=1)) # xi has to be transposed, because variables (bins) are in columns (2nd index) of it and cov expects otherwise. Weights are collapsed across the bins; the proper expression for covariance with weights changing for different variables within one sample has not been found yet; the jackknife expression is short by ~n_samples.
+np.savetxt(outfile_name, cov)
