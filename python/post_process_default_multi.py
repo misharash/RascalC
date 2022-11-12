@@ -63,43 +63,54 @@ def matrix_readin(suffix='full'):
             #print("Reading in integral components for C_{%s}, iteration %s"%(index4,suffix))
 
         # Load full integrals
-        c2=np.diag(np.loadtxt(file_root_all+'c2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[skip_bins:])
-        c3=np.loadtxt(file_root_all+'c3_n%d_m%d_%s_%s.txt' %(n,m,index3,suffix))[skip_bins:, skip_bins:]
-        c4=np.loadtxt(file_root_all+'c4_n%d_m%d_%s_%s.txt' %(n,m,index4,suffix))[skip_bins:, skip_bins:]
+        c2 = np.diag(np.loadtxt(file_root_all+'c2_n%d_m%d_%s_%s.txt' % (n, m, index2, suffix))[skip_bins:])
+        c3 = np.loadtxt(file_root_all+'c3_n%d_m%d_%s_%s.txt' % (n, m, index3, suffix))[skip_bins:, skip_bins:]
+        c4 = np.loadtxt(file_root_all+'c4_n%d_m%d_%s_%s.txt' % (n, m, index4, suffix))[skip_bins:, skip_bins:]
 
         # Add input symmetries
-        if(j1==j2):
+        if(j1 == j2):
             c2 = 0.5*(c2+c2.T)
-        if(j1==j3):
+        if(j1 == j3):
             c3 = 0.5*(c3+c3.T)
-        if((j1==j3)and(j2==j4)):
+        if((j1 == j3) and (j2 == j4)):
             c4 = 0.5*(c4+c4.T)
 
         # Now save components
-        c2s[j1,j2]=c2
-        c3s[j2,j1,j3]=c3
-        if((j1!=j2)&(j3!=j4)):
-            c4s[j1,j2,j3,j4]+=0.5*c4 # to account for xi_ik xi_jl = xi_il xi_jk assumption
+        c2s[j1, j2] = c2
+        c3s[j2, j1, j3] = c3
+        if((j1 != j2) and (j3 != j4)):
+            c4s[j1, j2, j3, j4] += 0.5*c4 # to account for xi_ik xi_jl = xi_il xi_jk assumption
         else:
-            c4s[j1,j2,j3,j4]=c4
+            c4s[j1, j2, j3, j4] = c4
 
         # Add symmetries (automatically accounts for xi assumption):
-        if j1!=j3:
-            c3s[j2,j3,j1]=c3
-        if j1!=j2:
-            c4s[j2,j1,j3,j4]=c4
-        if j3!=j4:
-            c4s[j1,j2,j4,j3]=c4
-            if j1!=j2:
-                c4s[j2,j1,j4,j3]=c4
-        if ((j1!=j3)or(j2!=j4)):
-            c4s[j3,j4,j1,j2]=c4.T
-            if j3!=j4:
-                c4s[j4,j3,j1,j2]=c4.T
-            if j1!=j2:
-                c4s[j3,j4,j2,j1]=c4.T
-                if j3!=j4:
-                    c4s[j4,j3,j2,j1]=c4.T
+        if j1 != j3:
+            c3s[j2, j3, j1] = c3.T
+        if j1 != j2:
+            if j3 != j4:
+                c4s[j2, j1, j3, j4] += 0.5*c4 # to account for xi_ik xi_jl = xi_il xi_jk assumption
+            else:
+                c4s[j2, j1, j3, j4] = c4
+        if j3 != j4:
+            if j1 != j2:
+                c4s[j2, j1, j4, j3] += 0.5*c4 # to account for xi_ik xi_jl = xi_il xi_jk assumption
+                c4s[j1, j2, j4, j3] += 0.5*c4 # to account for xi_ik xi_jl = xi_il xi_jk assumption
+            else:
+                c4s[j1, j2, j4, j3] = c4
+        if ((j1 != j3) or (j2 != j4)):
+            if j1 != j2:
+                if j3 != j4:
+                    c4s[j3, j4, j1, j2] += 0.5*c4.T # to account for xi_ik xi_jl = xi_il xi_jk assumption
+                    c4s[j3, j4, j2, j1] += 0.5*c4.T # to account for xi_ik xi_jl = xi_il xi_jk assumption
+                    c4s[j4, j3, j1, j2] += 0.5*c4.T # to account for xi_ik xi_jl = xi_il xi_jk assumption
+                    c4s[j4, j3, j2, j1] += 0.5*c4.T # to account for xi_ik xi_jl = xi_il xi_jk assumption
+                else:
+                    c4s[j3, j4, j1, j2] = c4.T
+                    c4s[j3, j4, j2, j1] = c4.T
+            else:
+                c4s[j3, j4, j1, j2] = c4.T
+                if j3 != j4:
+                    c4s[j4, j3, j1, j2] = c4.T
 
     def construct_fields(j1,j2,j3,j4,alpha1,alpha2):
         # Reconstruct the full field for given input fields and rescaling parameters
