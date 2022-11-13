@@ -86,18 +86,19 @@ def matrix_readin(suffix='full'):
         # Add symmetries (automatically accounts for xi assumption):
         if j1 != j3:
             c3s[j2, j3, j1] = c3.T
-        if j1 != j2:
+        
+        if j1 != j2: # swap first two indices if nontrivial
             if j3 != j4:
                 c4s[j2, j1, j3, j4] += 0.5*c4 # to account for xi_ik xi_jl = xi_il xi_jk assumption
             else:
                 c4s[j2, j1, j3, j4] = c4
-        if j3 != j4:
+        if j3 != j4: # swap last two indices if nontrivial
             if j1 != j2:
                 c4s[j2, j1, j4, j3] += 0.5*c4 # to account for xi_ik xi_jl = xi_il xi_jk assumption
                 c4s[j1, j2, j4, j3] += 0.5*c4 # to account for xi_ik xi_jl = xi_il xi_jk assumption
             else:
                 c4s[j1, j2, j4, j3] = c4
-        if ((j1 != j3) or (j2 != j4)):
+        if ((j1 != j3) or (j2 != j4)) and ((j1 != j4) or (j2 != j3)): # swap pairs of indices if nontrivial
             if j1 != j2:
                 if j3 != j4:
                     c4s[j3, j4, j1, j2] += 0.5*c4.T # to account for xi_ik xi_jl = xi_il xi_jk assumption
