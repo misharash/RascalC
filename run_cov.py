@@ -61,7 +61,7 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
-nseed = 3
+nseed = 4
 tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 10
@@ -72,9 +72,9 @@ convert_to_xyz = 1
 if redshift_cut or convert_to_xyz:
     FKP_weight = 0
     mask = 0 # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS
-    use_weights = 1
+    use_weights = 0
 create_jackknives = jackknife and 1
-do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
+do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_z0.800_cutsky_seed{nseed}_S100-{nrandoms}00_random.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
