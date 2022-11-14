@@ -157,7 +157,7 @@ print_and_log(f"Executing {__file__}")
 
 def exec_print_and_log(commandline):
     print_and_log(f"Running command: {commandline}")
-    os.system(f"{commandline} | tee -a {logfile}")
+    os.system(f"{commandline} 2>&1 | tee -a {logfile}")
 
 print("Starting Computation")
 
@@ -275,7 +275,7 @@ if convert_cf: # this is really for pair counts and jackknives
             if not cat_randoms: # reload full counts from pycorr, override jackknives - to prevent normalization issues
                 r_step = (rmax-rmin)//nbin
                 for c in range(ncorr):
-                    exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above}")
+                    exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
         else: # only need full, binned pair counts
             if cat_randoms: # compute counts with our own script
                 if ntracers == 1:
@@ -295,9 +295,9 @@ if convert_cf: # this is really for pair counts and jackknives
             if jackknife: # convert jackknife xi and all counts
                 for filename in (xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c]):
                     os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-                exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filenames[c][0]} {xi_jack_names[c]} {jackknife_weights_names[c]} {jackknife_pairs_names[c]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above}")
+                exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filenames[c][0]} {xi_jack_names[c]} {jackknife_weights_names[c]} {jackknife_pairs_names[c]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
             else: # convert full, binned pair counts
-                exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above}")
+                exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
 
 # running main code for each random file/part
 for i in range(nfiles):
@@ -314,7 +314,7 @@ for i in range(nfiles):
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
     # run code
-    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir} 2>&1" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre else ""))
+    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre else ""))
     print_and_log(f"Finished main computation {i+1} of {nfiles}")
 # end running main code for each random file/part
 
