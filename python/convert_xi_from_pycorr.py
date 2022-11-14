@@ -19,6 +19,14 @@ print("Read 2PCF shaped", result_orig.shape)
 n_mu_orig = result_orig.shape[1]
 assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
 mu_factor = n_mu_orig // 2 // n_mu
+
+# determine the radius step in pycorr
+r_steps_orig = np.diff(result_orig.edges[0])
+r_step_orig = int(np.around(np.mean(r_steps_orig)))
+assert np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3), "Binnings other than linear with integer step are not supported"
+assert r_step % r_step_orig == 0, "Radial rebinning not possible"
+r_step //= r_step_orig
+
 result = result_orig[::r_step, ::mu_factor] # rebin
 # retrieve data sizes
 data_size1_sum = result_orig.D1D2.size1
@@ -37,9 +45,11 @@ print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6e}")
 print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6e}")
 np.savetxt(outfile_name + ".ndata", np.array((data_size1_sum, data_size2_sum)) / len(infile_names)) # save them for later
 
+def fold_counts(counts): # utility function for correct folding, used in several places
+    return counts[:, n_mu:] + counts[:, n_mu-1::-1] # first term is positive mu bins, second is negative mu bins in reversed order
+
 def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
-    xi_RR = xi*RR
-    return (xi_RR[:, n_mu:] + xi_RR[:, n_mu-1::-1]) / (RR[:, n_mu:] + RR[:, n_mu-1::-1])
+    return fold_counts(xi*RR) / fold_counts(RR)
 
 xi = fold_xi(result.corr, result.R1R2.wcounts) # wrap around zero
 

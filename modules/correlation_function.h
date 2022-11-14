@@ -25,7 +25,7 @@ class CorrelationFunction{
             double y2 = y*y;
             double y3 = y2*y;
             double weight1 = y3 * (10. - 15. * y + 6. * y2); // this polynomial is 0 at y=0 and 1 at y=1, and has zero 1st and 2nd derivatives at both points. Thus this transition is continuous, smooth and has continuous 2nd derivative, just like the (bi)cubic spline used below.
-            double weight2 = 1 - weight1;
+            double weight2 = 1. - weight1;
             return weight1 * f1 + weight2 * f2;
         }
 
