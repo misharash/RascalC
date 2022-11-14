@@ -103,9 +103,9 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife:
-    data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_data.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_data.fits", fallback_dir="fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_random_S{i+1}00.fits.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_random_S{i+1}00.fits.fits", fallback_dir="fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
