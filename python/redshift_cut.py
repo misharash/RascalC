@@ -8,6 +8,8 @@ Output file format has (x,y,z,w) coordinates in Mpc/h units
         Z_MAX = Maximum redshift (non-inclusive, i.e. will require Z < Z_MAX)
         ---OPTIONAL---
         USE_FKP_WEIGHTS = whether to use FKP weights column (default False/0; only applies to (DESI) FITS files)
+        MASK = sets bins that all must be set in STATUS for the particle to be selected (default 0, only applies to (DESI) FITS files)
+        USE_WEIGHTS = whether to use WEIGHTS column, if not, set unit weights (default True/1)
 
 """
 
@@ -15,8 +17,8 @@ import sys
 import numpy as np
 
 # Check number of parameters
-if len(sys.argv) not in (5, 6, 7):
-    print("Please specify input arguments in the form convert_to_xyz.py {INFILE} {OUTFILE} {Z_MIN} {Z_MAX} [{USE_FKP_WEIGHTS or P0,NZ_name} [{MASK}]]")
+if len(sys.argv) not in (5, 6, 7, 8):
+    print("Usage: python redshift_cut.py {INFILE} {OUTFILE} {Z_MIN} {Z_MAX} [{USE_FKP_WEIGHTS or P0,NZ_name} [{MASK} [{USE_WEIGHTS}]]]")
     sys.exit()
           
 # Load file names
@@ -38,6 +40,7 @@ if manual_FKP:
     NZ_name = arg_FKP_split[1]
 # Load mask to select STATUS that has all 1-bits set in mask. Also only applies to (DESI) FITS files
 mask = int(sys.argv[6]) if len(sys.argv) >= 7 else 0 # default is 0 - no filtering
+use_weights = (sys.argv[7].lower() not in ("0", "false")) if len(sys.argv) >= 8 else True # use weights by default
 filt = True # default pre-filter is true
 
 if input_file.endswith(".fits"):
@@ -50,7 +53,7 @@ if input_file.endswith(".fits"):
         all_dec = data["DEC"]
         all_z = data["Z"]
         colnames = data.columns.names
-        all_w = data["WEIGHT"] if "WEIGHT" in colnames else np.ones_like(all_z)
+        all_w = data["WEIGHT"] if "WEIGHT" in colnames and use_weights else np.ones_like(all_z)
         if use_FKP_weights:
             all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
         if "WEIGHT" not in colnames and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
