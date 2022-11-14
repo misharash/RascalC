@@ -47,7 +47,7 @@ N3 = 80 # number of third cells/particles per secondary cell/particle
 N4 = 160 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
-nside = 201 # grid size for accelerating pair count
+nside = 101 # grid size for accelerating pair count
 boxsize = 2000 # only used if periodic=1
 
 suffixes_tracer_all = ("", "2") # all supported tracer suffixes
