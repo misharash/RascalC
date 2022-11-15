@@ -47,7 +47,7 @@ N3 = 80 # number of third cells/particles per secondary cell/particle
 N4 = 160 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
-nside = 101 # grid size for accelerating pair count
+nside = 201 # grid size for accelerating pair count
 boxsize = 2000 # only used if periodic=1
 
 suffixes_tracer_all = ("", "2") # all supported tracer suffixes
@@ -75,7 +75,7 @@ if redshift_cut or convert_to_xyz:
     use_weights = 0
 create_jackknives = jackknife and 1
 do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
-cat_randoms = 0 # concatenate random files for RascalC input
+cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_z0.800_cutsky_seed{nseed}_S100-{nrandoms}00_random.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
