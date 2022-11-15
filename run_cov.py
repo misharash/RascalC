@@ -110,6 +110,7 @@ if jackknife:
 input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_random_S{i+1}00.fits", fallback_dir="fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames that go into sampling
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 if do_counts:
+    distinct_randoms = 1
     input_filenames_RR = [[check_path(f"/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/{tlabel}/Mocks/{tlabel}_z0.800_cutsky_S{i+1}00_random.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames for RR counts and jackknife weights
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
@@ -252,12 +253,13 @@ if convert_cf: # this is really for pair counts and jackknives
             if not cat_randoms: # concatenate randoms now
                 for t in range(ntracers):
                     exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
-            # concatenate RR randoms
-            for t in range(ntracers):
-                exec_print_and_log(f"cat {' '.join(input_filenames_RR[t])} > {cat_randoms_files_RR[t]}")
+            # concatenate RR randoms if they are different
+            if distinct_randoms:
+                for t in range(ntracers):
+                    exec_print_and_log(f"cat {' '.join(input_filenames_RR[t])} > {cat_randoms_files_RR[t]}")
             # compute jackknife weights
             if ntracers == 1:
-                exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files_RR[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
+                exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files_RR[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/ {distinct_randoms}") # 1. is max mu
             elif ntracers == 2:
                 exec_print_and_log(f"python python/jackknife_weights_cross.py {' '.join(cat_randoms_files_RR)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             else:
@@ -285,10 +287,10 @@ if convert_cf: # this is really for pair counts and jackknives
                 for c in range(ncorr):
                     exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
         else: # only need full, binned pair counts
-            # concatenate RR randoms
-            for t in range(ntracers):
-                exec_print_and_log(f"cat {' '.join(input_filenames_RR[t])} > {cat_randoms_files_RR[t]}")
             if cat_randoms: # compute counts with our own script
+                if distinct_randoms: # concatenate RR randoms if they are different
+                    for t in range(ntracers):
+                        exec_print_and_log(f"cat {' '.join(input_filenames_RR[t])} > {cat_randoms_files_RR[t]}")
                 if ntracers == 1:
                     exec_print_and_log(f"python python/RR_counts.py {cat_randoms_files_RR[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
                 elif ntracers == 2:
