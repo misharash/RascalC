@@ -77,7 +77,9 @@ create_jackknives = jackknife and 1
 do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
-    cat_randoms_files = [f"{tlabel}_z0.800_cutsky_seed{nseed}_S100-{nrandoms}00_random.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
+    cat_randoms_files = [f"reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_random_S100-{nrandoms}00.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
+if do_counts:
+    cat_randoms_files_RR = [f"{tlabel}_z0.800_cutsky_seed{nseed}_S100-{nrandoms}00_random.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
 z_min, z_max = 0.4, 1.1 # for redshift cut and filenames
 
@@ -105,8 +107,10 @@ if convert_to_xyz:
 if jackknife:
     data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_data.fits", fallback_dir="fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_random_S{i+1}00.fits.fits", fallback_dir="fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/users/jeongin/recon/DA02/EZ{tlabel}/reciso_IFT_{tlabel}_z0.800_default_fkp_seed{nseed}_random_S{i+1}00.fits", fallback_dir="fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames that go into sampling
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
+if do_counts:
+    input_filenames_RR = [[check_path(f"/global/cfs/projectdirs/desi/users/dvalcin/EZMOCKS/{tlabel}/Mocks/{tlabel}_z0.800_cutsky_S{i+1}00_random.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames for RR counts and jackknife weights
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
