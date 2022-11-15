@@ -252,11 +252,14 @@ if convert_cf: # this is really for pair counts and jackknives
             if not cat_randoms: # concatenate randoms now
                 for t in range(ntracers):
                     exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+            # concatenate RR randoms
+            for t in range(ntracers):
+                exec_print_and_log(f"cat {' '.join(input_filenames_RR[t])} > {cat_randoms_files_RR[t]}")
             # compute jackknife weights
             if ntracers == 1:
-                exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
+                exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files_RR[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             elif ntracers == 2:
-                exec_print_and_log(f"python python/jackknife_weights_cross.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
+                exec_print_and_log(f"python python/jackknife_weights_cross.py {' '.join(cat_randoms_files_RR)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             else:
                 print("Number of tracers not supported for this operation (yet)")
                 sys.exit(1)
@@ -282,11 +285,14 @@ if convert_cf: # this is really for pair counts and jackknives
                 for c in range(ncorr):
                     exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
         else: # only need full, binned pair counts
+            # concatenate RR randoms
+            for t in range(ntracers):
+                exec_print_and_log(f"cat {' '.join(input_filenames_RR[t])} > {cat_randoms_files_RR[t]}")
             if cat_randoms: # compute counts with our own script
                 if ntracers == 1:
-                    exec_print_and_log(f"python python/RR_counts.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
+                    exec_print_and_log(f"python python/RR_counts.py {cat_randoms_files_RR[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
                 elif ntracers == 2:
-                    exec_print_and_log(f"python python/RR_counts_multi.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
+                    exec_print_and_log(f"python python/RR_counts_multi.py {' '.join(cat_randoms_files_RR)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
                 else:
                     print("Number of tracers not supported for this operation (yet)")
                     sys.exit(1)
