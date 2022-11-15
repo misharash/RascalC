@@ -259,7 +259,7 @@ if convert_cf: # this is really for pair counts and jackknives
                     exec_print_and_log(f"cat {' '.join(input_filenames_RR[t])} > {cat_randoms_files_RR[t]}")
             # compute jackknife weights
             if ntracers == 1:
-                exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files_RR[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/ {distinct_randoms}") # 1. is max mu
+                exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files_RR[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             elif ntracers == 2:
                 exec_print_and_log(f"python python/jackknife_weights_cross.py {' '.join(cat_randoms_files_RR)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             else:
@@ -276,7 +276,7 @@ if convert_cf: # this is really for pair counts and jackknives
                 data_ref_filenames[t] = xyzwj_filename
             # run RascalC own xi jack estimator
             if ntracers == 1:
-                exec_print_and_log(f"python python/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]}") # 1. is max mu
+                exec_print_and_log(f"python python/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]} {distinct_randoms}") # 1. is max mu
             elif ntracers == 2:
                 exec_print_and_log(f"python python/xi_estimator_jack_cross.py {' '.join(data_ref_filenames)} {' '.join(cat_randoms_files)} {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {' '.join(jackknife_pairs_names)}") # 1. is max mu
             else:
