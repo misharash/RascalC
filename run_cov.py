@@ -234,6 +234,26 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
                 input_filename = xyzwj_filename
         input_filenames[t][i] = input_filename # save final input filename for next loop
         print_and_log(f"Finished preparing file {i+1} of {nfiles_t}")
+    if do_counts:
+        if distinct_randoms: # process second set of randoms
+            for i, input_filename in enumerate(input_filenames_RR[t]):
+                print_and_log(f"Starting preparing RR file {i+1} of {nfiles_t}")
+                print_and_log(datetime.now())
+                # (potentially) run through all data processing steps
+                if redshift_cut:
+                    rdzw_filename = change_extension(input_filename, "rdzw")
+                    exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight} {mask} {use_weights}")
+                    input_filename = rdzw_filename
+                if convert_to_xyz:
+                    xyzw_filename = change_extension(input_filename, "xyzw")
+                    exec_print_and_log(f"python python/convert_to_xyz.py {input_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {mask} {use_weights}")
+                    input_filename = xyzw_filename
+                if create_jackknives:
+                    xyzwj_filename = change_extension(input_filename, "xyzwj")
+                    exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {input_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
+                    input_filename = xyzwj_filename
+                input_filenames_RR[t][i] = input_filename # save final input filename for future concatenation
+                print_and_log(f"Finished preparing RR file {i+1} of {nfiles_t}")
 # end processing steps for each random file
 
 if cat_randoms: # concatenate randoms
