@@ -292,7 +292,8 @@ if convert_cf: # this is really for pair counts and jackknives
                 exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {mask} {use_weights}")
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_filename} {data_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
+                # keep in mind some subtleties for multi-tracer jackknife assigment
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {data_filename} {xyzwj_filename} {njack}") # the first file must be rdzw, the second xyzw!
                 data_ref_filenames[t] = xyzwj_filename
             # run RascalC own xi jack estimator
             if ntracers == 1:
