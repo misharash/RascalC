@@ -53,13 +53,13 @@ for n, line in enumerate(open(RnameDS, 'r')):
 
 N_randDR = len(rX_DS) # number of particles
 
-if len(RRname) == 0 and not recompute_SS:
-    if RnameSS!=RnameDS:
-        # only read in RR file if distinct from DR and needed by the code:
+if len(RRname) == 0 or recompute_SS: # read SS file if RR are not given or asked to recompute the SS
+    if RnameSS != RnameDS:
+        # only read in SS file if distinct from DS and needed by the code:
         print("Counting lines in SS random file")
-        total_lines=0
+        total_lines = 0
         for n, line in enumerate(open(RnameSS, 'r')):
-            total_lines+=1
+            total_lines += 1
 
         rX_SS, rY_SS, rZ_SS, rW_SS, rJ_SS = np.zeros((5, total_lines))
 
@@ -125,7 +125,7 @@ print('%s radial bins are used in this file in the range [%d, %d]' % (nrbins, al
 if not periodic:
     # Compute RR, DR and DD counts for the non-periodic case (measuring mu from the radial direction)
     print("Using non-periodic input data");
-    def coord_transform(x,y,z):
+    def coord_transform(x, y, z):
         # Convert the X,Y,Z coordinates into Ra,Dec,comoving_distance (for use in corrfunc)
         # Shamelessly stolen from astropy
         xsq = x ** 2.
