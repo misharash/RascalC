@@ -1,4 +1,4 @@
-## Script to compute jackknife estimates of the correlation function xi^J(r,mu) via the Landay-Szelay estimator for a single set of random particles.
+## Script to compute jackknife estimates of the correlation function xi^J(r,mu) via the Landy-Szalay estimator for a single set of random particles.
 ## If the periodic flag is set, we assume a periodic simulation and measure mu from the Z-axis.
 ## This must be binned in the same binning as the desired covariance matrix
 
