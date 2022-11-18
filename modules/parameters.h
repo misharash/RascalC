@@ -12,7 +12,7 @@ public:
     //---------- ESSENTIAL PARAMETERS -----------------
 
     // The name of the input random particle files (first set)
-	char *fname = NULL;
+	std::vector<char*> fnames;
 	const char default_fname[500] = "LRG_NScomb_0.4_1.1.less.ran.xyzwj";
 
     // Name of the radial binning .csv file
@@ -99,7 +99,7 @@ public:
     //------------------ GENERAL MULTI-FIELD PARAMETERS ----------------------
 
     // Second set of random particles
-    char *fname2 = NULL;
+    std::vector<char*> fnames2;
     const char default_fname2[500] = "";
 
     // Correlation functions
@@ -231,8 +231,8 @@ public:
 		else if (!strcmp(argv[i],"-norm")) nofznorm = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-norm2")) nofznorm2 = atof(argv[++i]);
         else if (!strcmp(argv[i],"-nside")) nside = atoi(argv[++i]);
-		else if (!strcmp(argv[i],"-in")) fname = argv[++i];
-        else if (!strcmp(argv[i],"-in2")) fname2 = argv[++i];
+		else if (!strcmp(argv[i],"-in")) while (argv[i][0] != '-') fnames.push_back(argv[++i]);
+        else if (!strcmp(argv[i],"-in2")) while (argv[i][0] != '-') fnames2.push_back(argv[++i]);
 		else if (!strcmp(argv[i],"-cor")) corname = argv[++i];
 		else if (!strcmp(argv[i],"-cor12")) corname12 = argv[++i];
 		else if (!strcmp(argv[i],"-cor2")) corname2 = argv[++i];
@@ -291,7 +291,8 @@ public:
 			np = tmp;
 			make_random=1;
 		    }
-		else if (!strcmp(argv[i],"-def")) { fname = NULL; }
+        // the next line seems redundant
+		// else if (!strcmp(argv[i],"-def")) { fname = NULL; }
 		else {
 		    fprintf(stderr, "Don't recognize %s\n", argv[i]);
 		    usage();
@@ -370,13 +371,13 @@ public:
 	    if (radial_bin_file==NULL) {radial_bin_file = (char *) default_radial_bin_file;} // No radial binning
 	    if (radial_bin_file_cf==NULL) {radial_bin_file_cf = (char *) default_radial_bin_file_cf;} // No radial binning
 
-	    if (fname==NULL) fname = (char *) default_fname;   // No name was given
-	    if (fname2==NULL) fname2 = (char *) default_fname2;   // No name was given
+	    if (fnames.size() == 0) fnames.push_back((char *) default_fname);   // No name was given
+	    if (fnames2.size() == 0) fnames2.push_back((char *) default_fname2);   // No name was given
 	    if (corname2==NULL) { corname2 = (char *) default_corname2; }// No name was given
 	    if (corname12==NULL) { corname12 = (char *) default_corname12; }// No name was given
 
 	    // Decide if we are using multiple tracers:
-	    if (strlen(fname2)!=0){
+	    if (strlen(fnames2[0])!=0){
 #if (defined LEGENDRE || defined POWER)
 #ifdef LEGENDRE
             if ((strlen(phi_file12)==0)||(strlen(phi_file2)==0)){

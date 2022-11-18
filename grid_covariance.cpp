@@ -126,8 +126,8 @@ int main(int argc, char *argv[]) {
         Particle *orig_p;
         if (!par.make_random){
             char *filename;
-            if(index==0) filename=par.fname;
-            else filename=par.fname2;
+            if(index==0) filename=par.fnames[0];
+            else filename=par.fnames2[0];
 #ifdef JACKKNIFE
             orig_p = read_particles(par.rescale, &par.np, filename, par.rstart, par.nmax, &all_weights[index]);
             assert(par.np>0);
