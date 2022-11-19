@@ -172,14 +172,14 @@ public:
         CorrelationFunction true_cf;
         int grid1_index[3] = {0,1,0}, grid2_index[3] = {0,1,1};
 
-        for(int index=0;index<number_xi;index++){ // iterate over correlation functions
-            if (par->cf_loops>0){
+        for(int index = 0; index < number_xi; index++) { // iterate over correlation functions
+            if (par->cf_loops > 0){
                 fprintf(stderr, "\nRefining correlation function %d of %d.\n",index+1,number_xi);
             }
                 true_cf.copy_function(&all_cf[index]); // store initial correlation function
                 for (int n_refine = 0; n_refine < par->cf_loops; n_refine++) { // refine cf_loops times per correlation function
                     // Rescale correlation function
-                    CorrelationFunction output = rescale_xi(par, all_grids[grid1_index[index]], all_grids[grid2_index[index]], &all_cf[index], &true_cf, &all_rd[index],n_refine);
+                    CorrelationFunction output = rescale_xi(par, all_grids[grid1_index[index]], all_grids[grid2_index[index]], &all_cf[index], &true_cf, &all_rd[index], n_refine);
                     // Update correlation function
                     all_cf[index].copy_function(&output);
                 }
@@ -228,31 +228,31 @@ public:
         size_t maxnp1 = 0;
         for (int i = 0; i < par->n_randoms; ++i)
             if (grids1[i].maxnp > maxnp1) maxnp1 = grids1[i].maxnp;
-        int ec=0;
-        ec+=posix_memalign((void **) &prim_list, PAGE, sizeof(Particle) * maxnp1);
-        ec+=posix_memalign((void **) &prim_ids, PAGE, sizeof(int) * maxnp1);
-        assert(ec==0);
+        int ec = 0;
+        ec += posix_memalign((void **) &prim_list, PAGE, sizeof(Particle) * maxnp1);
+        ec += posix_memalign((void **) &prim_ids, PAGE, sizeof(int) * maxnp1);
+        assert(ec == 0);
 
     // start first loop
 #ifdef OPENMP
 #pragma omp for schedule(dynamic)
 #endif
         for (int n_loops = 0; n_loops < par->max_loops; n_loops++) {
-            for (int i_grid_12 = 0; i_grid_12 < par-> n_randoms; ++i_grid_12)
+            for (int i_grid_12 = 0; i_grid_12 < par->n_randoms; ++i_grid_12)
                 for (int n1 = 0; n1 < grids1[i_grid_12].nf; n1++) {
                     // Pick first particle
                     prim_id_1D = grids1[i_grid_12].filled[n1]; // 1d ID for cell i
                     prim_id = grids1[i_grid_12].cell_id_from_1d(prim_id_1D); // define first cell
                     pln = compute->particle_list(prim_id_1D, prim_list, prim_ids, &grids1[i_grid_12]); // update list of particles and number of particles
 
-                    if(pln==0) continue; // skip if empty
+                    if (pln == 0) continue; // skip if empty
 
-                    used_pairs+=pln*par->N2;
+                    used_pairs += pln * par->N2;
 
                     // Loop over N2 j cells;
-                    for (int n2=0;n2<par->N2;n2++){
-                        delta2 = rd->random_xidraw(locrng,&p2);
-                        sec_id = prim_id+delta2;
+                    for (int n2 = 0; n2 < par->N2; n2++) {
+                        delta2 = rd->random_xidraw(locrng, &p2);
+                        sec_id = prim_id + delta2;
                         cell_sep2 = grids2[i_grid_12].cell_sep(delta2);
 #ifdef THREE_PCF
                         x = compute->draw_particle(sec_id, particle_j, pid_j, cell_sep2, &grids2[i_grid_12], sln, locrng);
