@@ -177,9 +177,9 @@ public:
                 fprintf(stderr, "\nRefining correlation function %d of %d.\n",index+1,number_xi);
             }
                 true_cf.copy_function(&all_cf[index]); // store initial correlation function
-                for(int n_refine=0;n_refine<par->cf_loops;n_refine++){ // refine cf_loops times per correlation function
+                for (int n_refine = 0; n_refine < par->cf_loops; n_refine++) { // refine cf_loops times per correlation function
                     // Rescale correlation function
-                    CorrelationFunction output = rescale_xi(par, &all_grids[grid1_index[index]][0], &all_grids[grid2_index[index]][0], &all_cf[index], &true_cf, &all_rd[index],n_refine);
+                    CorrelationFunction output = rescale_xi(par, all_grids[grid1_index[index]], all_grids[grid2_index[index]], &all_cf[index], &true_cf, &all_rd[index],n_refine);
                     // Update correlation function
                     all_cf[index].copy_function(&output);
                 }
@@ -189,7 +189,7 @@ public:
         }
     }
 
-    CorrelationFunction rescale_xi(Parameters *par, Grid *grid1, Grid *grid2, CorrelationFunction *old_cf, CorrelationFunction *true_cf, RandomDraws *rd, int index){
+    CorrelationFunction rescale_xi(Parameters *par, std::vector<Grid> &grids1, std::vector<Grid> &grids2, CorrelationFunction *old_cf, CorrelationFunction *true_cf, RandomDraws *rd, int index){
         // Rescale the xi function by computing the binned xi from some estimate and comparing it to the known value. Return a correlation function object with an updated estimate of the xi at the bin-centers.
 
         // gsl and random class setup
@@ -201,7 +201,7 @@ public:
         uint64 used_pairs=0;
 
 #ifdef OPENMP
-#pragma omp parallel firstprivate(steps,par,grid1, grid2, old_cf) shared(gsl_rng_default,rd) reduction(+:used_pairs)
+#pragma omp parallel firstprivate(steps, par, grids1, grids2, old_cf) shared(gsl_rng_default, rd) reduction(+:used_pairs)
         { // start parallel loop
         // Decide thread
         int thread = omp_get_thread_num();
@@ -225,42 +225,46 @@ public:
         correlation_integral thread_xi_function(par, old_cf);
 
         // Allocate particle position memory
+        size_t maxnp1 = 0;
+        for (int i = 0; i < par->n_randoms; ++i)
+            if (grids1[i].maxnp > maxnp1) maxnp1 = grids1[i].maxnp;
         int ec=0;
-        ec+=posix_memalign((void **) &prim_list, PAGE, sizeof(Particle)*grid1->maxnp);
-        ec+=posix_memalign((void **) &prim_ids, PAGE, sizeof(int)*grid1->maxnp);
+        ec+=posix_memalign((void **) &prim_list, PAGE, sizeof(Particle) * maxnp1);
+        ec+=posix_memalign((void **) &prim_ids, PAGE, sizeof(int) * maxnp1);
         assert(ec==0);
 
     // start first loop
 #ifdef OPENMP
 #pragma omp for schedule(dynamic)
 #endif
-        for(int n_loops = 0; n_loops<par->max_loops; n_loops++){
-            for(int n1=0;n1<grid1->nf;n1++){
-                // Pick first particle
-                prim_id_1D = grid1-> filled[n1]; // 1d ID for cell i
-                prim_id = grid1->cell_id_from_1d(prim_id_1D); // define first cell
-                pln = compute->particle_list(prim_id_1D, prim_list, prim_ids, grid1); // update list of particles and number of particles
+        for (int n_loops = 0; n_loops < par->max_loops; n_loops++) {
+            for (int i_grid_12 = 0; i_grid_12 < par-> n_randoms; ++i_grid_12)
+                for (int n1 = 0; n1 < grids1[i_grid_12].nf; n1++) {
+                    // Pick first particle
+                    prim_id_1D = grids1[i_grid_12].filled[n1]; // 1d ID for cell i
+                    prim_id = grids1[i_grid_12].cell_id_from_1d(prim_id_1D); // define first cell
+                    pln = compute->particle_list(prim_id_1D, prim_list, prim_ids, &grids1[i_grid_12]); // update list of particles and number of particles
 
-                if(pln==0) continue; // skip if empty
+                    if(pln==0) continue; // skip if empty
 
-                used_pairs+=pln*par->N2;
+                    used_pairs+=pln*par->N2;
 
-                // Loop over N2 j cells;
-                for (int n2=0;n2<par->N2;n2++){
-                    delta2 = rd->random_xidraw(locrng,&p2);
-                    sec_id = prim_id+delta2;
-                    cell_sep2 = grid2->cell_sep(delta2);
+                    // Loop over N2 j cells;
+                    for (int n2=0;n2<par->N2;n2++){
+                        delta2 = rd->random_xidraw(locrng,&p2);
+                        sec_id = prim_id+delta2;
+                        cell_sep2 = grids2[i_grid_12].cell_sep(delta2);
 #ifdef THREE_PCF
-                    x = compute->draw_particle(sec_id,particle_j,pid_j,cell_sep2,grid2,sln,locrng);
+                        x = compute->draw_particle(sec_id, particle_j, pid_j, cell_sep2, &grids2[i_grid_12], sln, locrng);
 #else
-                    x = compute->draw_particle_without_class(sec_id,particle_j,pid_j,cell_sep2,grid2,sln,locrng);
+                        x = compute->draw_particle_without_class(sec_id, particle_j, pid_j, cell_sep2, &grids2[i_grid_12], sln, locrng);
 #endif
-                    if(x==1) continue; // skip if error
-                    p2*=1./(grid1->np*(double)sln);
-                    // Compute contributions to correlation function
-                    thread_xi_function.compile_integral(prim_list, prim_ids, pln, particle_j, pid_j, p2);
+                        if (x == 1) continue; // skip if error
+                        p2 *= 1./(grids1[i_grid_12].np * (double)sln);
+                        // Compute contributions to correlation function
+                        thread_xi_function.compile_integral(prim_list, prim_ids, pln, particle_j, pid_j, p2);
+                    }
                 }
-            }
 #ifdef OPENMP
 #pragma omp critical
 #endif
@@ -277,16 +281,16 @@ public:
         } // end OPENMP loop
 
         // Normalize integral
-        full_xi_function.normalize(grid1->norm,grid2->norm,(Float)used_pairs);
+        full_xi_function.normalize(grids1[0].norm, grids2[0].norm, (Float)used_pairs);
 
         // Compute ratios
-        Float true_xi,old_xi;
-        for(int i=0;i<nbin;i++){
-          for(int j=0;j<mbin;j++){
-                 old_xi = old_cf->xi(r_centers[i],mu_centers[j]);
-                true_xi = true_cf->xi(r_centers[i],mu_centers[j]);
+        Float true_xi, old_xi;
+        for(int i = 0; i<nbin; i++){
+          for(int j = 0; j<mbin; j++){
+                old_xi = old_cf->xi(r_centers[i], mu_centers[j]);
+                true_xi = true_cf->xi(r_centers[i], mu_centers[j]);
                 // Rescale value
-                new_xi_array[i*mbin+j]=true_xi/full_xi_function.cf_estimate[i*mbin+j]*old_xi;
+                new_xi_array[i*mbin+j] = true_xi / full_xi_function.cf_estimate[i*mbin+j] * old_xi;
             }
         }
 
