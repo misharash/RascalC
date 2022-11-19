@@ -166,7 +166,8 @@ int main(int argc, char *argv[]) {
     // Now put particles to grid
     std::vector<Grid> all_grids[no_fields]; // create empty grids
 
-    for (int index = 0; index < no_fields; index++)
+    for (int index = 0; index < no_fields; index++) {
+        all_grids[index].resize(par.n_randoms);
         for (int i = 0; i < par.n_randoms; ++i) {
             // Sort the particles into the grid.
             Float nofznorm = par.nofznorm;
@@ -201,6 +202,7 @@ int main(int argc, char *argv[]) {
 
             fflush(NULL);
         }
+    }
 
     // Print box size and max radius in grid units here, because they are adjusted while reading particles (non-periodic case)
     printf("Box Size = {%6.5e,%6.5e,%6.5e}\n", par.rect_boxsize.x, par.rect_boxsize.y, par.rect_boxsize.z);
