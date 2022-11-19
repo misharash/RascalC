@@ -143,14 +143,14 @@ int main(int argc, char *argv[]) {
             all_np[index].push_back(par.np);
         }
         for (int i = 0; i < par.n_randoms; ++i) {
-            if (par.qinvert) invert_weights(all_particles[index][i], par.np);
-            if (par.qbalance) balance_weights(all_particles[index][i], par.np);
+            if (par.qinvert) invert_weights(all_particles[index][i], all_np[index][i]);
+            if (par.qbalance) balance_weights(all_particles[index][i], all_np[index][i]);
         }
     }
 
     // Set the bounding box or shift
     Float3 shift;
-    if (!par.make_random){
+    if (!par.make_random) {
         par.perbox = compute_bounding_box(all_particles, all_np, no_fields, par.n_randoms, par.rect_boxsize, par.cellsize, par.rmax, shift, par.nside);
 #ifdef PERIODIC
         // respect the given boxsize if periodic but keep the shift from above
