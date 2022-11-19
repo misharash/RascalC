@@ -173,11 +173,11 @@ int main(int argc, char *argv[]) {
             if(index==1) nofznorm = par.nofznorm2;
             Grid tmp_grid(all_particles[index][i], all_np[index][i], par.rect_boxsize, par.cellsize, par.nside, shift, nofznorm);
 
-            Float grid_density = (double)par.np/tmp_grid.nf;
+            Float grid_density = (double)all_np[index][i] / tmp_grid.nf;
             printf("\n RANDOM CATALOG %d DIAGNOSTICS:\n",index+1);
             printf("Average number of particles per grid cell = %6.2f\n", grid_density);
             printf("Average number of particles per max_radius ball = %6.2f\n",
-                    par.np*4.0*M_PI/3.0*pow(par.rmax,3.0)/(par.rect_boxsize.x*par.rect_boxsize.y*par.rect_boxsize.z));
+                    all_np[index][i] * 4.0 * M_PI/ 3.0 * pow(par.rmax, 3) / (par.rect_boxsize.x * par.rect_boxsize.y * par.rect_boxsize.z));
             Float max_density = 16.;
             if (grid_density > max_density) {
                 fprintf(stderr,"Average particle density exceeds maximum advised particle density (%.0f particles per cell) - exiting.\n",max_density);
