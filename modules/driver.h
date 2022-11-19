@@ -137,7 +137,7 @@ bool compute_bounding_box(std::vector<Particle*> *p, std::vector<int> *np, int n
     bool box = false;
     pmin.x = pmin.y = pmin.z = INFINITY;
     pmax.x = pmax.y = pmax.z = -INFINITY;
-    for (int index = 0; index < n_files; ++index)
+    for (int index = 0; index < n_fields; ++index)
         for (int i = 0; i < n_files; ++i)
             for (int j=0; j < np[index][i]; j++) {
                 pmin.x = fmin(pmin.x, p[index][i][j].pos.x);
