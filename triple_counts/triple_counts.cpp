@@ -489,7 +489,7 @@ int main(int argc, char *argv[]) {
         
     int max_no_functions=1; // required number of xi / random_draws / jackknife_weight functions
     int no_fields=1; // number of different fields used
-    if(par.multi_tracers==true){
+    if (par.multi_tracers) {
         max_no_functions=3;
         no_fields=2;
     }

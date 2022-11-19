@@ -305,12 +305,12 @@ public:
 
 
 #ifdef PERIODIC
-        if (perbox!=true){
+        if (!perbox) {
             printf("\nC++ code compiled with periodic flag, but periodic box parameter is not set! Exiting.\n\n");
             exit(1);
         }
 #else
-        if (perbox==true){
+        if (perbox) {
             printf("\nC++ code not compiled with periodic flag, but periodic box parameter is set! Exiting.\n\n");
             exit(1);
         }
