@@ -383,7 +383,7 @@ public:
 
 	    // Decide if we are using multiple tracers:
 	    if (strlen(fnames2[0])!=0){
-            assert(n_randoms == fnames2.size()); // need to have same number of files for both tracers
+            assert(n_randoms == (int)fnames2.size()); // need to have same number of files for both tracers
 #if (defined LEGENDRE || defined POWER)
 #ifdef LEGENDRE
             if ((strlen(phi_file12)==0)||(strlen(phi_file2)==0)){
