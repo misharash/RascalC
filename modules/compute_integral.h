@@ -82,10 +82,10 @@
             else if ((Ia==2)&&(Ib==2)) return &all_rd[1];
             else return &all_rd[2];
         }
-        Grid* which_grid(std::vector<Grid> all_grids[], int Ia){
+        std::vector<Grid>& which_grids(std::vector<Grid> all_grids[], int Ia){
             // Returns the relevant correlation function for two input field indices
-            if(Ia==1) return &all_grids[0][0];
-            else return &all_grids[1][0];
+            if(Ia==1) return all_grids[0];
+            else return all_grids[1];
         }
 
 #if (defined LEGENDRE || defined POWER)
@@ -118,10 +118,10 @@
             if (par->multi_tracers) tot_iter = 7;
 
             // Define relevant grids
-            Grid *grid1 = which_grid(all_grids, I1);
-            Grid *grid2 = which_grid(all_grids, I2);
-            Grid *grid3 = which_grid(all_grids, I3);
-            Grid *grid4 = which_grid(all_grids, I4);
+            std::vector<Grid>& grids1 = which_grids(all_grids, I1);
+            std::vector<Grid>& grids2 = which_grids(all_grids, I2);
+            std::vector<Grid>& grids3 = which_grids(all_grids, I3);
+            std::vector<Grid>& grids4 = which_grids(all_grids, I4);
 
             // Define relevant correlation functions
             CorrelationFunction *cf12 = which_cf(all_cf,I1,I2);
@@ -234,9 +234,10 @@
 
             initial.Stop();
             fprintf(stderr, "Init time: %g s\n",initial.Elapsed());
-            printf("# 1st grid filled cells: %d\n",grid1->nf);
-            printf("# All 1st grid points in use: %d\n",grid1->np);
-            printf("# Max points in one cell in grid 1%d\n",grid1->maxnp);
+            // These are not too important, deal with them later
+            //printf("# 1st grid filled cells: %d\n",grid1->nf);
+            //printf("# All 1st grid points in use: %d\n",grid1->np);
+            //printf("# Max points in one cell in grid 1%d\n",grid1->maxnp);
             fflush(NULL);
 
             TotalTime.Start(); // Start timer
@@ -244,11 +245,11 @@
 #ifdef OPENMP
 
 #if (defined LEGENDRE || defined POWER)
-    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,TotalTime,gsl_rng_default,rd13,rd24) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(steps, par, printtime, grids1, grids2, grids3, grids4, cf12, cf13, cf24) shared(sumint, TotalTime, gsl_rng_default, rd13, rd24) reduction(+:convergence_counter, cell_attempt2, cell_attempt3, cell_attempt4, used_cell2, used_cell3, used_cell4, tot_pairs, tot_triples, tot_quads)
 #elif defined JACKKNIFE
-    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,TotalTime,gsl_rng_default,rd13,rd24,JK12,JK23,JK34,product_weights12_12,product_weights12_23,product_weights12_34) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(steps, par, printtime, grids1, grids2, grids3, grids4, cf12, cf13, cf24) shared(sumint, TotalTime, gsl_rng_default, rd13, rd24, JK12, JK23, JK34, product_weights12_12, product_weights12_23, product_weights12_34) reduction(+:convergence_counter, cell_attempt2, cell_attempt3, cell_attempt4, used_cell2, used_cell3, used_cell4, tot_pairs, tot_triples, tot_quads)
 #else
-    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,TotalTime,gsl_rng_default,rd13,rd24,JK12,JK23,JK34) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(steps, par, printtime, grids1, grids2, grids3, grids4, cf12, cf13, cf24) shared(sumint, TotalTime, gsl_rng_default, rd13, rd24, JK12, JK23, JK34) reduction(+:convergence_counter, cell_attempt2, cell_attempt3, cell_attempt4, used_cell2, used_cell3, used_cell4, tot_pairs, tot_triples, tot_quads)
 #endif
             { // start parallel loop
             // Decide which thread we are in
@@ -273,7 +274,9 @@
             Float p22,p21; // probabilities
 #endif
             int *bin_ij; // i-j separation bin
-            int mnp = grid1->maxnp; // max number of particles in a grid1 cell
+            int mnp = 0; // max number of particles in a grid1 cell
+            for (int i = 0; i < par->n_randoms; ++i)
+                if (grids1[i].maxnp > mnp) mnp = grids1[i].maxnp;
             Float *xi_ik, *w_ijk, *w_ij; // arrays to store xi and weight values
             Float percent_counter;
             int x, prim_id_1D;
@@ -285,8 +288,8 @@
             Integrals locint(par, cf12, cf13, cf24, I1, I2, I3, I4, survey_corr_12,survey_corr_23,survey_corr_34); // Accumulates the integral contribution of each thread
             // Assign memory for useful quantities
             int ecL=0;
-            ecL+=posix_memalign((void **) &factor_ij, PAGE, sizeof(Float)*mnp);
-            ecL+=posix_memalign((void **) &poly_ij, PAGE, sizeof(Float)*mnp*mbin);
+            ecL+=posix_memalign((void **) &factor_ij, PAGE, sizeof(Float) * mnp);
+            ecL+=posix_memalign((void **) &poly_ij, PAGE, sizeof(Float) * mnp * mbin);
             assert(ecL==0);
 #elif defined POWER
             Float *poly_ij;
@@ -304,23 +307,23 @@
             gsl_rng_set(locrng, steps*(thread+1));
 
             // Assign memory for intermediate steps
-            int ec=0;
-            ec+=posix_memalign((void **) &prim_list, PAGE, sizeof(Particle)*mnp);
-            ec+=posix_memalign((void **) &prim_ids, PAGE, sizeof(int)*mnp);
-            ec+=posix_memalign((void **) &bin_ij, PAGE, sizeof(int)*mnp);
-            ec+=posix_memalign((void **) &w_ij, PAGE, sizeof(Float)*mnp);
-            ec+=posix_memalign((void **) &xi_ik, PAGE, sizeof(Float)*mnp);
-            ec+=posix_memalign((void **) &w_ijk, PAGE, sizeof(Float)*mnp);
-            assert(ec==0);
+            int ec = 0;
+            ec += posix_memalign((void **) &prim_list, PAGE, sizeof(Particle) * mnp);
+            ec += posix_memalign((void **) &prim_ids, PAGE, sizeof(int) * mnp);
+            ec += posix_memalign((void **) &bin_ij, PAGE, sizeof(int) * mnp);
+            ec += posix_memalign((void **) &w_ij, PAGE, sizeof(Float) * mnp);
+            ec += posix_memalign((void **) &xi_ik, PAGE, sizeof(Float) * mnp);
+            ec += posix_memalign((void **) &w_ijk, PAGE, sizeof(Float) * mnp);
+            assert(ec == 0);
 
             uint64 loc_used_pairs,loc_used_triples, loc_used_quads; // local counts of used pairs/triples/quads
     //-----------START FIRST LOOP-----------
     #ifdef OPENMP
     #pragma omp for schedule(dynamic)
     #endif
-            for (int n_loops = 0; n_loops<par->max_loops; n_loops++){
-                percent_counter=0.;
-                loc_used_pairs=0; loc_used_triples=0; loc_used_quads=0;
+            for (int n_loops = 0; n_loops < par->max_loops; n_loops++){
+                percent_counter = 0.;
+                loc_used_pairs = 0; loc_used_triples = 0; loc_used_quads = 0;
 
                 // End loops early if convergence has been acheived
                 if (convergence_counter == par->convergence_ntimes){
@@ -329,120 +332,123 @@
                     continue;
                     }
                 // LOOP OVER ALL FILLED I CELLS
-                for (int n1=0; n1<grid1->nf;n1++){
+                for (int i_grid_12 = 0; i_grid_12 < par->n_randoms; ++i_grid_12)
+                    for (int n1 = 0; n1 < grids1[i_grid_12].nf; n1++) {
 
-                    // Print time left
-                    if((float(n1)/float(grid1->nf)*100)>=percent_counter){
-                        printf("Integral %d of %d, run %d of %d on thread %d: Using cell %d of %d - %.0f percent complete\n",iter_no,tot_iter,1+n_loops/par->nthread, int(ceil(float(par->max_loops)/(float)par->nthread)),thread, n1+1,grid1->nf,percent_counter);
-                        percent_counter+=5.;
-                    }
+                        // Print time left
+                        if ((float(n1) / float(grids1[i_grid_12].nf) * 100) >= percent_counter) {
+                            printf("Integral %d of %d, run %d of %d, file %d of %zu, on thread %d: Using cell %d of %d - %.0f percent complete\n", iter_no, tot_iter, 1+n_loops/par->nthread, int(ceil(float(par->max_loops)/(float)par->nthread)), i_grid_12+1, par->n_randoms, thread, n1+1, grids1[i_grid_12].nf, percent_counter);
+                            percent_counter += 5.;
+                        }
 
-                    // Pick first particle
-                    prim_id_1D = grid1-> filled[n1]; // 1d ID for cell i
-                    prim_id = grid1->cell_id_from_1d(prim_id_1D); // define first cell
-                    pln = particle_list(prim_id_1D, prim_list, prim_ids, grid1); // update list of particles and number of particles
+                        // Pick first particle
+                        prim_id_1D = grids1[i_grid_12].filled[n1]; // 1d ID for cell i
+                        prim_id = grids1[i_grid_12].cell_id_from_1d(prim_id_1D); // define first cell
+                        pln = particle_list(prim_id_1D, prim_list, prim_ids, &grids1[i_grid_12]); // update list of particles and number of particles
 
-                    if(pln==0) continue; // skip if empty
+                        if(pln==0) continue; // skip if empty
 
-                    loc_used_pairs+=pln*par->N2;
-                    loc_used_triples+=pln*par->N2*par->N3;
-                    loc_used_quads+=pln*par->N2*par->N3*par->N4;
+                        loc_used_pairs += pln * par->N2;
+                        loc_used_triples += pln * par->N2 * par->N3;
+                        loc_used_quads += pln * par->N2 * par->N3 * par->N4;
 
-                    // LOOP OVER N2 J CELLS
-                    for (int n2=0; n2<par->N2; n2++){
-                        cell_attempt2+=1; // new cell attempted
+                        // LOOP OVER N2 J CELLS
+                        for (int n2 = 0; n2 < par->N2; n2++) {
+                            cell_attempt2+=1; // new cell attempted
 
-                        // Draw second cell from i weighted by 1/r^2
-                        delta2 = rd13->random_cubedraw(locrng, &p2); // can use any rd class here since drawing as 1/r^2
-                        // p2 is the ratio of sampling to true pair distribution here
-                        sec_id = prim_id + delta2;
-                        cell_sep2 = grid2->cell_sep(delta2);
-                        x = draw_particle(sec_id, particle_j, pid_j, cell_sep2, grid2, sln, locrng, sln1, sln2);
-                        if (x==1) continue; // skip failed draws
+                            // Draw second cell from i weighted by 1/r^2
+                            delta2 = rd13->random_cubedraw(locrng, &p2); // can use any rd class here since drawing as 1/r^2
+                            // p2 is the ratio of sampling to true pair distribution here
+                            sec_id = prim_id + delta2;
+                            cell_sep2 = grids2[i_grid_12].cell_sep(delta2);
+                            x = draw_particle(sec_id, particle_j, pid_j, cell_sep2, &grids2[i_grid_12], sln, locrng, sln1, sln2);
+                            if (x==1) continue; // skip failed draws
 
-                        used_cell2+=1; // new cell accepted
+                            used_cell2 += 1; // new cell accepted
 
 #if (!defined LEGENDRE && !defined POWER)
-                        // Probabilities for two random-particle partitions
-                        p21=p2/(grid1->np1*(double)sln1); // divide probability by total number of particles in 1st partition and number in cell
-                        p22=p2/(grid1->np2*(double)sln2); // for partition 2
+                            // Probabilities for two random-particle partitions
+                            p21 = p2/(grids1[i_grid_12].np1*(double)sln1); // divide probability by total number of particles in 1st partition and number in cell
+                            p22 = p2/(grids1[i_grid_12].np2*(double)sln2); // for partition 2
 #endif
-                        // For all particles
-                        p2*=1./(grid1->np*(double)sln); // probability is divided by total number of i particles and number of particles in cell
+                            // For all particles
+                            p2 *= 1./(grids1[i_grid_12].np * (double)sln); // probability is divided by total number of i particles and number of particles in cell
 
-                        // Compute C2 integral
+                            // Compute C2 integral
 #ifdef LEGENDRE
-                        locint.second(prim_list, prim_ids, pln, particle_j, pid_j, bin_ij, w_ij, p2, factor_ij, poly_ij);
+                            locint.second(prim_list, prim_ids, pln, particle_j, pid_j, bin_ij, w_ij, p2, factor_ij, poly_ij);
 #elif defined POWER
-                        locint.second(prim_list, prim_ids, pln, particle_j, pid_j, bin_ij, w_ij, p2, poly_ij);
+                            locint.second(prim_list, prim_ids, pln, particle_j, pid_j, bin_ij, w_ij, p2, poly_ij);
 #else
-                        locint.second(prim_list, prim_ids, pln, particle_j, pid_j, bin_ij, w_ij, p2, p21, p22);
+                            locint.second(prim_list, prim_ids, pln, particle_j, pid_j, bin_ij, w_ij, p2, p21, p22);
 #endif
 
-                        // LOOP OVER N3 K CELLS
-                        for (int n3=0; n3<par->N3; n3++){
-                            cell_attempt3+=1; // new third cell attempted
+                            // LOOP OVER N3 K CELLS
+                            for (int n3 = 0; n3 < par->N3; n3++) {
+                                cell_attempt3 += 1; // new third cell attempted
 
-                            // Draw third cell from i weighted by xi(r)
-                            delta3 = rd13->random_xidraw(locrng, &p3); // use 1-3 random draw class here for xi_13
-                            thi_id = prim_id + delta3;
-                            cell_sep3 = grid3->cell_sep(delta3);
-                            x = draw_particle_without_class(thi_id,particle_k,pid_k,cell_sep3,grid3,tln,locrng); // draw from third grid
-                            if (x==1) continue; // skip failed draws
-                            if ((pid_j==pid_k) && (I2==I3)) continue; // skip jk self-counts
+                                // Choose file for K and J cells
+                                int i_grid_34 = gsl_rng_uniform_int(locrng, par->n_randoms);
+                                // Draw third cell from i weighted by xi(r)
+                                delta3 = rd13->random_xidraw(locrng, &p3); // use 1-3 random draw class here for xi_13
+                                thi_id = prim_id + delta3;
+                                cell_sep3 = grids3[i_grid_34].cell_sep(delta3);
+                                x = draw_particle_without_class(thi_id, particle_k, pid_k, cell_sep3, &grids3[i_grid_34], tln, locrng); // draw from third grid
+                                if (x == 1) continue; // skip failed draws
+                                if ((pid_j == pid_k) && (I2 == I3)) continue; // skip jk self-counts
 
-                            used_cell3+=1; // new third cell used
+                                used_cell3 += 1; // new third cell used
 
-                            p3*=p2/(double)tln; // update probability
+                                p3 *= p2/(double)tln; // update probability
 
-                            // Compute third integral
+                                // Compute third integral
 #ifdef LEGENDRE
-                            locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3,factor_ij,poly_ij);
+                                locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3,factor_ij,poly_ij);
 #elif defined POWER
-                            locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3, poly_ij);
+                                locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3, poly_ij);
 #else
-                            locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3);
+                                locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3);
 #endif
 
-                            // LOOP OVER N4 L CELLS
-                            for (int n4=0; n4<par->N4; n4++){
-                                cell_attempt4+=1; // new fourth cell attempted
+                                // LOOP OVER N4 L CELLS
+                                for (int n4 = 0; n4 < par->N4; n4++) {
+                                    cell_attempt4 += 1; // new fourth cell attempted
 
-                                // Draw fourth cell from j cell weighted by xi_24(r)
-                                delta4 = rd24->random_xidraw(locrng,&p4);
-                                x = draw_particle_without_class(sec_id+delta4,particle_l,pid_l,cell_sep2+grid4->cell_sep(delta4),grid4,fln,locrng); // draw from 4th grid
-                                if (x==1) continue; // skip failed draws
-                                if (((pid_l==pid_j) && (I4==I2)) || ((pid_l==pid_k) && (I4==I3))) continue; // skip jl and kl self-counts
+                                    // Draw fourth cell from j cell weighted by xi_24(r)
+                                    delta4 = rd24->random_xidraw(locrng,&p4);
+                                    x = draw_particle_without_class(sec_id + delta4, particle_l, pid_l, cell_sep2 + grids4[i_grid_34].cell_sep(delta4), &grids4[i_grid_34], fln, locrng); // draw from 4th grid
+                                    if (x == 1) continue; // skip failed draws
+                                    if (((pid_l == pid_j) && (I4 == I2)) || ((pid_l == pid_k) && (I4 == I3))) continue; // skip jl and kl self-counts
 
-                                used_cell4+=1; // new fourth cell used
+                                    used_cell4 += 1; // new fourth cell used
 
-                                p4*=p3/(double)fln;
+                                    p4 *= p3/(double)fln;
 
 
-                                // Now compute the four-point integral
+                                    // Now compute the four-point integral
 #ifdef LEGENDRE
-                                locint.fourth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, pid_j, pid_k, pid_l, bin_ij, w_ijk, xi_ik, p4, factor_ij, poly_ij);
+                                    locint.fourth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, pid_j, pid_k, pid_l, bin_ij, w_ijk, xi_ik, p4, factor_ij, poly_ij);
 #elif defined POWER
-                                locint.fourth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, pid_j, pid_k, pid_l, bin_ij, w_ijk, xi_ik, p4, poly_ij);
+                                    locint.fourth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, pid_j, pid_k, pid_l, bin_ij, w_ijk, xi_ik, p4, poly_ij);
 #else
-                                locint.fourth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, pid_j, pid_k, pid_l, bin_ij, w_ijk, xi_ik, p4);
+                                    locint.fourth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, pid_j, pid_k, pid_l, bin_ij, w_ijk, xi_ik, p4);
 #endif
 
+                                }
                             }
                         }
                     }
-                }
 
                 // Update used pair/triple/quad counts
-                tot_pairs+=loc_used_pairs;
-                tot_triples+=loc_used_triples;
-                tot_quads+=loc_used_quads;
+                tot_pairs += loc_used_pairs;
+                tot_triples += loc_used_triples;
+                tot_quads += loc_used_quads;
 
     #ifdef OPENMP
     #pragma omp critical // only one processor can access at once
     #endif
             {
-                if ((n_loops+1)%par->nthread==0){ // Print every nthread loops
+                if ((n_loops+1) % par->nthread == 0){ // Print every nthread loops
                     TotalTime.Stop(); // interrupt timing to access .Elapsed()
                     int current_runtime = TotalTime.Elapsed();
                     int remaining_time = current_runtime/((n_loops+1)/par->nthread)*(par->max_loops/par->nthread-(n_loops+1)/par->nthread);  // estimated remaining time
@@ -474,9 +480,9 @@
                 char output_string[50];
                 sprintf(output_string,"%d", n_loops);
 #ifndef POWER
-                locint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm,(Float)loc_used_pairs, (Float)loc_used_triples, (Float)loc_used_quads);
+                locint.normalize(grids1[0].norm, grids2[0].norm, grids3[0].norm, grids4[0].norm, (Float)loc_used_pairs, (Float)loc_used_triples, (Float)loc_used_quads);
 #else
-                locint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm,(Float)loc_used_pairs, (Float)loc_used_triples, (Float)loc_used_quads, par->power_norm);
+                locint.normalize(grids1[0].norm, grids2[0].norm, grids3[0].norm, grids4[0].norm, (Float)loc_used_pairs, (Float)loc_used_triples, (Float)loc_used_quads, par->power_norm);
 #endif
                 locint.save_integrals(output_string,0);
 #ifdef JACKKNIFE
@@ -503,9 +509,9 @@
 
         // Normalize the accumulated results, using the RR counts
 #ifndef POWER
-        sumint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm,(Float)tot_pairs, (Float)tot_triples,(Float)tot_quads);
+        sumint.normalize(grids1[0].norm, grids2[0].norm, grids3[0].norm, grids4[0].norm, (Float)tot_pairs, (Float)tot_triples,(Float)tot_quads);
 #else
-        sumint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm,(Float)tot_pairs, (Float)tot_triples,(Float)tot_quads, par->power_norm);
+        sumint.normalize(grids1[0].norm, grids2[0].norm, grids3[0].norm, grids4[0].norm, (Float)tot_pairs, (Float)tot_triples,(Float)tot_quads, par->power_norm);
 #endif
 
         int runtime = TotalTime.Elapsed();
@@ -521,7 +527,9 @@
 #else
         printf("Acceptance ratios are %.3f for pairs, %.3f for triples and %.3f for quads.\n",(double)cnt2/tot_pairs,(double)cnt3/tot_triples,(double)cnt4/tot_quads);
 #endif
-        printf("Average of %.2f pairs accepted per primary particle.\n\n",(Float)cnt2/grid1->np);
+        size_t np_tot = 0;
+        for (int i = 0; i < par->n_randoms; ++i) np_tot += grids1[i].np;
+        printf("Average of %.2f pairs accepted per primary particle.\n\n", (Float)cnt2 / np_tot);
 
         printf("\nTrial speed: %.2e quads per core per second\n",double(tot_quads)/(runtime*double(par->nthread)));
         printf("Acceptance speed: %.2e quads per core per second\n",double(cnt4)/(runtime*double(par->nthread)));
