@@ -108,9 +108,9 @@
         compute_integral(){};
 
 #if (defined LEGENDRE || defined POWER)
-        compute_integral(Grid all_grid[], Parameters *par, CorrelationFunction all_cf[], RandomDraws all_rd[], SurveyCorrection all_survey[], int I1, int I2, int I3, int I4, int iter_no){
+        compute_integral(std::vector<Grid> all_grids[], Parameters *par, CorrelationFunction all_cf[], RandomDraws all_rd[], SurveyCorrection all_survey[], int I1, int I2, int I3, int I4, int iter_no) {
 #else
-        compute_integral(std::vector<Grid> all_grids[], Parameters *par, JK_weights all_JK[], CorrelationFunction all_cf[], RandomDraws all_rd[], int I1, int I2, int I3, int I4, int iter_no){
+        compute_integral(std::vector<Grid> all_grids[], Parameters *par, JK_weights all_JK[], CorrelationFunction all_cf[], RandomDraws all_rd[], int I1, int I2, int I3, int I4, int iter_no) {
 #endif
             // MAIN FUNCTION TO COMPUTE INTEGRALS
 
