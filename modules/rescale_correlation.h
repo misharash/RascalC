@@ -225,7 +225,7 @@ public:
         correlation_integral thread_xi_function(par, old_cf);
 
         // Allocate particle position memory
-        size_t maxnp1 = 0;
+        int maxnp1 = 0;
         for (int i = 0; i < par->n_randoms; ++i)
             if (grids1[i].maxnp > maxnp1) maxnp1 = grids1[i].maxnp;
         int ec = 0;

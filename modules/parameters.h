@@ -16,7 +16,7 @@ public:
 	const char default_fname[500] = "LRG_NScomb_0.4_1.1.less.ran.xyzwj";
 
     // Number of randoms
-    size_t n_randoms = 1;
+    int n_randoms = 1;
 
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;

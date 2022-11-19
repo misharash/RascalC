@@ -337,7 +337,7 @@
 
                         // Print time left
                         if ((float(n1) / float(grids1[i_grid_12].nf) * 100) >= percent_counter) {
-                            printf("Integral %d of %d, run %d of %d, file %d of %zu, on thread %d: Using cell %d of %d - %.0f percent complete\n", iter_no, tot_iter, 1+n_loops/par->nthread, int(ceil(float(par->max_loops)/(float)par->nthread)), i_grid_12+1, par->n_randoms, thread, n1+1, grids1[i_grid_12].nf, percent_counter);
+                            printf("Integral %d of %d, run %d of %d, file %d of %d, on thread %d: Using cell %d of %d - %.0f percent complete\n", iter_no, tot_iter, 1+n_loops/par->nthread, int(ceil(float(par->max_loops)/(float)par->nthread)), i_grid_12+1, par->n_randoms, thread, n1+1, grids1[i_grid_12].nf, percent_counter);
                             percent_counter += 5.;
                         }
 
@@ -527,7 +527,7 @@
 #else
         printf("Acceptance ratios are %.3f for pairs, %.3f for triples and %.3f for quads.\n",(double)cnt2/tot_pairs,(double)cnt3/tot_triples,(double)cnt4/tot_quads);
 #endif
-        size_t np_tot = 0;
+        int np_tot = 0;
         for (int i = 0; i < par->n_randoms; ++i) np_tot += grids1[i].np;
         printf("Average of %.2f pairs accepted per primary particle.\n\n", (Float)cnt2 / np_tot);
 
