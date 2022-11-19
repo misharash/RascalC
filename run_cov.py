@@ -111,7 +111,7 @@ nfiles = [len(input_filenames_group) for input_filenames_group in input_filename
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = reg # output file directory
+outdir = " ".join(tlabels) + "_" + reg + "_disjoint_test" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
@@ -300,31 +300,23 @@ if convert_cf: # this is really for pair counts and jackknives
             else: # convert full, binned pair counts
                 exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
 
-# running main code for each random file/part
-for i in range(nfiles):
-    print_and_log(f"Starting main computation {i+1} of {nfiles}")
-    # define output subdirectory
-    this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
-    this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
-    if legendre: # need correction function
-        if ntracers == 1:
-            exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
-        elif ntracers == 2:
-            exec_print_and_log(f"python python/compute_correction_function_multi.py {' '.join([names[i] for names in input_filenames])} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {' '.join(binned_pair_names)}")
-        else:
-            print("Number of tracers not supported for this operation (yet)")
-            sys.exit(1)
-    # run code
-    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre else ""))
-    print_and_log(f"Finished main computation {i+1} of {nfiles}")
+# running main code
+print_and_log(f"Starting the main computation")
+this_outdir = os.path.normpath(outdir) + "/" # make sure there is exactly one slash in the end
+if legendre: # need correction function. This might be incorrect for the single run
+    if ntracers == 1:
+        exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
+    elif ntracers == 2:
+        exec_print_and_log(f"python python/compute_correction_function_multi.py {' '.join([names[i] for names in input_filenames])} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {' '.join(binned_pair_names)}")
+    else:
+        print("Number of tracers not supported for this operation (yet)")
+        sys.exit(1)
+# run code
+exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {' '.join(input_filenames[t])}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre else ""))
+print_and_log(f"Finished the main computation")
 # end running main code for each random file/part
 
 print_and_log(datetime.now())
-
-# Concatenate samples
-if nfiles > 1:
-    print_and_log(f"Concatenating samples")
-    exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {maxloops}" for i in range(nfiles)]) + f" {outdir}")
 
 # Maybe post-processing will be here later
 
