@@ -321,8 +321,7 @@
     #ifdef OPENMP
     #pragma omp for schedule(dynamic)
     #endif
-            for (int n_loops = 0; n_loops < par->max_loops; n_loops++){
-                percent_counter = 0.;
+            for (int n_loops = 0; n_loops < par->max_loops; n_loops++) {
                 loc_used_pairs = 0; loc_used_triples = 0; loc_used_quads = 0;
 
                 // End loops early if convergence has been acheived
@@ -332,7 +331,8 @@
                     continue;
                     }
                 // LOOP OVER ALL FILLED I CELLS
-                for (int i_grid_12 = 0; i_grid_12 < par->n_randoms; ++i_grid_12)
+                for (int i_grid_12 = 0; i_grid_12 < par->n_randoms; ++i_grid_12) {
+                    percent_counter = 0.;
                     for (int n1 = 0; n1 < grids1[i_grid_12].nf; n1++) {
 
                         // Print time left
@@ -438,6 +438,7 @@
                             }
                         }
                     }
+                }
 
                 // Update used pair/triple/quad counts
                 tot_pairs += loc_used_pairs;
