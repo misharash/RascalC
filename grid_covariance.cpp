@@ -128,9 +128,9 @@ int main(int argc, char *argv[]) {
         // set up 2D arrays
         all_particles[index] = &particle_buffer[index * par.n_randoms];
         all_np[index] = &np_buffer[index * par.n_randoms];
-        if (!par.make_random){
-            std::vector<char*> filenames;
-            if (index==0) filenames = par.fnames; else filenames = par.fnames2;
+        if (!par.make_random) {
+            std::vector<char*> &filenames = par.fnames;
+            if (index == 1) filenames = par.fnames2;
             for (int i = 0; i < par.n_randoms; ++i) {
 #ifdef JACKKNIFE
                 all_particles[index][i] = read_particles(par.rescale, &all_np[index][i], filenames[i], par.rstart, par.nmax, &all_weights[index]);
