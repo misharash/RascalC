@@ -234,8 +234,8 @@ public:
 		else if (!strcmp(argv[i],"-norm")) nofznorm = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-norm2")) nofznorm2 = atof(argv[++i]);
         else if (!strcmp(argv[i],"-nside")) nside = atoi(argv[++i]);
-		else if (!strcmp(argv[i],"-in")) while (argv[i][0] != '-') fnames.push_back(argv[++i]);
-        else if (!strcmp(argv[i],"-in2")) while (argv[i][0] != '-') fnames2.push_back(argv[++i]);
+		else if (!strcmp(argv[i],"-in")) while (argv[++i][0] != '-') fnames.push_back(argv[i]);
+        else if (!strcmp(argv[i],"-in2")) while (argv[++i][0] != '-') fnames2.push_back(argv[i]);
 		else if (!strcmp(argv[i],"-cor")) corname = argv[++i];
 		else if (!strcmp(argv[i],"-cor12")) corname12 = argv[++i];
 		else if (!strcmp(argv[i],"-cor2")) corname2 = argv[++i];
