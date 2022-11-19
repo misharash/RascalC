@@ -148,8 +148,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // Set the bounding box or shift
-    Float3 shift;
+    // Determine the bounding box and shift
+    Float3 shift; // default value is 0
     if (!par.make_random) {
         par.perbox = compute_bounding_box(all_particles, all_np, no_fields, par.n_randoms, par.rect_boxsize, par.cellsize, par.rmax, shift, par.nside);
 #ifdef PERIODIC
