@@ -166,7 +166,7 @@ public:
 
 
 public:
-    void refine_wrapper(Parameters *par, std::vector<Grid> all_grids[], CorrelationFunction all_cf[], RandomDraws all_rd[], int number_xi){
+    void refine_wrapper(Parameters *par, Grid* all_grids[], CorrelationFunction all_cf[], RandomDraws all_rd[], int number_xi){
         // Wrapper to refine each individual correlation function. This updates the correlation function and random draw classes.
 
         CorrelationFunction true_cf;
@@ -189,7 +189,7 @@ public:
         }
     }
 
-    CorrelationFunction rescale_xi(Parameters *par, std::vector<Grid> &grids1, std::vector<Grid> &grids2, CorrelationFunction *old_cf, CorrelationFunction *true_cf, RandomDraws *rd, int index){
+    CorrelationFunction rescale_xi(Parameters *par, Grid* grids1, Grid* grids2, CorrelationFunction *old_cf, CorrelationFunction *true_cf, RandomDraws *rd, int index){
         // Rescale the xi function by computing the binned xi from some estimate and comparing it to the known value. Return a correlation function object with an updated estimate of the xi at the bin-centers.
 
         // gsl and random class setup

@@ -11,7 +11,7 @@
 #else
     #include "integrals.h"
 #endif
-    class compute_integral{
+    class compute_integral {
 
     private:
         uint64 cnt2=0,cnt3=0,cnt4=0;
@@ -19,7 +19,7 @@
 
 
     public:
-        int particle_list(int id_1D, Particle* &part_list, int* &id_list, Grid *grid){
+        int particle_list(int id_1D, Particle* &part_list, int* &id_list, Grid *grid) {
             // function updates a list of particles for a 1-dimensional ID. Output is number of particles in list.
 
             Cell cell = grid->c[id_1D]; // cell object
@@ -33,7 +33,7 @@
         }
 
     private:
-        int draw_particle(integer3 id_3D, Particle &particle, int &pid, Float3 shift, Grid *grid, int &n_particles, gsl_rng* locrng, int &n_particles1, int &n_particles2){
+        int draw_particle(integer3 id_3D, Particle &particle, int &pid, Float3 shift, Grid *grid, int &n_particles, gsl_rng* locrng, int &n_particles1, int &n_particles2) {
             // Draw a random particle from a cell given the cell ID.
             // This updates the particle and particle ID and returns 1 if error.
 
@@ -53,7 +53,7 @@
         }
 
     public:
-        int draw_particle_without_class(integer3 id_3D, Particle &particle, int &pid, integer3 shift, Grid *grid, int &n_particles, gsl_rng* locrng){
+        int draw_particle_without_class(integer3 id_3D, Particle &particle, int &pid, integer3 shift, Grid *grid, int &n_particles, gsl_rng* locrng) {
             // Draw a random particle from a cell given the cell ID.
             // This updates the particle and particle ID and returns 1 if error.
             // This is used for k,l cells (with no indication of particle random class)
@@ -70,21 +70,21 @@
             return 0;
         }
     private:
-        CorrelationFunction* which_cf(CorrelationFunction all_cf[], int Ia, int Ib){
+        CorrelationFunction* which_cf(CorrelationFunction all_cf[], int Ia, int Ib) {
             // Returns the relevant correlation function for two input field indices
-            if((Ia==1)&(Ib==1)) return &all_cf[0];
-            else if ((Ia==2)&&(Ib==2)) return &all_cf[1];
+            if ((Ia == 1) && (Ib == 1)) return &all_cf[0];
+            else if ((Ia == 2) && (Ib == 2)) return &all_cf[1];
             else return &all_cf[2];
         }
-        RandomDraws* which_rd(RandomDraws all_rd[], int Ia, int Ib){
+        RandomDraws* which_rd(RandomDraws all_rd[], int Ia, int Ib) {
             // Returns the relevant correlation function for two input field indices
-            if((Ia==1)&(Ib==1)) return &all_rd[0];
-            else if ((Ia==2)&&(Ib==2)) return &all_rd[1];
+            if ((Ia == 1) && (Ib == 1)) return &all_rd[0];
+            else if ((Ia == 2) && (Ib == 2)) return &all_rd[1];
             else return &all_rd[2];
         }
-        std::vector<Grid>& which_grids(std::vector<Grid> all_grids[], int Ia){
+        Grid* which_grids(Grid* all_grids[], int Ia) {
             // Returns the relevant correlation function for two input field indices
-            if(Ia==1) return all_grids[0];
+            if (Ia == 1) return all_grids[0];
             else return all_grids[1];
         }
 
@@ -108,9 +108,9 @@
         compute_integral(){};
 
 #if (defined LEGENDRE || defined POWER)
-        compute_integral(std::vector<Grid> all_grids[], Parameters *par, CorrelationFunction all_cf[], RandomDraws all_rd[], SurveyCorrection all_survey[], int I1, int I2, int I3, int I4, int iter_no) {
+        compute_integral(Grid* all_grids[], Parameters *par, CorrelationFunction all_cf[], RandomDraws all_rd[], SurveyCorrection all_survey[], int I1, int I2, int I3, int I4, int iter_no) {
 #else
-        compute_integral(std::vector<Grid> all_grids[], Parameters *par, JK_weights all_JK[], CorrelationFunction all_cf[], RandomDraws all_rd[], int I1, int I2, int I3, int I4, int iter_no) {
+        compute_integral(Grid* all_grids[], Parameters *par, JK_weights all_JK[], CorrelationFunction all_cf[], RandomDraws all_rd[], int I1, int I2, int I3, int I4, int iter_no) {
 #endif
             // MAIN FUNCTION TO COMPUTE INTEGRALS
 
@@ -118,10 +118,10 @@
             if (par->multi_tracers) tot_iter = 7;
 
             // Define relevant grids
-            std::vector<Grid>& grids1 = which_grids(all_grids, I1);
-            std::vector<Grid>& grids2 = which_grids(all_grids, I2);
-            std::vector<Grid>& grids3 = which_grids(all_grids, I3);
-            std::vector<Grid>& grids4 = which_grids(all_grids, I4);
+            Grid* grids1 = which_grids(all_grids, I1);
+            Grid* grids2 = which_grids(all_grids, I2);
+            Grid* grids3 = which_grids(all_grids, I3);
+            Grid* grids4 = which_grids(all_grids, I4);
 
             // Define relevant correlation functions
             CorrelationFunction *cf12 = which_cf(all_cf,I1,I2);

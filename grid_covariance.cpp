@@ -167,10 +167,11 @@ int main(int argc, char *argv[]) {
     }
 
     // Now put particles to grid
-    std::vector<Grid> all_grids[no_fields]; // create empty grids
+    Grid grid_buffer[no_fields * par.n_randoms]; // create empty grids
+    Grid* all_grids[no_fields];
 
     for (int index = 0; index < no_fields; index++) {
-        all_grids[index].resize(par.n_randoms);
+        all_grids[index] = &grid_buffer[index * par.n_randoms];
         for (int i = 0; i < par.n_randoms; ++i) {
             // Sort the particles into the grid.
             Float nofznorm = par.nofznorm;
