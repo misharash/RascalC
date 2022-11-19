@@ -15,6 +15,9 @@ public:
 	std::vector<char*> fnames;
 	const char default_fname[500] = "LRG_NScomb_0.4_1.1.less.ran.xyzwj";
 
+    // Number of randoms
+    size_t n_randoms = 1;
+
     // Name of the radial binning .csv file
     char *radial_bin_file = NULL;
     const char default_radial_bin_file[500] = "radial_binning_cov.csv";
@@ -376,8 +379,11 @@ public:
 	    if (corname2==NULL) { corname2 = (char *) default_corname2; }// No name was given
 	    if (corname12==NULL) { corname12 = (char *) default_corname12; }// No name was given
 
+        n_randoms = fnames.size();
+
 	    // Decide if we are using multiple tracers:
 	    if (strlen(fnames2[0])!=0){
+            assert(n_randoms == fnames2.size()); // need to have same number of files for both tracers
 #if (defined LEGENDRE || defined POWER)
 #ifdef LEGENDRE
             if ((strlen(phi_file12)==0)||(strlen(phi_file2)==0)){
