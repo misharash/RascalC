@@ -82,10 +82,10 @@
             else if ((Ia==2)&&(Ib==2)) return &all_rd[1];
             else return &all_rd[2];
         }
-        Grid* which_grid(Grid all_grid[], int Ia){
+        Grid* which_grid(std::vector<Grid> all_grids[], int Ia){
             // Returns the relevant correlation function for two input field indices
-            if(Ia==1) return &all_grid[0];
-            else return &all_grid[1];
+            if(Ia==1) return &all_grids[0][0];
+            else return &all_grids[1][0];
         }
 
 #if (defined LEGENDRE || defined POWER)
@@ -110,7 +110,7 @@
 #if (defined LEGENDRE || defined POWER)
         compute_integral(Grid all_grid[], Parameters *par, CorrelationFunction all_cf[], RandomDraws all_rd[], SurveyCorrection all_survey[], int I1, int I2, int I3, int I4, int iter_no){
 #else
-        compute_integral(Grid all_grid[], Parameters *par, JK_weights all_JK[], CorrelationFunction all_cf[], RandomDraws all_rd[], int I1, int I2, int I3, int I4, int iter_no){
+        compute_integral(std::vector<Grid> all_grids[], Parameters *par, JK_weights all_JK[], CorrelationFunction all_cf[], RandomDraws all_rd[], int I1, int I2, int I3, int I4, int iter_no){
 #endif
             // MAIN FUNCTION TO COMPUTE INTEGRALS
 
@@ -118,10 +118,10 @@
             if(par->multi_tracers==true) tot_iter=7;
 
             // Define relevant grids
-            Grid *grid1 = which_grid(all_grid,I1);
-            Grid *grid2 = which_grid(all_grid,I2);
-            Grid *grid3 = which_grid(all_grid,I3);
-            Grid *grid4 = which_grid(all_grid,I4);
+            Grid *grid1 = which_grid(all_grids, I1);
+            Grid *grid2 = which_grid(all_grids, I2);
+            Grid *grid3 = which_grid(all_grids, I3);
+            Grid *grid4 = which_grid(all_grids, I4);
 
             // Define relevant correlation functions
             CorrelationFunction *cf12 = which_cf(all_cf,I1,I2);

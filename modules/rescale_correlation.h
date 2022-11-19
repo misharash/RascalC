@@ -166,7 +166,7 @@ public:
 
 
 public:
-    void refine_wrapper(Parameters *par, Grid all_grid[], CorrelationFunction all_cf[], RandomDraws all_rd[], int number_xi){
+    void refine_wrapper(Parameters *par, std::vector<Grid> all_grids[], CorrelationFunction all_cf[], RandomDraws all_rd[], int number_xi){
         // Wrapper to refine each individual correlation function. This updates the correlation function and random draw classes.
 
         CorrelationFunction true_cf;
@@ -179,7 +179,7 @@ public:
                 true_cf.copy_function(&all_cf[index]); // store initial correlation function
                 for(int n_refine=0;n_refine<par->cf_loops;n_refine++){ // refine cf_loops times per correlation function
                     // Rescale correlation function
-                    CorrelationFunction output = rescale_xi(par, &all_grid[grid1_index[index]], &all_grid[grid2_index[index]], &all_cf[index], &true_cf, &all_rd[index],n_refine);
+                    CorrelationFunction output = rescale_xi(par, &all_grids[grid1_index[index]][0], &all_grids[grid2_index[index]][0], &all_cf[index], &true_cf, &all_rd[index],n_refine);
                     // Update correlation function
                     all_cf[index].copy_function(&output);
                 }

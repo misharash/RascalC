@@ -131,20 +131,22 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
 
 
 
-bool compute_bounding_box(Particle *p, int np, Float3 &rect_boxsize, Float &cellsize, Float rmax, Float3& pmin, int nside) {
+bool compute_bounding_box(std::vector<Particle*> *p, std::vector<int> *np, int n_fields, size_t n_files, Float3 &rect_boxsize, Float &cellsize, Float rmax, Float3& pmin, int nside) {
     // Compute the boxsize of the bounding cuboid box and determine whether we are periodic
     Float3 pmax;
-    bool box=false;
-    pmin.x = pmin.y = pmin.z = 1e30;
-    pmax.x = pmax.y = pmax.z = -1e30;
-    for (int j=0; j<np; j++) {
-        pmin.x = fmin(pmin.x, p[j].pos.x);
-        pmin.y = fmin(pmin.y, p[j].pos.y);
-        pmin.z = fmin(pmin.z, p[j].pos.z);
-        pmax.x = fmax(pmax.x, p[j].pos.x);
-        pmax.y = fmax(pmax.y, p[j].pos.y);
-        pmax.z = fmax(pmax.z, p[j].pos.z);
-    }
+    bool box = false;
+    pmin.x = pmin.y = pmin.z = INFINITY;
+    pmax.x = pmax.y = pmax.z = -INFINITY;
+    for (int index = 0; index < n_files; ++index)
+        for (int i = 0; i < n_files; ++i)
+            for (int j=0; j < np[index][i]; j++) {
+                pmin.x = fmin(pmin.x, p[index][i][j].pos.x);
+                pmin.y = fmin(pmin.y, p[index][i][j].pos.y);
+                pmin.z = fmin(pmin.z, p[index][i][j].pos.z);
+                pmax.x = fmax(pmax.x, p[index][i][j].pos.x);
+                pmax.y = fmax(pmax.y, p[index][i][j].pos.y);
+                pmax.z = fmax(pmax.z, p[index][i][j].pos.z);
+            }
     printf("# Range of x positions are %6.2f to %6.2f\n", pmin.x, pmax.x);
     printf("# Range of y positions are %6.2f to %6.2f\n", pmin.y, pmax.y);
     printf("# Range of z positions are %6.2f to %6.2f\n", pmin.z, pmax.z);
