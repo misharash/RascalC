@@ -197,7 +197,7 @@ public:
         std::uniform_int_distribution<unsigned int> dist(1, std::numeric_limits<unsigned int>::max());
         unsigned long int steps = dist(urandom);
         gsl_rng_env_setup(); // initialize gsl rng
-        correlation_integral full_xi_function(par,old_cf); // full correlation function class
+        correlation_integral full_xi_function(par, old_cf); // full correlation function class
         uint64 used_pairs=0;
 
 #ifdef OPENMP
@@ -205,7 +205,7 @@ public:
         { // start parallel loop
         // Decide thread
         int thread = omp_get_thread_num();
-        assert(omp_get_num_threads()<=par->nthread);
+        assert(omp_get_num_threads() <= par->nthread);
         if (thread==0) fprintf(stderr, "# Computing correlation function iteration %d of %d on %d threads.\n", index+1,par->cf_loops, omp_get_num_threads());
     #else
         { // start empty loop
