@@ -131,7 +131,7 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
 
 
 
-bool compute_bounding_box(std::vector<Particle*> *p, std::vector<int> *np, int n_fields, int n_files, Float3 &rect_boxsize, Float &cellsize, Float rmax, Float3& pmin, int nside) {
+bool compute_bounding_box(Particle*** p, int** np, int n_fields, int n_files, Float3 &rect_boxsize, Float &cellsize, Float rmax, Float3& pmin, int nside) {
     // Compute the boxsize of the bounding cuboid box and determine whether we are periodic
     Float3 pmax;
     bool box = false;

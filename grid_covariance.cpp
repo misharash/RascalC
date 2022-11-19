@@ -119,15 +119,18 @@ int main(int argc, char *argv[]) {
 #endif
 
     // Now read in particles
-    std::vector<Particle*> all_particles[no_fields];
-    std::vector<int> all_np[no_fields];
+    Particle* particle_buffer[no_fields * par.n_randoms];
+    Particle** all_particles[no_fields];
+    int np_buffer[no_fields * par.n_randoms];
+    int* all_np[no_fields];
 
     for (int index = 0; index < no_fields; index++) {
+        // set up 2D arrays
+        all_particles[index] = &particle_buffer[index * par.n_randoms];
+        all_np[index] = &np_buffer[index * par.n_randoms];
         if (!par.make_random){
             std::vector<char*> filenames;
             if (index==0) filenames = par.fnames; else filenames = par.fnames2;
-            all_particles[index].resize(par.n_randoms);
-            all_np[index].resize(par.n_randoms);
             for (int i = 0; i < par.n_randoms; ++i) {
 #ifdef JACKKNIFE
                 all_particles[index][i] = read_particles(par.rescale, &all_np[index][i], filenames[i], par.rstart, par.nmax, &all_weights[index]);
@@ -139,8 +142,8 @@ int main(int argc, char *argv[]) {
         } else {
             // If you want to just make random particles instead:
             assert(par.np>0);
-            all_particles[index].push_back(make_particles(par.rect_boxsize, par.np, index));
-            all_np[index].push_back(par.np);
+            all_particles[index][0] = make_particles(par.rect_boxsize, par.np, index);
+            all_np[index][0] = par.np;
         }
         for (int i = 0; i < par.n_randoms; ++i) {
             if (par.qinvert) invert_weights(all_particles[index][i], all_np[index][i]);
