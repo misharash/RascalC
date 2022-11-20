@@ -407,6 +407,7 @@
 #else
                                         locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3);
 #endif
+                                        p3 *= (double)tln; // restore this factor for later
                                     }
 
                                 // Choose a potentially different file for K and J cells within 4th integral
@@ -417,7 +418,7 @@
                                 if (x == 1) continue; // skip failed draws
                                 if ((pid_j == pid_k) && (I2 == I3)) continue; // skip jk self-counts
 
-                                p3 *= p2/(double)tln; // update probability
+                                p3 /= (double)tln; // update probability
 
                                 // "Compute" third integral - add zero but set the arrays correctly. binct3 still increases but it does not seem like a problem.
 #ifdef LEGENDRE
