@@ -37,11 +37,8 @@ if r_max:
     r_max //= r_step_orig
     result_orig = result_orig[:r_max] # cut to max bin
 
-def fold_counts(counts): # utility function for correct folding, used in several places
-    return counts[:, n_mu:] + counts[:, n_mu-1::-1] # first term is positive mu bins, second is negative mu bins in reversed order
-
-result = result_orig[::r_step, ::mu_factor] # rebin
-binpairs = fold_counts(result.R1R2.wcounts).ravel() / counts_factor # total counts, just wrap around mu=0 and make 1D
+result = result_orig[::r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
+binpairs = result.R1R2.wcounts.ravel() / counts_factor # total counts, made 1D
 nonsplit_mask = (result.sepavg(axis=0) < split_above)
 if split_above > 0: binpairs[nonsplit_mask] /= counts_factor # divide once more below the splitting scale
 
@@ -57,11 +54,8 @@ def jack_realization_rascalc(jack_estimator, i):
 
 results = [jack_realization_rascalc(result, i) for i in result.realizations]
 
-def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
-    return fold_counts(xi*RR) / fold_counts(RR)
-
-jack_xi = np.array([fold_xi(jack.corr, jack.R1R2.wcounts).ravel() for jack in results]) # wrap around mu=0
-jack_pairs = np.array([fold_counts(jack.R1R2.wcounts).ravel() for jack in results]) / counts_factor # wrap around mu=0
+jack_xi = np.array([jack.corr.ravel() for jack in results]) # already wrapped
+jack_pairs = np.array([jack.R1R2.wcounts.ravel() for jack in results]) / counts_factor # already wrapped
 if split_above > 0: jack_pairs[:, nonsplit_mask] /= counts_factor # divide once more below the splitting scale
 jack_pairs_sum = np.sum(jack_pairs, axis=0)
 assert np.allclose(jack_pairs_sum, binpairs), "Total counts mismatch"
@@ -73,7 +67,7 @@ def my_a2s(a, fmt='%.18e'):
 
 ## Write to file using numpy funs
 np.savetxt(binpairs_name, binpairs.reshape(-1, 1)) # this file must have 1 column
-header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1)[n_mu:])
+header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1))
 np.savetxt(xi_name, jack_xi, header=header, comments='')
 jack_numbers = np.array(result.realizations).reshape(-1, 1) # column of jackknife numbers, may be useless but needed for format compatibility
 np.savetxt(jackweights_name, np.hstack((jack_numbers, jack_weights)))
