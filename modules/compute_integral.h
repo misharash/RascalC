@@ -331,20 +331,20 @@
                     continue;
                     }
                 // LOOP OVER ALL FILLED I CELLS
-                for (int i_grid_12 = 0; i_grid_12 < par->n_randoms; ++i_grid_12) {
+                for (int i_grid_123 = 0; i_grid_123 < par->n_randoms; ++i_grid_123) {
                     percent_counter = 0.;
-                    for (int n1 = 0; n1 < grids1[i_grid_12].nf; n1++) {
+                    for (int n1 = 0; n1 < grids1[i_grid_123].nf; n1++) {
 
                         // Print time left
-                        if ((float(n1) / float(grids1[i_grid_12].nf) * 100) >= percent_counter) {
-                            printf("Integral %d of %d, run %d of %d, file %d of %d, on thread %d: Using cell %d of %d - %.0f percent complete\n", iter_no, tot_iter, 1+n_loops/par->nthread, int(ceil(float(par->max_loops)/(float)par->nthread)), i_grid_12+1, par->n_randoms, thread, n1+1, grids1[i_grid_12].nf, percent_counter);
+                        if ((float(n1) / float(grids1[i_grid_123].nf) * 100) >= percent_counter) {
+                            printf("Integral %d of %d, run %d of %d, file %d of %d, on thread %d: Using cell %d of %d - %.0f percent complete\n", iter_no, tot_iter, 1+n_loops/par->nthread, int(ceil(float(par->max_loops)/(float)par->nthread)), i_grid_123+1, par->n_randoms, thread, n1+1, grids1[i_grid_123].nf, percent_counter);
                             percent_counter += 5.;
                         }
 
                         // Pick first particle
-                        prim_id_1D = grids1[i_grid_12].filled[n1]; // 1d ID for cell i
-                        prim_id = grids1[i_grid_12].cell_id_from_1d(prim_id_1D); // define first cell
-                        pln = particle_list(prim_id_1D, prim_list, prim_ids, &grids1[i_grid_12]); // update list of particles and number of particles
+                        prim_id_1D = grids1[i_grid_123].filled[n1]; // 1d ID for cell i
+                        prim_id = grids1[i_grid_123].cell_id_from_1d(prim_id_1D); // define first cell
+                        pln = particle_list(prim_id_1D, prim_list, prim_ids, &grids1[i_grid_123]); // update list of particles and number of particles
 
                         if(pln==0) continue; // skip if empty
 
@@ -360,19 +360,19 @@
                             delta2 = rd13->random_cubedraw(locrng, &p2); // can use any rd class here since drawing as 1/r^2
                             // p2 is the ratio of sampling to true pair distribution here
                             sec_id = prim_id + delta2;
-                            cell_sep2 = grids2[i_grid_12].cell_sep(delta2);
-                            x = draw_particle(sec_id, particle_j, pid_j, cell_sep2, &grids2[i_grid_12], sln, locrng, sln1, sln2);
+                            cell_sep2 = grids2[i_grid_123].cell_sep(delta2);
+                            x = draw_particle(sec_id, particle_j, pid_j, cell_sep2, &grids2[i_grid_123], sln, locrng, sln1, sln2);
                             if (x==1) continue; // skip failed draws
 
                             used_cell2 += 1; // new cell accepted
 
 #if (!defined LEGENDRE && !defined POWER)
                             // Probabilities for two random-particle partitions
-                            p21 = p2/(grids1[i_grid_12].np1*(double)sln1); // divide probability by total number of particles in 1st partition and number in cell
-                            p22 = p2/(grids1[i_grid_12].np2*(double)sln2); // for partition 2
+                            p21 = p2/(grids1[i_grid_123].np1*(double)sln1); // divide probability by total number of particles in 1st partition and number in cell
+                            p22 = p2/(grids1[i_grid_123].np2*(double)sln2); // for partition 2
 #endif
                             // For all particles
-                            p2 *= 1./(grids1[i_grid_12].np * (double)sln); // probability is divided by total number of i particles and number of particles in cell
+                            p2 *= 1./(grids1[i_grid_123].np * (double)sln); // probability is divided by total number of i particles and number of particles in cell
 
                             // Compute C2 integral
 #ifdef LEGENDRE
@@ -387,27 +387,45 @@
                             for (int n3 = 0; n3 < par->N3; n3++) {
                                 cell_attempt3 += 1; // new third cell attempted
 
-                                // Choose file for K and J cells
-                                int i_grid_34 = gsl_rng_uniform_int(locrng, par->n_randoms);
                                 // Draw third cell from i weighted by xi(r)
                                 delta3 = rd13->random_xidraw(locrng, &p3); // use 1-3 random draw class here for xi_13
                                 thi_id = prim_id + delta3;
+                                cell_sep3 = grids3[i_grid_123].cell_sep(delta3);
+                                x = draw_particle_without_class(thi_id, particle_k, pid_k, cell_sep3, &grids3[i_grid_123], tln, locrng); // draw from third grid
+                                if (x != 1) // skip failed draws
+                                    if ((pid_j != pid_k) || (I2 != I3)) { // skip jk self-counts
+
+                                        used_cell3 += 1; // new third cell used
+
+                                        p3 *= p2/(double)tln; // update probability
+
+                                        // Compute third integral
+#ifdef LEGENDRE
+                                        locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3, factor_ij, poly_ij);
+#elif defined POWER
+                                        locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3, poly_ij);
+#else
+                                        locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3);
+#endif
+                                    }
+
+                                // Choose a potentially different file for K and J cells within 4th integral
+                                int i_grid_34 = gsl_rng_uniform_int(locrng, par->n_randoms);
+                                // Draw the third particle again
                                 cell_sep3 = grids3[i_grid_34].cell_sep(delta3);
                                 x = draw_particle_without_class(thi_id, particle_k, pid_k, cell_sep3, &grids3[i_grid_34], tln, locrng); // draw from third grid
                                 if (x == 1) continue; // skip failed draws
                                 if ((pid_j == pid_k) && (I2 == I3)) continue; // skip jk self-counts
 
-                                used_cell3 += 1; // new third cell used
-
                                 p3 *= p2/(double)tln; // update probability
 
-                                // Compute third integral
+                                // "Compute" third integral - add zero but set the arrays correctly. binct3 still increases but it does not seem like a problem.
 #ifdef LEGENDRE
-                                locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3,factor_ij,poly_ij);
+                                locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, INFINITY, factor_ij, poly_ij);
 #elif defined POWER
-                                locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3, poly_ij);
+                                locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, INFINITY, poly_ij);
 #else
-                                locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3);
+                                locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, INFINITY);
 #endif
 
                                 // LOOP OVER N4 L CELLS
