@@ -27,7 +27,7 @@ assert np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3), "Binnings o
 assert r_step % r_step_orig == 0, "Radial rebinning not possible"
 r_step //= r_step_orig
 
-result = result_orig[::r_step, ::mu_factor] # rebin
+result = result_orig[::r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
 # retrieve data sizes
 data_size1_sum = result_orig.D1D2.size1
 data_size2_sum = result_orig.D1D2.size2
@@ -36,7 +36,7 @@ data_size2_sum = result_orig.D1D2.size2
 for infile_name in infile_names[1:]:
     result_tmp = TwoPointCorrelationFunction.load(infile_name)
     assert result_tmp.shape == result_orig.shape, "Different shape in file %s" % infile_name
-    result += result_tmp[::r_step, ::mu_factor] # rebin and accumulate
+    result += result_tmp[::r_step, ::mu_factor].wrap() # rebin, wrap to positive mu and accumulate
     # accumulate data sizes
     data_size1_sum += result_tmp.D1D2.size1
     data_size2_sum += result_tmp.D1D2.size2
@@ -45,18 +45,12 @@ print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6e}")
 print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6e}")
 np.savetxt(outfile_name + ".ndata", np.array((data_size1_sum, data_size2_sum)) / len(infile_names)) # save them for later
 
-def fold_counts(counts): # utility function for correct folding, used in several places
-    return counts[:, n_mu:] + counts[:, n_mu-1::-1] # first term is positive mu bins, second is negative mu bins in reversed order
-
-def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
-    return fold_counts(xi*RR) / fold_counts(RR)
-
-xi = fold_xi(result.corr, result.R1R2.wcounts) # wrap around zero
+xi = result.corr * result.R1R2.normalized_wcounts() / result.S1S2.normalized_wcounts() # already wrapped; for input xi need to divide by SS instead of RR in post-recon case, in pre-recon case RR=SS so should work too
 
 ## Custom array to string function
 def my_a2s(a, fmt='%.18e'):
     return ' '.join([fmt % e for e in a])
 
 ## Write to file using numpy funs
-header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1)[n_mu:])
+header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1))
 np.savetxt(outfile_name, xi, header=header, comments='')

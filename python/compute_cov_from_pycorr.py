@@ -22,12 +22,6 @@ assert n_corr > 0, "Need at least one correlation"
 assert n_files % n_corr == 0, "Need the same number of files for each correlation"
 n_samples = n_files // n_corr
 
-def fold_counts(counts): # utility function for correct folding, used in several places
-    return counts[:, n_mu:] + counts[:, n_mu-1::-1] # first term is positive mu bins, second is negative mu bins in reversed order
-
-def fold_xi(xi, RR): # proper folding of correlation function around mu=0: average weighted by RR counts
-    return fold_counts(xi*RR) / fold_counts(RR)
-
 # load first input file
 result_orig = TwoPointCorrelationFunction.load(infile_names[0])
 print("Read 2PCF shaped", result_orig.shape)
@@ -44,13 +38,13 @@ r_step //= r_step_orig
 assert r_max % r_step_orig == 0, "Max radial bin cut incompatible with original radial binning"
 r_max //= r_step_orig
 
-result = result_orig[:r_max:r_step, ::mu_factor] # rebin
+result = result_orig[:r_max:r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
 n_bins = np.prod(result.corr.shape) // 2 # number of (s, mu) bins, factor of 2 from folding about mu=0
 
 # start xi and weights arrays
 xi, weights = np.zeros((2, len(infile_names), n_bins * n_corr))
-weights[0, :n_bins] = fold_counts(result.R1R2.wcounts).ravel()
-xi[0, :n_bins] = fold_xi(result.corr, result.R1R2.wcounts).ravel()
+weights[0, :n_bins] = result.R1R2.wcounts.ravel()
+xi[0, :n_bins] = result.corr.ravel()
 
 # load remaining input files if any
 for i in range(1, n_files):
@@ -60,8 +54,8 @@ for i in range(1, n_files):
     result = result_tmp[:r_max:r_step, ::mu_factor] # rebin and accumulate
     i_sample = i % n_samples # sample index
     i_corr = i // n_samples # correlation function index
-    weights[i_sample, i_corr*n_bins:(i_corr+1)*n_bins] = fold_counts(result.R1R2.wcounts).ravel()
-    xi[i_sample, i_corr*n_bins:(i_corr+1)*n_bins] = fold_xi(result.corr, result.R1R2.wcounts).ravel()
+    weights[i_sample, i_corr*n_bins:(i_corr+1)*n_bins] = result.R1R2.wcounts.ravel()
+    xi[i_sample, i_corr*n_bins:(i_corr+1)*n_bins] = result.corr.ravel()
 
 cov = np.cov(xi.T, aweights=np.sum(weights, axis=1)) # xi has to be transposed, because variables (bins) are in columns (2nd index) of it and cov expects otherwise. Weights are collapsed across the bins; the proper expression for covariance with weights changing for different variables within one sample has not been found yet; the jackknife expression is short by ~n_samples.
 np.savetxt(outfile_name, cov)

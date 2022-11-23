@@ -111,7 +111,7 @@ nfiles = [len(input_filenames_group) for input_filenames_group in input_filename
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = reg + "4" # output file directory
+outdir = "_".join(tlabels) + "_" + reg # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
@@ -246,7 +246,8 @@ if convert_cf: # this is really for pair counts and jackknives
     if do_counts: # redo counts
         if jackknife: # do jackknife xi and all counts
             if not cat_randoms: # concatenate randoms now
-                exec_print_and_log(f"cat {' '.join(input_filenames[i])} > {cat_randoms_files[i]}")
+                for t in range(ntracers):
+                    exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
             # compute jackknife weights
             if ntracers == 1:
                 exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
@@ -262,7 +263,8 @@ if convert_cf: # this is really for pair counts and jackknives
                 exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {mask} {use_weights}")
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_filename} {data_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
+                # keep in mind some subtleties for multi-tracer jackknife assigment
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {data_filename} {xyzwj_filename} {njack}") # the first file must be rdzw, the second xyzw!
                 data_ref_filenames[t] = xyzwj_filename
             # run RascalC own xi jack estimator
             if ntracers == 1:
