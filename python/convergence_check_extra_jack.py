@@ -1,6 +1,7 @@
 ## Script to perform an extra convergence check on jackknife integrals
 ## More specifically, divide integral subsamples into halves and check similarity of their average results
 ## Determines single-field vs multi-field automatically
+## Now legacy, jackknife integrals convergence checking implemented in convergence_check_extra.py, but old post-processing results do not have the needed information saved in .npz files
 
 import numpy as np
 import sys,os
@@ -21,7 +22,7 @@ skip_bins = int(sys.argv[8]) * m if len(sys.argv) >= 9 else 0
 
 input_root_jack = os.path.join(input_root, 'CovMatricesJack/')
 
-weights = np.loadtxt(weight_file)[:,1:]
+weights = np.loadtxt(weight_file)[:, 1+skip_bins:]
 RR = np.loadtxt(RR_file)
 
 # methods to assess similarity
