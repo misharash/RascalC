@@ -56,7 +56,7 @@ for i, index in enumerate(indices):
 
     # Load in full jackknife theoretical matrices
     print("Loading best estimate of covariance matrix for field %d" % (i+1))
-    c2, c3, c4 = load_matrices('full', i+1)
+    c2f, c3f, c4f = load_matrices('full', i+1)
 
     # Check matrix convergence
     from numpy.linalg import eigvalsh
@@ -80,15 +80,15 @@ for i, index in enumerate(indices):
     # Compute inverted matrix
     def Psi(alpha):
         """Compute precision matrix from covariance matrix, removing quadratic order bias terms."""
-        c_tot = c2*alpha**2.+c3*alpha+c4
+        c_tot = c2f * alpha**2. + c3f * alpha + c4f
         partial_cov = alpha**2 * c2s + alpha * c3s + c4s
         sum_partial_cov = np.sum(partial_cov, axis=0)
-        tmp=0.
+        tmp = 0.
         for i in range(n_samples):
             c_excl_i = (sum_partial_cov - partial_cov[i]) / (n_samples - 1)
-            tmp+=np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
-        D_est=(n_samples-1.)/n_samples * (-1.*np.eye(n_bins) + tmp/n_samples)
-        Psi = np.matmul(np.eye(n_bins)-D_est,np.linalg.inv(c_tot))
+            tmp += np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
+        D_est = (n_samples - 1) / n_samples * (-np.eye(n_bins) + tmp / n_samples)
+        Psi = np.matmul(np.eye(n_bins) - D_est, np.linalg.inv(c_tot))
         return Psi
 
     def neg_log_L1(alpha):
