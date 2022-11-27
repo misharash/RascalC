@@ -199,127 +199,148 @@ def matrix_readin(suffix='full'):
     """Read in multi-field covariance matrices. This returns lists of full and jackknife covariance matrices"""
 
     ## Define arrays for covariance matrices
-    c2s,c2js=[np.zeros([2, 2, n_bins, n_bins]) for _ in range(2)]
-    RRs=np.zeros([2,2,n*m])
-    diff1s,diff2s,JK_weights=[np.zeros([2, 2, n_jack, n_bins]) for _ in range(3)]
-    c3s,c3js=[np.zeros([2, 2, 2 , n_bins, n_bins]) for _ in range(2)]
-    c4s,c4js=[np.zeros([2, 2, 2, 2, n_bins, n_bins]) for _ in range(2)]
+    c2s, c2js = np.zeros([2, 2, 2, n_bins, n_bins])
+    RRs = np.zeros([2, 2, n_bins])
+    diff1s, diff2s, JK_weights = np.zeros([3, 2, 2, n_jack, n_bins])
+    c3s, c3js = np.zeros([2, 2, 2, 2, n_bins, n_bins])
+    c4s, c4js = np.zeros([2, 2, 2, 2, 2, n_bins, n_bins])
+    ## Normalization arrays for covariance matrices
+    n2s = np.zeros([2, 2])
+    n3s = np.zeros([2, 2, 2])
+    n4s = np.zeros([2, 2, 2, 2])
 
     for ii in range(len(I1)):
-        index4="%d%d,%d%d"%(I1[ii],I2[ii],I3[ii],I4[ii])
-        index3="%d,%d%d"%(I2[ii],I1[ii],I3[ii])
-        index2="%d%d"%(I1[ii],I2[ii])
+        index4 = "%d%d,%d%d" % (I1[ii], I2[ii], I3[ii], I4[ii])
+        index3 = "%d,%d%d" % (I2[ii], I1[ii], I3[ii])
+        index2 = "%d%d" % (I1[ii], I2[ii])
 
-        j1,j2,j3,j4=I1[ii]-1,I2[ii]-1,I3[ii]-1,I4[ii]-1 # internal indexing
+        j1, j2, j3,j4=I1[ii]-1, I2[ii]-1, I3[ii]-1, I4[ii]-1 # internal indexing
 
         # Define input files
         file_root_all = os.path.join(file_root, 'CovMatricesAll/')
         file_root_jack = os.path.join(file_root, 'CovMatricesJack/')
-        jndex=index2
-        if jndex=='21':
-            jndex='12' # to get correct weights
-        rr_true_file = os.path.join(weight_dir, 'binned_pair_counts_n%d_m%d_j%d_%s.dat'%(n,m,n_jack,jndex))
-        weights_file = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_%s.dat'%(n,m,n_jack,jndex))
+        jndex = index2
+        if jndex[0] > jndex[1]: # e.g. "21"
+            jndex = jndex[::-1] # to get correct weights
+        rr_true_file = os.path.join(weight_dir, 'binned_pair_counts_n%d_m%d_j%d_%s.dat' % (n, m, n_jack, jndex))
+        weights_file = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_%s.dat' % (n, m, n_jack, jndex))
 
-        if suffix=='full':
-            counts_file = file_root_all+'total_counts_n%d_m%d_%s.txt'%(n,m,index4)
+        if suffix == 'full':
+            counts_file = file_root_all + 'total_counts_n%d_m%d_%s.txt' % (n, m, index4)
             # Load total number of counts
-            total_counts=np.loadtxt(counts_file)
-            print("Reading in integral components for C_{%s}, which used %.2e pairs, %.2e triples and %.2e quads of particles"%(index4,total_counts[0],total_counts[1],total_counts[2]))
+            try:
+                total_counts = np.loadtxt(counts_file)
+                print("Reading in integral components for C_{%s}, which used %.2e pairs, %.2e triples and %.2e quads of particles" % (index4, total_counts[0], total_counts[1], total_counts[2]))
+            except (FileNotFoundError, IOError): pass
         else:
-            print("Reading in integral components for C_{%s}, iteration %s"%(index4,suffix))
+            print("Reading in integral components for C_{%s}, iteration %s" % (index4, suffix))
 
         # Load jackknife weights
-        weights=np.loadtxt(weights_file)[:, 1+skip_bins:]
+        weights = np.loadtxt(weights_file)[:, 1+skip_bins:]
 
         # Load pair counts
         rr_true = np.loadtxt(rr_true_file)[skip_bins:]
 
         # Load full integrals
-        c2=np.diag(np.loadtxt(file_root_all+'c2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[skip_bins:])
-        c3=np.loadtxt(file_root_all+'c3_n%d_m%d_%s_%s.txt' %(n,m,index3,suffix))[skip_bins:, skip_bins:]
-        c4=np.loadtxt(file_root_all+'c4_n%d_m%d_%s_%s.txt' %(n,m,index4,suffix))[skip_bins:, skip_bins:]
+        c2 = np.diag(np.loadtxt(file_root_all + 'c2_n%d_m%d_%s_%s.txt' % (n, m, index2, suffix))[skip_bins:])
+        c3 = np.loadtxt(file_root_all + 'c3_n%d_m%d_%s_%s.txt' % (n, m, index3, suffix))[skip_bins:, skip_bins:]
+        c4 = np.loadtxt(file_root_all + 'c4_n%d_m%d_%s_%s.txt' % (n, m, index4, suffix))[skip_bins:, skip_bins:]
 
         # Load jackknife integrals
-        c2j=np.diag(np.loadtxt(file_root_jack+'c2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[skip_bins:])
-        c3j=np.loadtxt(file_root_jack+'c3_n%d_m%d_%s_%s.txt' %(n,m,index3,suffix))[skip_bins:, skip_bins:]
-        c4j=np.loadtxt(file_root_jack+'c4_n%d_m%d_%s_%s.txt' %(n,m,index4,suffix))[skip_bins:, skip_bins:]
+        c2j = np.diag(np.loadtxt(file_root_jack + 'c2_n%d_m%d_%s_%s.txt' % (n, m, index2, suffix))[skip_bins:])
+        c3j = np.loadtxt(file_root_jack + 'c3_n%d_m%d_%s_%s.txt' % (n, m, index3, suffix))[skip_bins:, skip_bins:]
+        c4j = np.loadtxt(file_root_jack + 'c4_n%d_m%d_%s_%s.txt' % (n, m, index4, suffix))[skip_bins:, skip_bins:]
 
         # Define cxj components
-        EEaA1 = np.loadtxt(file_root_jack+'EE1_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[:, skip_bins:]
-        EEaA2 = np.loadtxt(file_root_jack+'EE2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[:, skip_bins:]
-        RRaA1 = np.loadtxt(file_root_jack+'RR1_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[:, skip_bins:]
-        RRaA2 = np.loadtxt(file_root_jack+'RR2_n%d_m%d_%s_%s.txt' %(n,m,index2,suffix))[:, skip_bins:]
+        EEaA1 = np.loadtxt(file_root_jack + 'EE1_n%d_m%d_%s_%s.txt' % (n, m, index2, suffix))[:, skip_bins:]
+        EEaA2 = np.loadtxt(file_root_jack + 'EE2_n%d_m%d_%s_%s.txt' % (n, m, index2, suffix))[:, skip_bins:]
+        RRaA1 = np.loadtxt(file_root_jack + 'RR1_n%d_m%d_%s_%s.txt' % (n, m, index2, suffix))[:, skip_bins:]
+        RRaA2 = np.loadtxt(file_root_jack + 'RR2_n%d_m%d_%s_%s.txt' % (n, m, index2, suffix))[:, skip_bins:]
         w_aA1 = RRaA1/np.sum(RRaA1,axis=0)
         w_aA2 = RRaA2/np.sum(RRaA2,axis=0)
-        EEa1 = np.sum(EEaA1,axis=0)
-        EEa2 = np.sum(EEaA2,axis=0)
+        EEa1 = np.sum(EEaA1, axis=0)
+        EEa2 = np.sum(EEaA2, axis=0)
         diff1 = EEaA1-w_aA1*EEa1
         diff2 = EEaA2-w_aA2*EEa2
 
-        # Now save components
-        RRs[j1,j2]=rr_true
-        JK_weights[j1,j2]=weights
-        c2s[j1,j2]=c2
-        c2js[j1,j2]=c2j
-        diff1s[j1,j2]=diff1
-        diff2s[j1,j2]=diff2
-        c3s[j2,j1,j3]=c3
-        c3js[j2,j1,j3]=c3j
-        if((j1!=j2)&(j3!=j4)):
-            c4s[j1,j2,j3,j4]+=0.5*c4 # to account for xi_ik xi_jl = xi_il xi_jk assumption
-            c4js[j1,j2,j3,j4]+=0.5*c4j
-        else:
-            c4s[j1,j2,j3,j4]=c4
-            c4js[j1,j2,j3,j4]=c4j
+        # Save 2-point components
+        RRs[j1, j2] += rr_true
+        JK_weights[j1, j2] += weights
+        c2s[j1, j2] += c2
+        c2js[j1, j2] += c2j
+        diff1s[j1, j2] += diff1
+        diff2s[j1, j2] += diff2
+        n2s[j1, j2] += 1
+        # interchange indices
+        RRs[j2, j1] += rr_true
+        JK_weights[j2, j1] += weights
+        c2s[j2, j1] += c2.T
+        c2js[j2, j1] += c2j.T
+        diff1s[j2, j1] += diff1
+        diff2s[j2, j1] += diff2
+        n2s[j2, j1] += 1
 
-        # Add symmetries (automatically accounts for xi assumption):
-        if j1!=j3:
-            c3s[j2,j3,j1]=c3
-            c3js[j2,j3,j1]=c3j
-        if j1!=j2:
-            c4s[j2,j1,j3,j4]=c4
-            c4js[j2,j1,j3,j4]=c4j
-        if j3!=j4:
-            c4s[j1,j2,j4,j3]=c4
-            c4js[j1,j2,j4,j3]=c4j
-            if j1!=j2:
-                c4s[j2,j1,j4,j3]=c4
-                c4js[j2,j1,j4,j3]=c4j
-        if ((j1!=j3)or(j2!=j4)):
-            c4s[j3,j4,j1,j2]=c4.T
-            c4js[j3,j4,j1,j2]=c4j.T
-            if j3!=j4:
-                c4s[j4,j3,j1,j2]=c4.T
-                c4js[j4,j3,j1,j2]=c4j.T
-            if j1!=j2:
-                c4s[j3,j4,j2,j1]=c4.T
-                c4js[j3,j4,j2,j1]=c4j.T
-                if j3!=j4:
-                    c4s[j4,j3,j2,j1]=c4.T
-                    c4js[j4,j3,j2,j1]=c4j.T
+        # 3-point components
+        c3s[j2, j1, j3] += c3
+        c3js[j2, j1, j3] += c3j
+        n3s[j2, j1, j3] += 1
+        # interchange last two indices
+        c3s[j2, j3, j1] += c3.T
+        c3js[j2, j3, j1] += c3j.T
+        n3s[j2, j3, j1] += 1
 
-    def construct_fields(j1,j2,j3,j4,alpha1,alpha2):
+        # All symmetries possible for c4 without transpositions
+        permutations4 = ((j1, j2, j3, j4), # original
+                         (j2, j1, j3, j4), # first two indices interchanged
+                         (j1, j2, j4, j3), # last two indices interchanged
+                         (j2, j1, j4, j3), # first and last two indices interchanged at the same time
+                        )
+        
+        # 4-point components
+        for (i1, i2, i3, i4) in permutations4:
+            c4s[i1, i2, i3, i4] += c4
+            c4js[i1, i2, i3, i4] += c4j
+            n4s[i1, i2, i3, i4] += 1
+            # now swap indices and transpose
+            c4s[i3, i4, i1, i2] += c4.T
+            c4js[i3, i4, i1, i2] += c4j.T
+            n4s[i3, i4, i1, i2] += 1
+    
+    # normalize the 2-point components
+    RRs /= n2s[:, :, None, None]
+    JK_weights /= n2s[:, :, None, None]
+    c2s /= n2s[:, :, None, None]
+    c2js /= n2s[:, :, None, None]
+    diff1s /= n2s[:, :, None, None]
+    diff2s /= n2s[:, :, None, None]
+    # 3-point components
+    c3s /= n3s[:, :, :, None, None]
+    c3js /= n3s[:, :, :, None, None]
+    # 4-point components
+    c4s /= n4s[:, :, :, :, None, None]
+    c4js /= n4s[:, :, :, :, None, None]
+
+    def construct_fields(j1, j2, j3, j4, alpha1, alpha2):
         # Reconstruct the full field for given input fields and rescaling parameters
 
         # Create kronecker deltas
-        d_xw=(j1==j4)
-        d_xz=(j1==j3)
-        d_yw=(j2==j4)
-        d_yz=(j2==j3)
+        d_xw = (j1 == j4)
+        d_xz = (j1 == j3)
+        d_yw = (j2 == j4)
+        d_yz = (j2 == j3)
 
         # Compute disconnected piece
-        t1=np.matmul(diff1s[j1,j2].T,diff2s[j3,j4])
-        t2=np.asarray(np.matmul(np.asmatrix(RRs[j1,j2]).T,np.asmatrix(RRs[j3,j4])))
-        t3=1.-np.matmul(JK_weights[j1,j2].T,JK_weights[j3,j4])
-        cxj=t1/(t2*t3)
+        t1 = np.matmul(diff1s[j1, j2].T, diff2s[j3, j4])
+        t2 = np.asarray(np.matmul(np.asmatrix(RRs[j1, j2]).T, np.asmatrix(RRs[j3, j4])))
+        t3 = 1. - np.matmul(JK_weights[j1, j2].T, JK_weights[j3, j4])
+        cxj = t1/(t2*t3)
 
-        full=c4s[j1,j2,j3,j4]+0.25*alpha1*(d_xw*c3s[j1,j2,j3]+d_xz*c3s[j1,j2,j4])+0.25*alpha2*(d_yw*c3s[j2,j1,j3]+d_yz*c3s[j2,j1,j4])+0.5*alpha1*alpha2*(d_xw*d_yz+d_xz*d_yw)*c2s[j1,j2]
-        jack=c4js[j1,j2,j3,j4]+0.25*alpha1*(d_xw*c3js[j1,j2,j3]+d_xz*c3js[j1,j2,j4])+0.25*alpha2*(d_yw*c3js[j2,j1,j3]+d_yz*c3js[j2,j1,j4])+0.5*alpha1*alpha2*(d_xw*d_yz+d_xz*d_yw)*c2js[j1,j2]+cxj
-        return full,jack
+        full = c4s[j1, j2, j3, j4] + 0.25 * alpha1 * (d_xw * c3s[j1, j2, j3] + d_xz * c3s[j1, j2, j4]) + 0.25 * alpha2 * (d_yw * c3s[j2, j1, j3] + d_yz * c3s[j2, j1, j4]) + 0.5 * alpha1 * alpha2 * (d_xw * d_yz + d_xz * d_yw) * c2s[j1, j2]
+        jack = c4js[j1, j2, j3, j4] + 0.25 * alpha1 * (d_xw * c3js[j1, j2, j3] + d_xz * c3js[j1, j2, j4]) + 0.25 * alpha2 * (d_yw * c3js[j2, j1, j3] + d_yz * c3js[j2, j1, j4]) + 0.5 * alpha1 * alpha2 * (d_xw * d_yz + d_xz * d_yw) * c2js[j1, j2] + cxj
+        return full, jack
 
     # Index in ordering (P_11,P_12,P_22)
-    cov_indices = [[0,0],[0,1],[1,1]]
+    cov_indices = [[0, 0], [0, 1], [1, 1]]
 
     c_tot = np.zeros([3, 3, n_bins, n_bins]) # array with each individual covariance accessible
     cj_tot = np.zeros([3, 3, n_bins, n_bins])
@@ -327,17 +348,17 @@ def matrix_readin(suffix='full'):
     cj_comb = np.zeros([3*n_bins, 3*n_bins])
 
     for j1 in range(3):
-        ind1,ind2 = cov_indices[j1]
+        ind1, ind2 = cov_indices[j1]
         alpha_1, alpha_2 = alpha_best[[ind1, ind2]]
         for j2 in range(3):
-            ind3,ind4 = cov_indices[j2]
-            tmp,tmpj=construct_fields(ind1,ind2,ind3,ind4,alpha_1,alpha_2)
+            ind3, ind4 = cov_indices[j2]
+            tmp, tmpj = construct_fields(ind1, ind2, ind3, ind4, alpha_1, alpha_2)
             c_tot[j1, j2] = tmp
             cj_tot[j1, j2] = tmpj
             c_comb[j1*n_bins:(j1+1)*n_bins, j2*n_bins:(j2+1)*n_bins] = tmp
             cj_comb[j1*n_bins:(j1+1)*n_bins, j2*n_bins:(j2+1)*n_bins] = tmpj
 
-    return c_tot,0.5*(c_comb+c_comb.T), cj_tot, 0.5*(cj_comb+cj_comb.T) # add all remaining symmetries
+    return c_tot, 0.5*(c_comb+c_comb.T), cj_tot, 0.5*(cj_comb+cj_comb.T) # add all remaining symmetries
 
 # Load full matrices
 c_tot,c_comb, cj_tot, cj_comb = matrix_readin()
@@ -374,9 +395,9 @@ print("Computing precision matrices and N_eff")
 prec_comb,N_eff,D_est = compute_precision(c_comb,c_subsamples)
 precj_comb,Nj_eff,Dj_est = compute_precision(cj_comb,cj_subsamples)
 
-output_name = os.path.join(outdir, 'Rescaled_Multi_Field_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz'%(n,m,n_jack))
+output_name = os.path.join(outdir, 'Rescaled_Multi_Field_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (n, m, n_jack))
 
-np.savez(output_name,jackknife_theory_covariance=cj_comb,
+np.savez(output_name, jackknife_theory_covariance=cj_comb,
          full_theory_covariance=c_comb,
          all_covariances=c_tot,
          all_jackknife_covariances=cj_tot,
@@ -386,6 +407,7 @@ np.savez(output_name,jackknife_theory_covariance=cj_comb,
          N_eff=N_eff,
          full_theory_D_matrix=D_est,
          jackknife_data_covariance=data_cov,
-         individual_theory_covariances = c_subsamples)
+         individual_theory_covariances=c_subsamples,
+         individual_theory_jackknife_covariances=cj_subsamples)
 
-print("Saved output covariance matrices as %s"%output_name)
+print("Saved output covariance matrices as %s" % output_name)

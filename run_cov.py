@@ -247,7 +247,8 @@ if convert_cf: # this is really for pair counts and jackknives
     if do_counts: # redo counts
         if jackknife: # do jackknife xi and all counts
             if not cat_randoms: # concatenate randoms now
-                exec_print_and_log(f"cat {' '.join(input_filenames[i])} > {cat_randoms_files[i]}")
+                for t in range(ntracers):
+                    exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
             # compute jackknife weights
             if ntracers == 1:
                 exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
@@ -263,7 +264,8 @@ if convert_cf: # this is really for pair counts and jackknives
                 exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {mask} {use_weights}")
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_filename} {data_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
+                # keep in mind some subtleties for multi-tracer jackknife assigment
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {data_filename} {xyzwj_filename} {njack}") # the first file must be rdzw, the second xyzw!
                 data_ref_filenames[t] = xyzwj_filename
             # run RascalC own xi jack estimator
             if ntracers == 1:
