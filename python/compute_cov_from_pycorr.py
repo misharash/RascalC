@@ -39,7 +39,7 @@ assert r_max % r_step_orig == 0, "Max radial bin cut incompatible with original 
 r_max //= r_step_orig
 
 result = result_orig[:r_max:r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
-n_bins = np.prod(result.corr.shape) // 2 # number of (s, mu) bins, factor of 2 from folding about mu=0
+n_bins = np.prod(result.corr.shape) # number of (s, mu) bins
 
 # start xi and weights arrays
 xi, weights = np.zeros((2, len(infile_names), n_bins * n_corr))
@@ -51,7 +51,7 @@ for i in range(1, n_files):
     infile_name = infile_names[i]
     result_tmp = TwoPointCorrelationFunction.load(infile_name)
     assert result_tmp.shape == result_orig.shape, "Different shape in file %s" % infile_name
-    result = result_tmp[:r_max:r_step, ::mu_factor] # rebin and accumulate
+    result = result_tmp[:r_max:r_step, ::mu_factor].wrap() # rebin and accumulate
     i_sample = i % n_samples # sample index
     i_corr = i // n_samples # correlation function index
     weights[i_sample, i_corr*n_bins:(i_corr+1)*n_bins] = result.R1R2.wcounts.ravel()
