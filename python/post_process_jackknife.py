@@ -5,8 +5,8 @@ import numpy as np
 import sys,os
 
 # PARAMETERS
-if len(sys.argv)!=7:
-    print("Usage: python post_process_jackknife.py {XI_JACKKNIFE_FILE} {WEIGHTS_DIR} {COVARIANCE_DIR} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR}")
+if len(sys.argv) not in (7, 8):
+    print("Usage: python post_process_jackknife.py {XI_JACKKNIFE_FILE} {WEIGHTS_DIR} {COVARIANCE_DIR} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SKIP_R_BINS}]")
     sys.exit()
         
 jackknife_file = str(sys.argv[1])
@@ -15,6 +15,7 @@ file_root = str(sys.argv[3])
 m = int(sys.argv[4])
 n_samples = int(sys.argv[5])
 outdir = str(sys.argv[6])
+skip_bins = int(sys.argv[7]) * m if len(sys.argv) >= 8 else 0 # convert from radial to total number of bins right away
 
 # Create output directory
 if not os.path.exists(outdir):
@@ -22,16 +23,16 @@ if not os.path.exists(outdir):
 
 # Load jackknife xi estimates from data
 print("Loading correlation function jackknife estimates from %s"%jackknife_file)
-xi_jack = np.loadtxt(jackknife_file,skiprows=2)
+xi_jack = np.loadtxt(jackknife_file,skiprows=2)[:, skip_bins:]
 n_bins = xi_jack.shape[1] # total bins
 n_jack = xi_jack.shape[0] # total jackknives
-n = n_bins//m # radial bins
+n = (n_bins+skip_bins)//m # radial bins
 
 weight_file = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_11.dat'%(n,m,n_jack))
 RR_file = os.path.join(weight_dir, 'binned_pair_counts_n%d_m%d_j%d_11.dat'%(n,m,n_jack))
 
 print("Loading weights file from %s"%weight_file)
-weights = np.loadtxt(weight_file)[:,1:]
+weights = np.loadtxt(weight_file)[:, 1+skip_bins:]
 
 # First exclude any dodgy jackknife regions
 good_jk = np.where(np.all(np.isfinite(xi_jack), axis=1))[0] # all xi in jackknife have to be normal numbers
@@ -49,7 +50,7 @@ denom = np.matmul(weights.T,weights)
 data_cov /= (np.ones_like(denom)-denom)
 
 print("Loading weights file from %s"%RR_file)
-RR=np.loadtxt(RR_file)
+RR=np.loadtxt(RR_file)[skip_bins:]
 
 def load_matrices(index,jack=True):
     """Load intermediate or full covariance matrices"""
@@ -57,14 +58,14 @@ def load_matrices(index,jack=True):
         cov_root = os.path.join(file_root, 'CovMatricesJack/')
     else:
         cov_root = os.path.join(file_root, 'CovMatricesAll/')
-    c2 = np.diag(np.loadtxt(cov_root+'c2_n%d_m%d_11_%s.txt'%(n,m,index)))
-    c3 = np.loadtxt(cov_root+'c3_n%d_m%d_1,11_%s.txt'%(n,m,index))
-    c4 = np.loadtxt(cov_root+'c4_n%d_m%d_11,11_%s.txt'%(n,m,index))
+    c2 = np.diag(np.loadtxt(cov_root+'c2_n%d_m%d_11_%s.txt'%(n,m,index))[skip_bins:])
+    c3 = np.loadtxt(cov_root+'c3_n%d_m%d_1,11_%s.txt'%(n,m,index))[skip_bins:, skip_bins:]
+    c4 = np.loadtxt(cov_root+'c4_n%d_m%d_11,11_%s.txt'%(n,m,index))[skip_bins:, skip_bins:]
     if jack:
-        EEaA1 = np.loadtxt(cov_root+'EE1_n%d_m%d_11_%s.txt' %(n,m,index))
-        EEaA2 = np.loadtxt(cov_root+'EE2_n%d_m%d_11_%s.txt' %(n,m,index))
-        RRaA1 = np.loadtxt(cov_root+'RR1_n%d_m%d_11_%s.txt' %(n,m,index))
-        RRaA2 = np.loadtxt(cov_root+'RR2_n%d_m%d_11_%s.txt' %(n,m,index))
+        EEaA1 = np.loadtxt(cov_root+'EE1_n%d_m%d_11_%s.txt' %(n,m,index))[:, skip_bins:]
+        EEaA2 = np.loadtxt(cov_root+'EE2_n%d_m%d_11_%s.txt' %(n,m,index))[:, skip_bins:]
+        RRaA1 = np.loadtxt(cov_root+'RR1_n%d_m%d_11_%s.txt' %(n,m,index))[:, skip_bins:]
+        RRaA2 = np.loadtxt(cov_root+'RR2_n%d_m%d_11_%s.txt' %(n,m,index))[:, skip_bins:]
     
         # Compute disconnected term
         w_aA1 = RRaA1/np.sum(RRaA1,axis=0)
@@ -89,28 +90,29 @@ eig_c4 = eigvalsh(c4j)
 eig_c2 = eigvalsh(c2j)
 if min(eig_c4)<-1.*min(eig_c2):
     print("Jackknife 4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
     sys.exit()
 
 # Load in partial jackknife theoretical matrices
-c2s,c3s,c4s=[],[],[]
+c2s, c3s, c4s = [], [], []
 for i in range(n_samples):
     print("Loading jackknife subsample %d of %d"%(i+1,n_samples))
     c2,c3,c4=load_matrices(i)
     c2s.append(c2)
     c3s.append(c3)
     c4s.append(c4)
+c2s, c3s, c4s = [np.array(a) for a in (c2s, c3s, c4s)]
 
 # Compute inverted matrix
 def Psi(alpha):
     """Compute precision matrix from covariance matrix, removing quadratic order bias terms."""
     c_tot = c2j*alpha**2.+c3j*alpha+c4j
-    partial_cov=[]
-    for i in range(n_samples):
-        partial_cov.append(alpha**2.*c2s[i]+alpha*c3s[i]+c4s[i])
+    partial_cov = alpha**2 * c2s + alpha * c3s + c4s
+    sum_partial_cov = np.sum(partial_cov, axis=0)
     tmp=0.
     for i in range(n_samples):
-        c_excl_i = np.mean(partial_cov[:i]+partial_cov[i+1:],axis=0)
-        tmp+=np.matmul(np.linalg.inv(c_excl_i),partial_cov[i])
+        c_excl_i = (sum_partial_cov - partial_cov[i]) / (n_samples - 1)
+        tmp+=np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
     D_est=(n_samples-1.)/n_samples * (-1.*np.eye(n_bins) + tmp/n_samples)
     Psi = np.matmul(np.eye(n_bins)-D_est,np.linalg.inv(c_tot))
     return Psi
@@ -141,40 +143,44 @@ eig_c4f = eigvalsh(c4f)
 eig_c2f = eigvalsh(c2f)
 if min(eig_c4f)<min(eig_c2f)*-1.:
     print("Full 4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4f), min(eig_c2f)))
     sys.exit()
 
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")
 # Load in partial jackknife theoretical matrices
-c2fs,c3fs,c4fs=[],[],[]
+c2fs, c3fs, c4fs = [], [], []
 for i in range(n_samples):
     print("Loading full subsample %d of %d"%(i+1,n_samples))
     c2,c3,c4=load_matrices(i,jack=False)
     c2fs.append(c2)
     c3fs.append(c3)
     c4fs.append(c4)
-partial_cov=[]
-for i in range(n_samples):
-    partial_cov.append(alpha_best**2.*c2fs[i]+alpha_best*c3fs[i]+c4fs[i])
+c2fs, c3fs, c4fs = [np.array(a) for a in (c2fs, c3fs, c4fs)]
+partial_cov = alpha_best**2 * c2fs + alpha_best * c3fs + c4fs
+sum_partial_cov = np.sum(partial_cov, axis=0)
 tmp=0.
 for i in range(n_samples):
-    c_excl_i = np.mean(partial_cov[:i]+partial_cov[i+1:],axis=0)
-    tmp+=np.matmul(np.linalg.inv(c_excl_i),partial_cov[i])
+    c_excl_i = (sum_partial_cov - partial_cov[i]) / (n_samples - 1)
+    tmp+=np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
 full_D_est=(n_samples-1.)/n_samples * (-1.*np.eye(n_bins) + tmp/n_samples)
 full_prec = np.matmul(np.eye(n_bins)-full_D_est,np.linalg.inv(full_cov))
 print("Full precision matrix estimate computed")    
 
 # Now compute effective N:
-slogdetD=np.linalg.slogdet(full_D_est)
+slogdetD = np.linalg.slogdet(full_D_est)
 D_value = slogdetD[0]*np.exp(slogdetD[1]/n_bins)
 N_eff_D = (n_bins+1.)/D_value+1.
-print("Total N_eff Estimate: %.4e"%N_eff_D)        
+print("Total N_eff Estimate: %.4e" % N_eff_D)
 
-output_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz'%(n,m,n_jack))
-np.savez(output_name,jackknife_theory_covariance=jack_cov,full_theory_covariance=full_cov,
-         jackknife_data_covariance=data_cov,shot_noise_rescaling=alpha_best,
-         jackknife_theory_precision=jack_prec,full_theory_precision=full_prec,
-         N_eff=N_eff_D,full_theory_D_matrix=full_D_est,
-         individual_theory_covariances=partial_cov)
+# Jackknife covariance for posterity
+partial_jack_cov = alpha_best**2 * c2s + alpha_best * c3s + c4s
+
+output_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (n, m, n_jack))
+np.savez(output_name, jackknife_theory_covariance=jack_cov, full_theory_covariance=full_cov,
+         jackknife_data_covariance=data_cov, shot_noise_rescaling=alpha_best,
+         jackknife_theory_precision=jack_prec, full_theory_precision=full_prec,
+         N_eff=N_eff_D, full_theory_D_matrix=full_D_est,
+         individual_theory_covariances=partial_cov, individual_theory_jackknife_covariances=partial_jack_cov)
 
 print("Saved output covariance matrices as %s"%output_name)
