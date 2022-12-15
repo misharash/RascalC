@@ -6,7 +6,7 @@ import sys
 ## PARAMETERS
 if len(sys.argv)<4:
     print("Please specify input parameters in the form {CENTERS_FILE} {INPUT_PARTICLES_FILE} {OUTPUT_PARTICLES_FILE}.")
-    sys.exit()
+    sys.exit(1)
 centersfile_name = str(sys.argv[1])
 infile_name = str(sys.argv[2])
 outfile_name = str(sys.argv[3])

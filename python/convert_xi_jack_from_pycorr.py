@@ -7,7 +7,7 @@ import sys
 ## PARAMETERS
 if len(sys.argv) not in (8, 9, 10, 11):
     print("Usage: python convert_xi_jack_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_XI_JACK_FILE} {JACKKNIFE_WEIGHTS_FILE} {JACKKNIFE_PAIRCOUNTS_FILE} {BINNED_PAIRCOUNTS_FILE} {R_STEP} {N_MU} [{COUNTS_FACTOR} [{SPLIT_ABOVE} [{R_MAX}]]].")
-    sys.exit()
+    sys.exit(1)
 infile_name = str(sys.argv[1])
 xi_name = str(sys.argv[2])
 jackweights_name = str(sys.argv[3])

@@ -7,7 +7,7 @@ import sys,os
 # PARAMETERS
 if len(sys.argv) not in (7, 8):
     print("Usage: python post_process_default_mocks.py {MOCK_COV_FILE} {COVARIANCE_DIR} {N_R_BINS} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SKIP_R_BINS}]")
-    sys.exit()
+    sys.exit(1)
         
 mock_cov_file = str(sys.argv[1])
 file_root = str(sys.argv[2])
@@ -35,18 +35,18 @@ def load_matrices(index):
 
 # Load in full theoretical matrices
 print("Loading best estimate of covariance matrix")
-c2,c3,c4=load_matrices('full')
+c2f, c3f, c4f = load_matrices('full')
 
 # Check matrix convergence
 from numpy.linalg import eigvalsh
-eig_c4 = eigvalsh(c4)
-eig_c2 = eigvalsh(c2)
+eig_c4 = eigvalsh(c4f)
+eig_c2 = eigvalsh(c2f)
 if min(eig_c4)<-1.*min(eig_c2):
     print("4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
     print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
-    sys.exit()
+    sys.exit(1)
 
-n_bins = len(c4)
+n_bins = len(c4f)
 
 # Load in partial theoretical matrices
 c2s, c3s, c4s = [], [], []
@@ -61,7 +61,7 @@ c2s, c3s, c4s = [np.array(a) for a in (c2s, c3s, c4s)]
 # Compute inverted matrix
 def Psi(alpha):
     """Compute precision matrix from covariance matrix, removing quadratic order bias terms."""
-    c_tot = c2*alpha**2.+c3*alpha+c4
+    c_tot = c2f * alpha**2 + c3f * alpha + c4f
     partial_cov = alpha**2 * c2s + alpha * c3s + c4s
     sum_partial_cov = np.sum(partial_cov, axis=0)
     tmp=0.
@@ -89,7 +89,7 @@ print("Optimization complete - optimal rescaling parameter is %.6f" % alpha_best
 alpha = alpha_best # to save editing later
 
 # Compute full covariance matrices and precision
-full_cov = c4+c3*alpha+c2*alpha**2.
+full_cov = c4f + c3f*alpha + c2f*alpha**2
 
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")

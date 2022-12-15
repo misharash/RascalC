@@ -7,7 +7,7 @@ import sys
 ## PARAMETERS
 if len(sys.argv) not in (5, 6, 7, 8):
     print("Usage: python convert_counts_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_PAIRCOUNTS_TEXT_FILE} {R_STEP} {N_MU} [{COUNTS_FACTOR} [{SPLIT_ABOVE}] [{R_MAX}]]].")
-    sys.exit()
+    sys.exit(1)
 infile_name = str(sys.argv[1])
 outfile_name = str(sys.argv[2])
 r_step = int(sys.argv[3])
