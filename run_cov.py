@@ -336,6 +336,7 @@ print_and_log(datetime.now())
 if nfiles > 1:
     print_and_log("Concatenating samples")
     exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {maxloops}" for i in range(nfiles)]) + f" {outdir}")
+    print_and_log(datetime.now())
 
 # Post-process
 print_and_log("Post-processing")
@@ -372,8 +373,11 @@ else:
     print("Number of tracers not supported for this operation (yet)")
     sys.exit(1)
 
-# Convergence check
 results_file = os.path.join(outdir, results_file)
+print_and_log(datetime.now())
+
+# Convergence check
 exec_print_and_log(f"python python/convergence_check_extra.py {results_file}")
 
+print_and_log(datetime.now())
 print_and_log(f"Finished execution.")
