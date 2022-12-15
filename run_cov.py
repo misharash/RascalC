@@ -19,7 +19,7 @@ ntracers = 1 # number of tracers
 if ntracers > 1:
     cycle_randoms = 1
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
-make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make any
+make_randoms = 0 # whether to generate randoms, only works in periodic case (cubic box)
 jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
@@ -29,7 +29,7 @@ if legendre:
 
 assert ntracers in (1, 2), "Only single- and two-tracer modes are currently supported"
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
-assert not (make_randoms and not periodic), "Non-periodic randoms not supported"
+assert not (make_randoms and not periodic), "Non-periodic random generation not supported"
 assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
