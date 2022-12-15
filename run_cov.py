@@ -240,6 +240,7 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
 
 if cat_randoms: # concatenate randoms
     for t in range(ntracers):
+        print_and_log(datetime.now())
         exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
         input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
     nfiles = 1
@@ -250,6 +251,7 @@ else:
 # now the number of files to process is the same for sure
 
 if convert_cf: # this is really for pair counts and jackknives
+    print_and_log(datetime.now())
     if do_counts: # redo counts
         if jackknife: # do jackknife xi and all counts
             if not cat_randoms: # concatenate randoms now
@@ -311,6 +313,7 @@ if convert_cf: # this is really for pair counts and jackknives
 # running main code for each random file/part
 for i in range(nfiles):
     print_and_log(f"Starting main computation {i+1} of {nfiles}")
+    print_and_log(datetime.now())
     # define output subdirectory
     this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
@@ -331,7 +334,7 @@ print_and_log(datetime.now())
 
 # Concatenate samples
 if nfiles > 1:
-    print_and_log(f"Concatenating samples")
+    print_and_log("Concatenating samples")
     exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {maxloops}" for i in range(nfiles)]) + f" {outdir}")
 
 # Maybe post-processing will be here later
