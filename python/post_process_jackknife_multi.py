@@ -8,7 +8,7 @@ import sys,os
 # PARAMETERS
 if len(sys.argv) not in (9, 10):
     print("Usage: python post_process_jackknife_multi.py {XI_JACKKNIFE_FILE_11} {XI_JACKKNIFE_FILE_12} {XI_JACKKNIFE_FILE_22} {WEIGHTS_DIR} {COVARIANCE_DIR} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SKIP_R_BINS}]")
-    sys.exit()
+    sys.exit(1)
 
 jackknife_file_11 = str(sys.argv[1])
 jackknife_file_12 = str(sys.argv[2])
@@ -22,7 +22,7 @@ skip_bins = int(sys.argv[9]) * m if len(sys.argv) >= 10 else 0 # convert from ra
 
 if n_samples<2:
     print("Need more than 1 subsample for matrix inversion; exiting.")
-    sys.exit()
+    sys.exit(1)
 
 # Create output directory
 if not os.path.exists(outdir):
@@ -146,7 +146,7 @@ for i,index in enumerate(indices):
     eig_c2 = eigvalsh(c2j)
     if min(eig_c4)<-1.*min(eig_c2):
         print("Jackknife 4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
-        sys.exit()
+        sys.exit(1)
 
     # Load in partial jackknife theoretical matrices
     c2s, c3s, c4s = [], [], []

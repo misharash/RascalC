@@ -18,10 +18,9 @@ Output file format has (x,y,z,w) coordinates in Mpc/h units
 import sys
 import numpy as np
 
-
 if len(sys.argv) not in (3, 4, 5, 6, 7, 8, 9):
     print("Usage: python convert_to_xyz.py {INFILE} {OUTFILE} [{OMEGA_M} {OMEGA_K} {W_DARK_ENERGY} [{USE_FKP_WEIGHTS or P0,NZ_name} [{MASK} [{USE_WEIGHTS}]]]]")
-    sys.exit()
+    sys.exit(1)
           
 # Load file names
 input_file = str(sys.argv[1])
