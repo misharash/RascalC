@@ -337,6 +337,43 @@ if nfiles > 1:
     print_and_log("Concatenating samples")
     exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {maxloops}" for i in range(nfiles)]) + f" {outdir}")
 
-# Maybe post-processing will be here later
+# Post-process
+print_and_log("Post-processing")
+# Parameters
+skip_bins = 5
+if not jackknife:
+    shot_noise_rescaling = 1
+    if ntracers >= 2: shot_noise_rescaling2 = 1
+if legendre:
+    skip_l = 0
+
+n_subsamples = maxloops * nfiles # every case needs this number
+if ntracers == 1:
+    if legendre:
+        exec_print_and_log(f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}")
+        results_file = 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
+    elif jackknife:
+        exec_print_and_log(f"python python/post_process_jackknife.py {xi_jack_names[0]} {os.path.dirname(jackknife_weights_names[0])} {outdir} {mbin} {n_subsamples} {outdir} {skip_bins}")
+        results_file = 'Rescaled_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (nbin, mbin, njack)
+    else: # default
+        exec_print_and_log(f"python python/post_process_default.py {outdir} {nbin} {mbin} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins}")
+        results_file = 'Rescaled_Covariance_Matrices_Default_n%d_m%d.npz' % (nbin, mbin)
+elif ntracers == 2:
+    if legendre:
+        exec_print_and_log(f"python python/post_process_legendre_multi.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {shot_noise_rescaling2} {skip_bins} {skip_l}")
+        results_file = 'Rescaled_Multi_Field_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
+    elif jackknife:
+        exec_print_and_log(f"python python/post_process_jackknife_multi.py {' '.join(xi_jack_names)} {os.path.dirname(jackknife_weights_names[0])} {outdir} {mbin} {n_subsamples} {outdir} {skip_bins}")
+        results_file = 'Rescaled_Multi_Field_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (nbin, mbin, njack)
+    else: # default
+        exec_print_and_log(f"python python/post_process_default_multi.py {outdir} {nbin} {mbin} {n_subsamples} {outdir} {shot_noise_rescaling} {shot_noise_rescaling2} {skip_bins}")
+        results_file = 'Rescaled_Multi_Field_Covariance_Matrices_Default_n%d_m%d.npz' % (nbin, mbin)
+else:
+    print("Number of tracers not supported for this operation (yet)")
+    sys.exit(1)
+
+# Convergence check
+results_file = os.path.join(outdir, results_file)
+exec_print_and_log(f"python python/convergence_check_extra.py {results_file}")
 
 print_and_log(f"Finished execution.")
