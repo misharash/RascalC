@@ -16,6 +16,8 @@ def check_path(filename, fallback_dir=""):
 terminate_on_error = 1 # whether to terminate if any of executed scripts returns nonzero
 
 ntracers = 1 # number of tracers
+if ntracers > 1:
+    cycle_randoms = 1
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make any
 jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
@@ -246,9 +248,10 @@ if cat_randoms: # concatenate randoms
     nfiles = 1
 else:
     nfiles = nfiles[0]
-    for t in range(1, ntracers):
-        input_filenames[t] = input_filenames[t][t:] + input_filenames[t][:t] # shift the filename list cyclically by number of tracer, this makes sure files with different numbers for different tracers are fed to the C++ code, otherwise overlapping positions are likely at least between LRG and ELG
-# now the number of files to process is the same for sure
+    if cycle_randoms:
+        for t in range(1, ntracers):
+            input_filenames[t] = input_filenames[t][t*cycle_randoms:] + input_filenames[t][:t*cycle_randoms] # shift the filename list cyclically by number of tracer, this makes sure files with different numbers for different tracers are fed to the C++ code, otherwise overlapping positions are likely at least between LRG and ELG
+    # now the number of files to process is the same for sure
 
 if convert_cf: # this is really for pair counts and jackknives
     print_and_log(datetime.now())
