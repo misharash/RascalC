@@ -7,7 +7,7 @@ import sys
 ## PARAMETERS
 if len(sys.argv) < 5:
     print("Usage: python convert_xi_from_pycorr.py {INPUT_NPY_FILE1} [{INPUT_NPY_FILE2} ...] {OUTPUT_XI_DAT_FILE} {R_STEP} {N_MU}.")
-    sys.exit()
+    sys.exit(1)
 infile_names = sys.argv[1:-3]
 outfile_name = str(sys.argv[-3])
 r_step = int(sys.argv[-2])

@@ -7,7 +7,7 @@ import sys
 ## PARAMETERS
 if len(sys.argv) not in (13, 15):
     print("Usage: python combine_covs_multi.py {RASCALC_RESULTS1} {RASCALC_RESULTS2} {PYCORR_FILE1_11} {PYCORR_FILE2_11} {PYCORR_FILE1_12} {PYCORR_FILE2_12} {PYCORR_FILE1_22} {PYCORR_FILE2_22} {N_R_BINS} {N_MU_BINS} {R_BINS_SKIP} {OUTPUT_COV_FILE} [{OUTPUT_COV_FILE1} {OUTPUT_COV_FILE2}].")
-    sys.exit()
+    sys.exit(1)
 rascalc_results1 = str(sys.argv[1])
 rascalc_results2 = str(sys.argv[2])
 pycorr_files1 = [str(sys.argv[i]) for i in (3, 5, 7)]

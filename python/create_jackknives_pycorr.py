@@ -7,7 +7,7 @@ import sys
 ## PARAMETERS
 if len(sys.argv) != 5:
     print("Usage: python create_jackknives_pycorr.py {REF_RDZ_FILE} {INPUT_XYZW_FILE} {OUTPUT_XYZWJ_FILE} {NJACK}.")
-    sys.exit()
+    sys.exit(1)
 reffile_name = str(sys.argv[1])
 infile_name = str(sys.argv[2])
 outfile_name = str(sys.argv[3])
