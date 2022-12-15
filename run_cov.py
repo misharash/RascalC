@@ -13,6 +13,8 @@ def check_path(filename, fallback_dir=""):
 
 ##################### INPUT PARAMETERS ###################
 
+terminate_on_error = 1 # whether to terminate if any of executed scripts returns nonzero
+
 ntracers = 1 # number of tracers
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # how many randoms to generate in periodic case, 0 = don't make any
@@ -157,7 +159,12 @@ print_and_log(f"Executing {__file__}")
 
 def exec_print_and_log(commandline):
     print_and_log(f"Running command: {commandline}")
-    os.system(f"{commandline} 2>&1 | tee -a {logfile}")
+    exit_code = os.system(f"{commandline} 2>&1 | tee -a {logfile}")
+    if exit_code:
+        print(f"{commandline} exited with error (code {exit_code}).")
+        if terminate_on_error:
+            print("Terminating the running script execution due to this error.")
+            sys.exit(1)
 
 print("Starting Computation")
 
