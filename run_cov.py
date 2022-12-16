@@ -75,7 +75,7 @@ redshift_cut = 1
 convert_to_xyz = 1
 if redshift_cut or convert_to_xyz:
     FKP_weight = 1
-    mask = 0 # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS
+    masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Each tracer can have its own mask
     use_weights = 1
 create_jackknives = jackknife and 1
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
@@ -198,7 +198,7 @@ if create_jackknives and redshift_cut: # prepare reference file
     for t, data_ref_filename in enumerate(data_ref_filenames):
         print_and_log(f"Processing data file for jackknife reference")
         rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-        exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {mask} {use_weights}")
+        exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {masks[t]} {use_weights}")
         data_ref_filenames[t] = rdzw_ref_filename
 
 command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
@@ -226,11 +226,11 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
         else: # (potentially) run through all data processing steps
             if redshift_cut:
                 rdzw_filename = change_extension(input_filename, "rdzw")
-                exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight} {mask} {use_weights}")
+                exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight} {masks[t]} {use_weights}")
                 input_filename = rdzw_filename
             if convert_to_xyz:
                 xyzw_filename = change_extension(input_filename, "xyzw")
-                exec_print_and_log(f"python python/convert_to_xyz.py {input_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {mask} {use_weights}")
+                exec_print_and_log(f"python python/convert_to_xyz.py {input_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {masks[t]} {use_weights}")
                 input_filename = xyzw_filename
             if create_jackknives:
                 xyzwj_filename = change_extension(input_filename, "xyzwj")
@@ -272,7 +272,7 @@ if convert_cf: # this is really for pair counts and jackknives
             for t in range(ntracers):
                 data_filename = data_ref_filenames[t]
                 xyzw_filename = change_extension(data_filename, "xyzw")
-                exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {mask} {use_weights}")
+                exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {masks[t]} {use_weights}")
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
                 # keep in mind some subtleties for multi-tracer jackknife assigment
