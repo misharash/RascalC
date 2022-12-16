@@ -45,7 +45,7 @@ mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 30 # number of OMP threads to use
-maxloops = 240 # number of integration loops per filename
+maxloops = 30 # number of integration loops per filename
 N2 = 20 # number of secondary cells/particles per primary cell
 N3 = 40 # number of third cells/particles per secondary cell/particle
 N4 = 80 # number of fourth cells/particles per third cell/particle
@@ -65,23 +65,22 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
-reg = "N" # region for filenames
-tlabels = ("LRG", "ELG_LOPnotqso") # tracer labels for filenames
+tlabels = ("LRG", "ELG") # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 10
+nrandoms = 20
 
 # data processing steps
 redshift_cut = 1
 convert_to_xyz = 1
 if redshift_cut or convert_to_xyz:
-    FKP_weight = 1
-    masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Each tracer can have its own mask
+    FKP_weight = 0
+    masks = [0b1010, 0b0010] # First bit for Y5 footprint, third for main subsample (only LRG - first tracer). All bits set to 1 in the mask have to be set in the FITS data STATUS.
     use_weights = 1
 create_jackknives = jackknife and 1
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
-cat_randoms = 0 # concatenate random files for RascalC input
+cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
-    cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
+    cat_randoms_files = [f"cutsky_{tlabel}_random_S100-{nrandoms}00_{nrandoms}X.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
 z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
 
@@ -89,9 +88,9 @@ z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
 convert_cf = 1
 if convert_cf:
     # first index is correlation function index
-    counts_factor = nrandoms
-    split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/xi/da02/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 60}_nran{nrandoms}_split{split_above}.npy")] for corlabel in ("LRG", "LRG_ELG_LOPnotqso", "ELG_LOPnotqso")]
+    counts_factor = nrandoms if not cat_randoms else 1
+    split_above = np.inf
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/LRG/Xi/Pre/jmena/pycorr_format/Xi_cutsky_LRG_z0.800_AbacusSummit_base_c000_ph{i:03d}_zmin0.8_zmax1.1.npy", fallback_dir="pycorr") for i in range(25)], [check_path(f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Cross/xi_LRG x ELG_cutsky_seed{i}_z0.8_1.1_abacus.npy", fallback_dir="pycorr") for i in range(25)], [check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/ELG/Xi/Pre/Cristhian/z_0p8_1p1/npy/z_0p8_1p1_cutsky_ELG_ph{i:03d}.npy", fallback_dir="pycorr") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -107,15 +106,15 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife:
-    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_z0.800_AbacusSummit_base_c000_ph000.fits"), check_path(f"/global/cfs/cdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/ELG/z1.100/cutsky_ELG_z1.100_AbacusSummit_base_c000_ph000.fits")] # for jackknife reference only, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/LRG/z0.800/cutsky_LRG_random_S{i+1}00_1X.fits", fallback_dir="fits") for i in range(nrandoms)], [check_path(f"/global/cfs/cdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/ELG/z1.100/cutsky_ELG_random_S{i+1}00_1X.fits", fallback_dir="fits") for i in range(nrandoms)]] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = "_".join(tlabels) + "_" + reg # output file directory
+outdir = "_".join(tlabels) + f"_z{z_min}-{z_max}_Abacus_CutSky" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
