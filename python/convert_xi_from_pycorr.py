@@ -1,0 +1,56 @@
+"This reads cosmodesi/pycorr .npy file(s) and generates input xi text file for RascalC to use"
+
+from pycorr import TwoPointCorrelationFunction
+import numpy as np
+import sys
+
+## PARAMETERS
+if len(sys.argv) < 5:
+    print("Usage: python convert_xi_from_pycorr.py {INPUT_NPY_FILE1} [{INPUT_NPY_FILE2} ...] {OUTPUT_XI_DAT_FILE} {R_STEP} {N_MU}.")
+    sys.exit(1)
+infile_names = sys.argv[1:-3]
+outfile_name = str(sys.argv[-3])
+r_step = int(sys.argv[-2])
+n_mu = int(sys.argv[-1])
+
+# load first input file
+result_orig = TwoPointCorrelationFunction.load(infile_names[0])
+print("Read 2PCF shaped", result_orig.shape)
+n_mu_orig = result_orig.shape[1]
+assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
+mu_factor = n_mu_orig // 2 // n_mu
+
+# determine the radius step in pycorr
+r_steps_orig = np.diff(result_orig.edges[0])
+r_step_orig = int(np.around(np.mean(r_steps_orig)))
+assert np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3), "Binnings other than linear with integer step are not supported"
+assert r_step % r_step_orig == 0, "Radial rebinning not possible"
+r_step //= r_step_orig
+
+result = result_orig[::r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
+# retrieve data sizes
+data_size1_sum = result_orig.D1D2.size1
+data_size2_sum = result_orig.D1D2.size2
+
+# load remaining input files if any
+for infile_name in infile_names[1:]:
+    result_tmp = TwoPointCorrelationFunction.load(infile_name)
+    assert result_tmp.shape == result_orig.shape, "Different shape in file %s" % infile_name
+    result += result_tmp[::r_step, ::mu_factor].wrap() # rebin, wrap to positive mu and accumulate
+    # accumulate data sizes
+    data_size1_sum += result_tmp.D1D2.size1
+    data_size2_sum += result_tmp.D1D2.size2
+
+print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6e}")
+print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6e}")
+np.savetxt(outfile_name + ".ndata", np.array((data_size1_sum, data_size2_sum)) / len(infile_names)) # save them for later
+
+xi = result.corr * result.R1R2.normalized_wcounts() / result.S1S2.normalized_wcounts() # already wrapped; for input xi need to divide by SS instead of RR in post-recon case, in pre-recon case RR=SS so should work too
+
+## Custom array to string function
+def my_a2s(a, fmt='%.18e'):
+    return ' '.join([fmt % e for e in a])
+
+## Write to file using numpy funs
+header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1))
+np.savetxt(outfile_name, xi, header=header, comments='')

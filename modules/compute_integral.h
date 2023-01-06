@@ -69,25 +69,6 @@
     #endif
             return 0;
         }
-    public:
-        void check_threads(Parameters *par,int print){
-            // Set up OPENMP and define which threads to use
-    #ifdef OPENMP
-            cpu_set_t mask[par->nthread+1];
-            int tnum=0;
-            sched_getaffinity(0, sizeof(cpu_set_t), &mask[par->nthread]);
-            if(print==1) fprintf(stderr, " CPUs used are: ");
-            for(int ii=0;ii<64;ii++){
-                if(CPU_ISSET(ii, &mask[par->nthread])){
-                    if(print==1) fprintf(stderr,"%d ", ii);
-                    CPU_ZERO(&mask[tnum]);
-                    CPU_SET(ii,&mask[tnum]);
-                    tnum++;
-                }
-            }
-            fprintf(stderr,"\n");
-    #endif
-        }
     private:
         CorrelationFunction* which_cf(CorrelationFunction all_cf[], int Ia, int Ib){
             // Returns the relevant correlation function for two input field indices
@@ -250,8 +231,6 @@
             uint64 tot_pairs=0, tot_triples=0, tot_quads=0; // global number of particle pairs/triples/quads used (including those rejected for being in the wrong bins)
             uint64 cell_attempt2=0,cell_attempt3=0,cell_attempt4=0; // number of j,k,l cells attempted
             uint64 used_cell2=0,used_cell3=0,used_cell4=0; // number of used j,k,l cells
-
-            check_threads(par,1); // Define which threads we use
 
             initial.Stop();
             fprintf(stderr, "Init time: %g s\n",initial.Elapsed());
@@ -493,7 +472,7 @@
 
                 // Save output after each loop
                 char output_string[50];
-                sprintf(output_string,"%d", n_loops);
+                snprintf(output_string, 50, "%d", n_loops);
 #ifndef POWER
                 locint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm,(Float)loc_used_pairs, (Float)loc_used_triples, (Float)loc_used_quads);
 #else
@@ -548,7 +527,7 @@
         printf("Acceptance speed: %.2e quads per core per second\n",double(cnt4)/(runtime*double(par->nthread)));
 
         char out_string[5];
-        sprintf(out_string,"full");
+        snprintf(out_string, 5, "full");
         sumint.save_integrals(out_string,1); // save integrals to file
         sumint.save_counts(tot_pairs,tot_triples,tot_quads); // save total pair/triple/quads attempted to file
 #ifdef POWER

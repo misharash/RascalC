@@ -273,7 +273,8 @@ public:
         else if (!strcmp(argv[i],"-phi_file")) phi_file=argv[++i];
         else if (!strcmp(argv[i],"-N5")) N5=atof(argv[++i]);
         else if (!strcmp(argv[i],"-N6")) N6=atof(argv[++i]);
-#else
+#endif
+#if (!defined LEGENDRE && !defined POWER && !defined THREE_PCF)
 		else if (!strcmp(argv[i],"-mbin")) mbin = atoi(argv[++i]);
         else if (!strcmp(argv[i],"-RRbin")) RR_bin_file=argv[++i];
 		else if (!strcmp(argv[i],"-RRbin12")) RR_bin_file12=argv[++i];
@@ -670,7 +671,7 @@ private:
 
                 // Split into variables
                 char * split_string;
-                split_string = strtok(line, "\t");
+                split_string = strtok(line, " \t");
                 counter=0;
 
                 // Iterate over line
@@ -685,7 +686,7 @@ private:
                         fprintf(stderr,"Incorrect file format");
                         abort();
                     }
-                    split_string = strtok(NULL,"\t");
+                    split_string = strtok(NULL, " \t");
                     counter++;
                 }
                 line_count++;
@@ -738,7 +739,7 @@ private:
 
                 // Split into variables
                 char * split_string;
-                split_string = strtok(line, "\t");
+                split_string = strtok(line, " \t");
                 counter=0;
 
                 // Iterate over line
@@ -753,7 +754,7 @@ private:
                         fprintf(stderr,"Incorrect file format");
                         abort();
                     }
-                    split_string = strtok(NULL,"\t");
+                    split_string = strtok(NULL, " \t");
                     counter++;
                 }
                 line_count++;

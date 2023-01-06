@@ -38,7 +38,7 @@ For an analysis using two distinct fields::
 
 **Notes**:
 
-- Output files will be saved as ``RR_counts_n{N}_m{M}_{INDEX}.txt`` for N radial and M angular bins. INDEX specifies which fields are used (e.g. INDEX=12 for the field 1 x field 2 pair count). This is saved as a simple list of :math:`N\times M` values using the indexing :math:`\mathrm{bin}_\mathrm{collapsed} = \mathrm{bin}_\mathrm{radial}*M + \mathrm{bin}_\mathrm{angular}`.
+- Output files will be saved as ``RR_counts_n{N}_m{M}_{INDEX}.dat`` for N radial and M angular bins. INDEX specifies which fields are used (e.g. INDEX=12 for the field 1 x field 2 pair count). This is saved as a simple list of :math:`N\times M` values using the indexing :math:`\mathrm{bin}_\mathrm{collapsed} = \mathrm{bin}_\mathrm{radial}*M + \mathrm{bin}_\mathrm{angular}`.
 - This is a very CPU intensive computation since we must compute pair counts between every pair of random particles up to the maximum particle separation. The process can be expedited using multiple CPU cores or a reduced number of random particles (e.g. via the :ref:`particle-subset` script).
 - For two sets of input particles, three sets of weights must be computed for the three possible pairs of two distinct fields, hence the computation time increases by a factor of three.
 
@@ -65,7 +65,7 @@ For an analysis using two distinct fields::
 
 See the :ref:`RR_counts` parameters above. Additionally;
 
-- {RR_COUNTS}, {RR_COUNTS_11}, {RR_COUNTS_12} {RR_COUNTS_22} *(Only required if dataset is aperiodic)*: RR counts computed by the :ref:`RR_counts` script, or externally. These should be normalized by the sum of the squared random weights (by using the NORMED flag above).
+- {RR_COUNTS}, {RR_COUNTS_11}, {RR_COUNTS_12} {RR_COUNTS_22} *(Only required if dataset is aperiodic)*: RR counts computed by the :ref:`RR_counts` script, or externally. These should be NOT normalized by the sum of the squared random weights (by setting the NORMED flag above to 0).
 
 **Notes**:
 
