@@ -86,7 +86,7 @@ if do_counts or cat_randoms:
 z_min, z_max = 0.1, 0.2 # for redshift cut and filenames
 
 ndata_array = [4345604.08, 3837133.48, 1793020.88, 321419.56]
-ndata = ndata_array[int(10*z_min)-1]
+ndata = [ndata_array[int(10*z_min)-1]]
 
 # CF options
 convert_cf = 0
