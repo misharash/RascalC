@@ -20,10 +20,10 @@ if ntracers > 1:
     cycle_randoms = 1
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # whether to generate randoms, only works in periodic case (cubic box)
-jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
+jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
-legendre = 0
+legendre = 1
 if legendre:
     max_l = 4
 
@@ -51,7 +51,7 @@ N3 = 40 # number of third cells/particles per secondary cell/particle
 N4 = 80 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
-nside = 101 # grid size for accelerating pair count
+nside = 401 # grid size for accelerating pair count
 boxsize = 2000 # only used if periodic=1
 
 suffixes_tracer_all = ("", "2") # all supported tracer suffixes
@@ -65,14 +65,14 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
-reg = "N" # region for filenames
-tlabels = ["LRG"] # tracer labels for filenames
+reg = None # region for filenames
+tlabels = ["BGS"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 10
 
 # data processing steps
-redshift_cut = 1
-convert_to_xyz = 1
+redshift_cut = 0
+convert_to_xyz = 0
 if redshift_cut or convert_to_xyz:
     FKP_weight = 1
     masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Each tracer can have its own mask
@@ -83,10 +83,13 @@ cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
-z_min, z_max = 0.4, 1.1 # for redshift cut and filenames
+z_min, z_max = 0.1, 0.2 # for redshift cut and filenames
+
+ndata_array = [4345604.08, 3837133.48, 1793020.88, 321419.56]
+ndata = ndata_array[int(10*z_min)-1]
 
 # CF options
-convert_cf = 1
+convert_cf = 0
 if convert_cf:
     # first index is correlation function index
     counts_factor = nrandoms
@@ -107,15 +110,15 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife:
-    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
+    data_ref_filenames = [None for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[f"z_{10*z_min:02.0f}_{10*z_max:02.0f}/{tlabel}.ran.xyzw"] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = "_".join(tlabels) + "_" + reg # output file directory
+outdir = f"z_{10*z_min:02.0f}_{10*z_max:02.0f}" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
