@@ -257,9 +257,11 @@ if convert_cf: # this is really for pair counts and jackknives
     print_and_log(datetime.now())
     if do_counts: # redo counts
         if jackknife: # do jackknife xi and all counts
-            if not cat_randoms: # concatenate randoms now
+            if nfiles > 1: # concatenate randoms now if needed
                 for t in range(ntracers):
                     exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+            else:
+                cat_randoms_files[t] = input_filenames[t][0]
             # compute jackknife weights
             if ntracers == 1:
                 exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
