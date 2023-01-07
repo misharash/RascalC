@@ -40,7 +40,7 @@ nbin = 50 # radial bins for output cov
 mbin = 20 # angular (mu) bins for output cov; in Legendre case it is the number of 
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
-nbin_cf = 200 # radial bins for input 2PCF
+nbin_cf = 100 # radial bins for input 2PCF
 mbin_cf = 20 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
