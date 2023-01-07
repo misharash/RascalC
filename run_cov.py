@@ -37,11 +37,11 @@ ndata = [None] * ntracers # number of data points for each tracer; set None to m
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
 nbin = 50 # radial bins for output cov
-mbin = 1 # angular (mu) bins for output cov
+mbin = 20 # angular (mu) bins for output cov; in Legendre case it is the number of 
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
 nbin_cf = 200 # radial bins for input 2PCF
-mbin_cf = 10 # angular (mu) bins for input 2PCF
+mbin_cf = 20 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 30 # number of OMP threads to use
@@ -85,16 +85,13 @@ if do_counts or cat_randoms:
 
 z_min, z_max = 0.1, 0.2 # for redshift cut and filenames
 
-ndata_array = [4345604.08, 3837133.48, 1793020.88, 321419.56]
-ndata = [ndata_array[int(10*z_min)-1]]
-
 # CF options
-convert_cf = 0
+convert_cf = 1
 if convert_cf:
     # first index is correlation function index
-    counts_factor = nrandoms
-    split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/xi/da02/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 60}_nran{nrandoms}_split{split_above}.npy")] for corlabel in ["LRG"]]
+    counts_factor = 1
+    split_above = np.inf
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/BGS/Xi/Pre/strusov/cf_abacus_z_{10*z_min:02.0f}_{10*z_max:02.0f}_ndt_{i}.npy", fallback_dir="pycorr") for i in range(25)] for corlabel in ["BGS"]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -260,9 +257,11 @@ if convert_cf: # this is really for pair counts and jackknives
     print_and_log(datetime.now())
     if do_counts: # redo counts
         if jackknife: # do jackknife xi and all counts
-            if not cat_randoms: # concatenate randoms now
+            if nfiles > 1: # concatenate randoms now if needed
                 for t in range(ntracers):
                     exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+            else:
+                cat_randoms_files[t] = input_filenames[t][0]
             # compute jackknife weights
             if ntracers == 1:
                 exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
