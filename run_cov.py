@@ -242,9 +242,10 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
 
 if cat_randoms: # concatenate randoms
     for t in range(ntracers):
-        print_and_log(datetime.now())
-        exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
-        input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
+        if nfiles[t] > 1: # real action is needed
+            print_and_log(datetime.now())
+            exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+            input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
     nfiles = 1
 else:
     nfiles = nfiles[0]
