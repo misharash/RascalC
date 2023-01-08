@@ -246,6 +246,8 @@ if cat_randoms: # concatenate randoms
             print_and_log(datetime.now())
             exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
             input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
+        else: # skip actual concatenation, just reuse the only input file
+            cat_randoms_files[t] = input_filenames[t][0]
     nfiles = 1
 else:
     nfiles = nfiles[0]
