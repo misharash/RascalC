@@ -51,7 +51,7 @@ N3 = 40 # number of third cells/particles per secondary cell/particle
 N4 = 80 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
-nside = 301 # grid size for accelerating pair count
+nside = 401 # grid size for accelerating pair count
 boxsize = 2000 # only used if periodic=1
 
 suffixes_tracer_all = ("", "2") # all supported tracer suffixes
@@ -83,7 +83,7 @@ cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
-z_min, z_max = 0.4, 0.5 # for redshift cut and filenames
+z_min, z_max = 0.2, 0.3 # for redshift cut and filenames
 
 # CF options
 convert_cf = 1
