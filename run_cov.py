@@ -41,7 +41,7 @@ mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 30 # number of OMP threads to use
-maxloops = 30 # number of integration loops per filename
+maxloops = 60 # number of integration loops per filename
 N2 = 20 # number of secondary cells/particles per primary cell
 N3 = 80 # number of third cells/particles per secondary cell/particle
 N4 = 160 # number of fourth cells/particles per third cell/particle
@@ -61,7 +61,7 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
-nseed = 10
+nseed = 6
 tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 10
