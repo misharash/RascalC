@@ -241,13 +241,16 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
 
 if cat_randoms: # concatenate randoms
     for t in range(ntracers):
-        print_and_log(datetime.now())
-        exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
-        input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
+        if nfiles[t] > 1: # real action is needed
+            print_and_log(datetime.now())
+            exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+            input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
+        else: # skip actual concatenation, just reuse the only input file
+            cat_randoms_files[t] = input_filenames[t][0]
     nfiles = 1
 else:
     nfiles = nfiles[0]
-    if cycle_randoms:
+    if ntracers > 1 and nfiles > 1 and cycle_randoms:
         for t in range(1, ntracers):
             input_filenames[t] = input_filenames[t][t*cycle_randoms:] + input_filenames[t][:t*cycle_randoms] # shift the filename list cyclically by number of tracer, this makes sure files with different numbers for different tracers are fed to the C++ code, otherwise overlapping positions are likely at least between LRG and ELG
     # now the number of files to process is the same for sure
@@ -256,9 +259,11 @@ if convert_cf: # this is really for pair counts and jackknives
     print_and_log(datetime.now())
     if do_counts: # redo counts
         if jackknife: # do jackknife xi and all counts
-            if not cat_randoms: # concatenate randoms now
+            if nfiles > 1: # concatenate randoms now if needed
                 for t in range(ntracers):
                     exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+            else:
+                cat_randoms_files[t] = input_filenames[t][0]
             # compute jackknife weights
             if ntracers == 1:
                 exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
