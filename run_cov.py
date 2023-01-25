@@ -44,8 +44,8 @@ nbin_cf = 83 # radial bins for input 2PCF
 mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
-nthread = 30 # number of OMP threads to use
-maxloops = 240 # number of integration loops per filename
+nthread = 60 # number of OMP threads to use
+maxloops = 480 # number of integration loops per filename
 N2 = 20 # number of secondary cells/particles per primary cell
 N3 = 40 # number of third cells/particles per secondary cell/particle
 N4 = 80 # number of fourth cells/particles per third cell/particle
@@ -116,7 +116,7 @@ nfiles = [len(input_filenames_group) for input_filenames_group in input_filename
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = "_".join(tlabels) + "2" # output file directory
+outdir = "_".join(tlabels) + "3" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
