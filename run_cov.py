@@ -77,7 +77,7 @@ if redshift_cut or convert_to_xyz:
     masks = [0b1010, 0b0010] # First bit for Y5 footprint, third for main subsample (only LRG - first tracer). All bits set to 1 in the mask have to be set in the FITS data STATUS.
     use_weights = [1] * ntracers
 create_jackknives = jackknife and 1
-do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
+do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"cutsky_{tlabel}_random_S100-{nrandoms}00_{nrandoms}X.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
