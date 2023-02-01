@@ -73,9 +73,10 @@ nrandoms = 20
 redshift_cut = 1
 convert_to_xyz = 1
 if redshift_cut or convert_to_xyz:
-    FKP_weights = [0, "4e3,NZ"]
-    masks = [0b1010, 0b0010] # First bit for Y5 footprint, third for main subsample (only LRG - first tracer). All bits set to 1 in the mask have to be set in the FITS data STATUS.
-    use_weights = [1] * ntracers
+    # the following options are set for each tracer, possibly differently. Make sure that all the counts are compatible with the selected weighting and selection.
+    use_weights = [1] * ntracers # For FITS files: 0 - do not use the WEIGHT column even if present. 1 - use WEIGHT column if present. Has no effect with plain text files
+    FKP_weights = [0, "4e3,NZ"] # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
+    masks = [0b1010, 0b0010] # First bit for Y5 footprint, third for main subsample (only LRG - first tracer). All bits set to 1 in the mask have to be set in the FITS data STATUS. Does nothing with plain text files.
 create_jackknives = jackknife and 1
 do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
