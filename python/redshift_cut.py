@@ -1,5 +1,5 @@
-"""Convenience script to perform redshift cut on an input (Ra,Dec,w) FITS or txt file and save the result in a .txt file for use with further scripts. (Michael Rashkovetskyi 2022).
-Output file format has (x,y,z,w) coordinates in Mpc/h units 
+"""Convenience script to perform redshift cut on an input (Ra,Dec,z,w) FITS or txt file and save the result in a .txt file for use with further scripts. (Michael Rashkovetskyi 2022).
+Output file format has (Ra,Dec,z,w) coordinates
 
     Parameters:
         INFILE = input ASCII or FITS file
