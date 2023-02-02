@@ -162,7 +162,9 @@ print_and_log(f"Executing {__file__}")
 
 def exec_print_and_log(commandline):
     print_and_log(f"Running command: {commandline}")
-    exit_code = os.system(f"{commandline} 2>&1 | tee -a {logfile}")
+    exit_code = os.system(f"set -o pipefail; {commandline} 2>&1 | tee -a {logfile}")
+    # tee prints what it gets to stdout AND saves to file
+    # without pipefail, the exit_code would be of tee, not reflecting main command failures
     if exit_code:
         print(f"{commandline} exited with error (code {exit_code}).")
         if terminate_on_error:
