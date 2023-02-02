@@ -6,7 +6,7 @@ import sys
 
 ## PARAMETERS
 if len(sys.argv) not in (8, 9, 10, 11):
-    print("Usage: python convert_xi_jack_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_XI_JACK_FILE} {JACKKNIFE_WEIGHTS_FILE} {JACKKNIFE_PAIRCOUNTS_FILE} {BINNED_PAIRCOUNTS_FILE} {R_STEP} {N_MU} [{COUNTS_FACTOR} [{SPLIT_ABOVE} [{R_MAX}]]].")
+    print("Usage: python convert_xi_jack_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_XI_JACK_FILE} {JACKKNIFE_WEIGHTS_FILE} {JACKKNIFE_PAIRCOUNTS_FILE} {BINNED_PAIRCOUNTS_FILE} {R_STEP} {N_MU} [{COUNTS_FACTOR} [{SPLIT_ABOVE} [{R_MAX}]]]. COUNTS_FACTOR=0 is a special value to use normalized counts.")
     sys.exit(1)
 infile_name = str(sys.argv[1])
 xi_name = str(sys.argv[2])
@@ -38,9 +38,12 @@ if r_max:
     result_orig = result_orig[:r_max] # cut to max bin
 
 result = result_orig[::r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
-binpairs = result.R1R2.wcounts.ravel() / counts_factor # total counts, made 1D
-nonsplit_mask = (result.sepavg(axis=0) < split_above)
-if split_above > 0: binpairs[nonsplit_mask] /= counts_factor # divide once more below the splitting scale
+if counts_factor: # nonzero value
+    binpairs = result.R1R2.wcounts.ravel() / counts_factor # total counts, made 1D
+    nonsplit_mask = (result.sepavg(axis=0) < split_above)
+    if split_above > 0: binpairs[nonsplit_mask] /= counts_factor # divide once more below the splitting scale
+else: # zero value, use normalized counts
+    binpairs = result.R1R2.normalized_wcounts().ravel()
 
 def jack_realization_rascalc(jack_estimator, i):
     # returns RascalC-framed jackknife realization, different from implemented in pycorr
@@ -55,8 +58,11 @@ def jack_realization_rascalc(jack_estimator, i):
 results = [jack_realization_rascalc(result, i) for i in result.realizations]
 
 jack_xi = np.array([jack.corr.ravel() for jack in results]) # already wrapped
-jack_pairs = np.array([jack.R1R2.wcounts.ravel() for jack in results]) / counts_factor # already wrapped
-if split_above > 0: jack_pairs[:, nonsplit_mask] /= counts_factor # divide once more below the splitting scale
+if counts_factor: # nonzero value
+    jack_pairs = np.array([jack.R1R2.wcounts.ravel() for jack in results]) / counts_factor # already wrapped
+    if split_above > 0: jack_pairs[:, nonsplit_mask] /= counts_factor # divide once more below the splitting scale
+else: # zero value, use normalized counts
+    jack_pairs = np.array([jack.R1R2.normalized_wcounts().ravel() for jack in results]) # already wrapped
 jack_pairs_sum = np.sum(jack_pairs, axis=0)
 assert np.allclose(jack_pairs_sum, binpairs), "Total counts mismatch"
 jack_weights = jack_pairs / binpairs[None, :]

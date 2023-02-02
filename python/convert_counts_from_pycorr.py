@@ -6,7 +6,7 @@ import sys
 
 ## PARAMETERS
 if len(sys.argv) not in (5, 6, 7, 8):
-    print("Usage: python convert_counts_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_PAIRCOUNTS_TEXT_FILE} {R_STEP} {N_MU} [{COUNTS_FACTOR} [{SPLIT_ABOVE}] [{R_MAX}]]].")
+    print("Usage: python convert_counts_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_PAIRCOUNTS_TEXT_FILE} {R_STEP} {N_MU} [{COUNTS_FACTOR} [{SPLIT_ABOVE}] [{R_MAX}]]]. COUNTS_FACTOR=0 is a special value to use normalized counts.")
     sys.exit(1)
 infile_name = str(sys.argv[1])
 outfile_name = str(sys.argv[2])
@@ -35,9 +35,12 @@ if r_max:
     result_orig = result_orig[:r_max] # cut to max bin
 
 result = result_orig[::r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
-paircounts = result.R1R2.wcounts / counts_factor
-nonsplit_mask = (result.sepavg(axis=0) < split_above)
-if split_above > 0: paircounts[nonsplit_mask] /= counts_factor # divide once more below the splitting scale
+if counts_factor: # nonzero value
+    paircounts = result.R1R2.wcounts / counts_factor
+    nonsplit_mask = (result.sepavg(axis=0) < split_above)
+    if split_above > 0: paircounts[nonsplit_mask] /= counts_factor # divide once more below the splitting scale
+else: # zero value, use normalized counts
+    paircounts = result.R1R2.normalized_wcounts()
 
 ## Write to file using numpy funs
 np.savetxt(outfile_name, paircounts.reshape(-1, 1)) # the file always has 1 column
