@@ -78,6 +78,7 @@ if redshift_cut or convert_to_xyz:
     FKP_weights = [0, "4e3,NZ"] # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
     masks = [0b1010, 0b0010] # First bit for Y5 footprint, third for main subsample (only LRG - first tracer). All bits set to 1 in the mask have to be set in the FITS data STATUS. Does nothing with plain text files.
 create_jackknives = jackknife and 1
+normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
@@ -89,7 +90,7 @@ z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
 convert_cf = 1
 if convert_cf:
     # first index is correlation function index
-    counts_factor = nrandoms if not cat_randoms else 1
+    counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
     pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/LRG/Xi/Pre/jmena/pycorr_format/Xi_cutsky_LRG_z0.800_AbacusSummit_base_c000_ph{i:03d}_zmin0.8_zmax1.1.npy", fallback_dir="pycorr") for i in range(25)], [check_path(f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Cross/xi_LRGxELG_cutsky_seed{i}_z0.8_1.1_abacus_elgFKP_nosplit.npy", fallback_dir="pycorr") for i in range(25)], [check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/ELG/Xi/Pre/Cristhian/z_0p8_1p1/npy/z_0p8_1p1_cutsky_ELG_ph{i:03d}.npy", fallback_dir="pycorr") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
@@ -194,6 +195,9 @@ if periodic and make_randoms:
 def change_extension(name, ext):
     return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
+def append_to_filename(name, appendage):
+    return os.path.join(tmpdir, os.path.basename(name + appendage)) # append part and switch to tmpdir
+
 if create_jackknives and redshift_cut: # prepare reference file
     for t, data_ref_filename in enumerate(data_ref_filenames):
         print_and_log(f"Processing data file for jackknife reference")
@@ -256,6 +260,18 @@ else:
             input_filenames[t] = input_filenames[t][t*cycle_randoms:] + input_filenames[t][:t*cycle_randoms] # shift the filename list cyclically by number of tracer, this makes sure files with different numbers for different tracers are fed to the C++ code, otherwise overlapping positions are likely at least between LRG and ELG
     # now the number of files to process is the same for sure
 
+# most sensible to normalize weights after concatenation but before counts computation and main code run
+if normalize_weights:
+    for t, input_filenames_t in enumerate(input_filenames):
+        print_and_log(f"Normalizing weights for tracer {t+1} of {ntracers}")
+        for i, input_filename in enumerate(input_filenames_t):
+            print_and_log(f"Starting normalizing weights in file {i+1} of {nfiles}")
+            print_and_log(datetime.now())
+            n_filename = append_to_filename(input_filename, "n") # append letter n to the original filename
+            exec_print_and_log(f"python python/normalize_weights.py {input_filename} {n_filename}")
+            input_filenames[t][i] = n_filename # update input filename for later
+            print_and_log(f"Finished normalizing weights in file {i+1} of {nfiles}")
+
 if convert_cf: # this is really for pair counts and jackknives
     print_and_log(datetime.now())
     if do_counts: # redo counts
@@ -282,7 +298,12 @@ if convert_cf: # this is really for pair counts and jackknives
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
                 # keep in mind some subtleties for multi-tracer jackknife assigment
                 exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {data_filename} {xyzwj_filename} {njack}") # the first file must be rdzw, the second xyzw!
-                data_ref_filenames[t] = xyzwj_filename
+                data_filename = xyzwj_filename
+                if normalize_weights:
+                    n_filename = append_to_filename(data_filename, "n") # append letter n to the original filename
+                    exec_print_and_log(f"python python/normalize_weights.py {data_filename} {n_filename}")
+                    data_filename = n_filename
+                data_ref_filenames[t] = data_filename # update the name in list
             # run RascalC own xi jack estimator
             if ntracers == 1:
                 exec_print_and_log(f"python python/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]}") # 1. is max mu
