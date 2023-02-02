@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
 
     // Now put particles to grid(s)
     Grid all_grid[no_fields]; // create empty grids
-    Float max_density = 16., min_density = 2.;
+    Float max_density = 64., min_density = 2.;
 
     for (int index = 0; index < no_fields; index++) {
         // Now ready to compute!
