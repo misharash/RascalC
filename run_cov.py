@@ -162,10 +162,12 @@ print_and_log(f"Executing {__file__}")
 
 def exec_print_and_log(commandline):
     print_and_log(f"Running command: {commandline}")
-    exit_code = os.system(f"set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}")
+    status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}'")
     # tee prints what it gets to stdout AND saves to file
     # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
     # without pipefail, the exit_code would be of tee, not reflecting main command failures
+    # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
+    exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
     if exit_code:
         print(f"{commandline} exited with error (code {exit_code}).")
         if terminate_on_error:
