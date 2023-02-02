@@ -162,8 +162,9 @@ print_and_log(f"Executing {__file__}")
 
 def exec_print_and_log(commandline):
     print_and_log(f"Running command: {commandline}")
-    exit_code = os.system(f"set -o pipefail; {commandline} 2>&1 | tee -a {logfile}")
+    exit_code = os.system(f"set -o pipefail; unbuffer {commandline} 2>&1 | tee -a {logfile}")
     # tee prints what it gets to stdout AND saves to file
+    # unbuffer should solve the output delays due to buffering without hurting the performance too much
     # without pipefail, the exit_code would be of tee, not reflecting main command failures
     if exit_code:
         print(f"{commandline} exited with error (code {exit_code}).")
