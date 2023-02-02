@@ -162,6 +162,8 @@ print_and_log(f"Executing {__file__}")
 
 def exec_print_and_log(commandline):
     print_and_log(f"Running command: {commandline}")
+    if commandline.startswith("python"): # additional anti-buffering for python
+        commandline = commandline.replace("python", "python -u", 1)
     status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}'")
     # tee prints what it gets to stdout AND saves to file
     # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
