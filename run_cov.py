@@ -92,7 +92,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/LRG/Xi/Pre/jmena/pycorr_format/Xi_cutsky_LRG_z0.800_AbacusSummit_base_c000_ph{i:03d}_zmin0.8_zmax1.1.npy", fallback_dir="pycorr") for i in range(25)], [check_path(f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Cross/xi_LRGxELG_cutsky_seed{i}_z0.8_1.1_abacus_elgFKP_nosplit.npy", fallback_dir="pycorr") for i in range(25)], [check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/ELG/Xi/Pre/Cristhian/z_0p8_1p1/npy/z_0p8_1p1_cutsky_ELG_ph{i:03d}.npy", fallback_dir="pycorr") for i in range(25)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/LRG/Xi/Pre/jmena/pycorr_format/Xi_cutsky_LRG_z0.800_AbacusSummit_base_c000_ph{i:03d}_zmin0.8_zmax1.1.npy", fallback_dir="pycorr") for i in range(25)], [check_path(f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Cross/xi_LRGxELG_cutsky_seed{i}_z0.8_1.1_abacus_elgFKP_nosplit.npy", fallback_dir="pycorr") for i in range(25)], [check_path(f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Cross/xi_ELG_cutsky_seed{i}_z0.8_1.1_abacus_elgFKP_nosplit.npy", fallback_dir="pycorr") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
