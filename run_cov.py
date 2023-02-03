@@ -191,6 +191,8 @@ if convert_cf:
             exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
             cornames[c] = corname # save outside of the loop
 
+ndata[1] = 1.612659e+07 # the value loaded from David's ELG autocorrelation file is 0 for some reason; LRG value from Juan's file is ok
+
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
