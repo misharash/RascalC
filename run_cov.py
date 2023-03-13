@@ -23,7 +23,7 @@ make_randoms = 0 # whether to generate randoms, only works in periodic case (cub
 jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
-legendre = 0
+legendre = 1
 if legendre:
     max_l = 4
 
@@ -37,7 +37,7 @@ ndata = [None] * ntracers # number of data points for each tracer; set None to m
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
 nbin = 50 # radial bins for output cov
-mbin = 1 # angular (mu) bins for output cov
+mbin = 20 # angular (mu) bins for output cov; in jackknife mode number of bins for correction function instead
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
 nbin_cf = 100 # radial bins for input 2PCF
