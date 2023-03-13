@@ -20,7 +20,7 @@ if ntracers > 1:
     cycle_randoms = 1
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # whether to generate randoms, only works in periodic case (cubic box)
-jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
+jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
 legendre = 0
@@ -68,7 +68,7 @@ tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 reg = "N" # region for filenames
 tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 10
+nrandoms = 1
 
 # data processing steps
 redshift_cut = 1
@@ -76,7 +76,7 @@ convert_to_xyz = 1
 if redshift_cut or convert_to_xyz:
     # the following options are set for each tracer, possibly differently. Make sure that all the counts are compatible with the selected weighting and selection.
     use_weights = [1] * ntracers # For FITS files: 0 - do not use the WEIGHT column even if present. 1 - use WEIGHT column if present. Has no effect with plain text files
-    FKP_weights = [1] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
+    FKP_weights = [0] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
     masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Does nothing with plain text files.
 create_jackknives = jackknife and 1
 normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
@@ -93,7 +93,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/xi/da02/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 60}_nran{nrandoms}_split{split_above}.npy")] for corlabel in ["LRG"]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena/unblinded/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_lin_njack{njack if jackknife else 0}_nran{nrandoms}_split{split_above}.npy")] for corlabel in ["LRG"]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -109,9 +109,9 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife:
-    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena/unblinded/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/main/mocks/FirstGenMocks/AbacusSummit/Y1/mock1/LSScats/blinded/jmena/unblinded/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
