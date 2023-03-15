@@ -1,4 +1,4 @@
-"This reads two sets of RascalC results and two triplets of cosmodesi/pycorr .npy files to combine two covs following NScomb procedure for 2 tracers"
+"This reads two sets of RascalC results and two triplets of cosmodesi/pycorr .npy files to combine two covs following NScomb procedure for 2 tracers. Covariance of N and S 2PCF is neglected."
 
 from pycorr import TwoPointCorrelationFunction
 import numpy as np
