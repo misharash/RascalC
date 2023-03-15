@@ -92,7 +92,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/users/arocher/mock_challenge_ELG/v1_high_density/HOD_0/z1.1/xi/allcounts_AbacusSummit_base_c000_ph{i:03d}_HOD_0.npy", fallback_dir="antoine") for i in range(25)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/ELG/Xi/Pre/HOD/cristhian_measurements/antoine/AbacusSummit_base_c000_ph{i:03d}_hod0.npy", fallback_dir="antoine") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
