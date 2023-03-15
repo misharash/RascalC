@@ -73,10 +73,12 @@ nrandoms = 1
 redshift_cut = 0
 convert_to_xyz = 0
 if redshift_cut or convert_to_xyz:
-    FKP_weight = 0
-    masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Each tracer can have its own mask
-    use_weights = 1
+    # the following options are set for each tracer, possibly differently. Make sure that all the counts are compatible with the selected weighting and selection.
+    use_weights = [1] * ntracers # For FITS files: 0 - do not use the WEIGHT column even if present. 1 - use WEIGHT column if present. Has no effect with plain text files
+    FKP_weights = [0] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
+    masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Does nothing with plain text files.
 create_jackknives = jackknife and 1
+normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
@@ -88,7 +90,7 @@ z_min, z_max = 0.4, 1.1 # for redshift cut and filenames
 convert_cf = 1
 if convert_cf:
     # first index is correlation function index
-    counts_factor = nrandoms
+    counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
     pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/users/arocher/mock_challenge_ELG/v1_high_density/HOD_0/z1.1/xi/allcounts_AbacusSummit_base_c000_ph{i:03d}_HOD_0.npy", fallback_dir="antoine") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
@@ -160,7 +162,14 @@ print_and_log(f"Executing {__file__}")
 
 def exec_print_and_log(commandline):
     print_and_log(f"Running command: {commandline}")
-    exit_code = os.system(f"{commandline} 2>&1 | tee -a {logfile}")
+    if commandline.startswith("python"): # additional anti-buffering for python
+        commandline = commandline.replace("python", "python -u", 1)
+    status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}'")
+    # tee prints what it gets to stdout AND saves to file
+    # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
+    # without pipefail, the exit_code would be of tee, not reflecting main command failures
+    # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
+    exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
     if exit_code:
         print(f"{commandline} exited with error (code {exit_code}).")
         if terminate_on_error:
@@ -193,11 +202,14 @@ if periodic and make_randoms:
 def change_extension(name, ext):
     return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
+def append_to_filename(name, appendage):
+    return os.path.join(tmpdir, os.path.basename(name + appendage)) # append part and switch to tmpdir
+
 if create_jackknives and redshift_cut: # prepare reference file
     for t, data_ref_filename in enumerate(data_ref_filenames):
         print_and_log(f"Processing data file for jackknife reference")
         rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-        exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weight} {masks[t]} {use_weights}")
+        exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
         data_ref_filenames[t] = rdzw_ref_filename
 
 command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
@@ -225,11 +237,11 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
         else: # (potentially) run through all data processing steps
             if redshift_cut:
                 rdzw_filename = change_extension(input_filename, "rdzw")
-                exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weight} {masks[t]} {use_weights}")
+                exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
                 input_filename = rdzw_filename
             if convert_to_xyz:
                 xyzw_filename = change_extension(input_filename, "xyzw")
-                exec_print_and_log(f"python python/convert_to_xyz.py {input_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {masks[t]} {use_weights}")
+                exec_print_and_log(f"python python/convert_to_xyz.py {input_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
                 input_filename = xyzw_filename
             if create_jackknives:
                 xyzwj_filename = change_extension(input_filename, "xyzwj")
@@ -241,24 +253,41 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
 
 if cat_randoms: # concatenate randoms
     for t in range(ntracers):
-        print_and_log(datetime.now())
-        exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
-        input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
+        if nfiles[t] > 1: # real action is needed
+            print_and_log(datetime.now())
+            exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+            input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
+        else: # skip actual concatenation, just reuse the only input file
+            cat_randoms_files[t] = input_filenames[t][0]
     nfiles = 1
 else:
     nfiles = nfiles[0]
-    if cycle_randoms:
+    if ntracers > 1 and nfiles > 1 and cycle_randoms:
         for t in range(1, ntracers):
             input_filenames[t] = input_filenames[t][t*cycle_randoms:] + input_filenames[t][:t*cycle_randoms] # shift the filename list cyclically by number of tracer, this makes sure files with different numbers for different tracers are fed to the C++ code, otherwise overlapping positions are likely at least between LRG and ELG
     # now the number of files to process is the same for sure
+
+# most sensible to normalize weights after concatenation but before counts computation and main code run
+if normalize_weights:
+    for t, input_filenames_t in enumerate(input_filenames):
+        print_and_log(f"Normalizing weights for tracer {t+1} of {ntracers}")
+        for i, input_filename in enumerate(input_filenames_t):
+            print_and_log(f"Starting normalizing weights in file {i+1} of {nfiles}")
+            print_and_log(datetime.now())
+            n_filename = append_to_filename(input_filename, "n") # append letter n to the original filename
+            exec_print_and_log(f"python python/normalize_weights.py {input_filename} {n_filename}")
+            input_filenames[t][i] = n_filename # update input filename for later
+            print_and_log(f"Finished normalizing weights in file {i+1} of {nfiles}")
 
 if convert_cf: # this is really for pair counts and jackknives
     print_and_log(datetime.now())
     if do_counts: # redo counts
         if jackknife: # do jackknife xi and all counts
-            if not cat_randoms: # concatenate randoms now
+            if nfiles > 1: # concatenate randoms now if needed
                 for t in range(ntracers):
                     exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+            else:
+                cat_randoms_files[t] = input_filenames[t][0]
             # compute jackknife weights
             if ntracers == 1:
                 exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
@@ -271,12 +300,17 @@ if convert_cf: # this is really for pair counts and jackknives
             for t in range(ntracers):
                 data_filename = data_ref_filenames[t]
                 xyzw_filename = change_extension(data_filename, "xyzw")
-                exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weight} {masks[t]} {use_weights}")
+                exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
                 # keep in mind some subtleties for multi-tracer jackknife assigment
                 exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {data_filename} {xyzwj_filename} {njack}") # the first file must be rdzw, the second xyzw!
-                data_ref_filenames[t] = xyzwj_filename
+                data_filename = xyzwj_filename
+                if normalize_weights:
+                    n_filename = append_to_filename(data_filename, "n") # append letter n to the original filename
+                    exec_print_and_log(f"python python/normalize_weights.py {data_filename} {n_filename}")
+                    data_filename = n_filename
+                data_ref_filenames[t] = data_filename # update the name in list
             # run RascalC own xi jack estimator
             if ntracers == 1:
                 exec_print_and_log(f"python python/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]}") # 1. is max mu
