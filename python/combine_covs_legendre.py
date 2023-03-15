@@ -79,8 +79,8 @@ leg_mu_avg = leg_mu_ints / np.diff(mu_edges) # average value of Legendre polynom
 # Angularly binned 2PCF are added with weights (normalized) weight1/2[r_bin, mu_bin]
 # Derivatives of Legendre wrt binned 2PCF are leg_mu_ints[ell//2, mu_bin] * (2*ell+1)
 # So we need to sum such product over mu bins, while radial bins stay independent, and the partial derivative of combined 2PCF wrt the 2PCFs 1/2 will be
-pd1 = np.einsum('il,kl,jl->ikjk', leg_mu_avg, weight1, (2*ells[:, None]+1) * leg_mu_ints).reshape(n_bins, n_bins)
-pd2 = np.einsum('il,kl,jl->ikjk', leg_mu_avg, weight2, (2*ells[:, None]+1) * leg_mu_ints).reshape(n_bins, n_bins)
+pd1 = np.einsum('il,kl,jl,km->ikjm', leg_mu_avg, weight1, (2*ells[:, None]+1) * leg_mu_ints, np.eye(n)).reshape(n_bins, n_bins)
+pd2 = np.einsum('il,kl,jl,km->ikjm', leg_mu_avg, weight2, (2*ells[:, None]+1) * leg_mu_ints, np.eye(n)).reshape(n_bins, n_bins)
 # We have correct [l_in, r_in, l_out, r_out] ordering and want to make these matrices in the end thus the reshape
 
 # Produce and save combined cov
