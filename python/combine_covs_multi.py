@@ -36,15 +36,15 @@ if len(sys.argv) >= 15:
 weight1 = np.zeros(0)
 for pycorr_file1 in pycorr_files1:
     result = TwoPointCorrelationFunction.load(pycorr_file1)
-    result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].normalize()
+    result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].wrap().normalize()
     result = result[r_bins_skip:]
-    weight1 = np.append(weight1, (result.R1R2.wcounts[:, n_mu_bins:] + result.R1R2.wcounts[:, n_mu_bins-1::-1]).ravel())
+    weight1 = np.append(weight1, result.R1R2.wcounts.ravel())
 weight2 = np.zeros(0)
 for pycorr_file2 in pycorr_files2:
     result = TwoPointCorrelationFunction.load(pycorr_file2)
-    result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].normalize()
+    result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].wrap().normalize()
     result = result[r_bins_skip:]
-    weight2 = np.append(weight2, (result.R1R2.wcounts[:, n_mu_bins:] + result.R1R2.wcounts[:, n_mu_bins-1::-1]).ravel())
+    weight2 = np.append(weight2, result.R1R2.wcounts.ravel())
 
 # Produce and save combined cov
 # following xi = (xi1 * weight1 + xi2 * weight2) / (weight1 + weight2)
