@@ -23,7 +23,7 @@ make_randoms = 0 # whether to generate randoms, only works in periodic case (cub
 jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
-legendre = 1
+legendre = 0
 if legendre:
     max_l = 4
 
