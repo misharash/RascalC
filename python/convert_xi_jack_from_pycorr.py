@@ -62,7 +62,7 @@ if counts_factor: # nonzero value
     jack_pairs = np.array([jack.R1R2.wcounts.ravel() for jack in results]) / counts_factor # already wrapped
     if split_above > 0: jack_pairs[:, nonsplit_mask] /= counts_factor # divide once more below the splitting scale
 else: # zero value, use normalized counts
-    jack_pairs = np.array([jack.R1R2.normalized_wcounts().ravel() for jack in results]) # already wrapped
+    jack_pairs = np.array([(jack.R1R2.wcounts / result.R1R2.wnorm).ravel() for jack in results]) # already wrapped
 jack_pairs_sum = np.sum(jack_pairs, axis=0)
 assert np.allclose(jack_pairs_sum, binpairs), "Total counts mismatch"
 jack_weights = jack_pairs / binpairs[None, :]
