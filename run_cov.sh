@@ -17,4 +17,7 @@ export OMP_PROC_BIND=spread
 export OMP_PLACES=threads
 export OMP_NUM_THREADS=256 # should match what is set in python script
 
+# Hopefully let numpy use all threads
+export NUMEXPR_MAX_THREADS=256
+
 srun python -u run_cov.py
