@@ -68,7 +68,7 @@ tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 reg = "N" # region for filenames
 tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
-variant = "unblinded"
+variant = "test_w0-0.970439944958287_wa-0.507777992481059"
 nrandoms = 1
 
 # data processing steps
