@@ -45,7 +45,8 @@ print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6e}")
 print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6e}")
 np.savetxt(outfile_name + ".ndata", np.array((data_size1_sum, data_size2_sum)) / len(infile_names)) # save them for later
 
-xi = result.corr * result.R1R2.normalized_wcounts() / result.S1S2.normalized_wcounts() # already wrapped; for input xi need to divide by SS instead of RR in post-recon case, in pre-recon case RR=SS so should work too
+xi = result.corr # * result.R1R2.normalized_wcounts() / result.S1S2.normalized_wcounts() # already wrapped; for input xi need to divide by SS instead of RR in post-recon case, in pre-recon case RR=SS so should work too
+# on this branch we do mock-average so input points will be R and not S. Thus correction commented out.
 
 ## Custom array to string function
 def my_a2s(a, fmt='%.18e'):
