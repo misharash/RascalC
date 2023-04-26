@@ -84,7 +84,7 @@ normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. 
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
-    cat_randoms_files = [f"cutsky_{tlabel}_S100-{nrandoms}00_{nrandoms}X.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
+    cat_randoms_files = [f"cutsky_{tlabel}_S1000-{nrandoms+9}00_{nrandoms}X.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
 z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
 
@@ -94,7 +94,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/EZmock/CutSky_6Gpc/LRG/Xi/Post/forero/fiducial_settings/z0.800/cutsky_LRG_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed{i+1}/{reg}/{z_min}z{z_max}f0.830/{recon}_tpcf.pkl.npy", fallback_dir="pycorr") for i in range(25)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/EZmock/CutSky_6Gpc/LRG/Xi/Post/forero/fiducial_settings/z0.800/cutsky_LRG_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed{i+1}/{reg}/{z_min}z{z_max}f0.830/{recon}_tpcf.pkl.npy", fallback_dir="pycorr") for i in range(1000)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -112,7 +112,7 @@ if convert_to_xyz:
 if jackknife:
     data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/z0.800/cutsky_{tlabel}_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed1_{reg}.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/Random/cutsky_{tlabel}_S{i+1}00_{reg}.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/Random/cutsky_{tlabel}_S{i+10}00_{reg}.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
