@@ -1,4 +1,4 @@
-"This reads two sets of RascalC results and two cosmodesi/pycorr .npy files to combine two covs following NScomb procedure"
+"This reads two sets of RascalC results and two cosmodesi/pycorr .npy files to combine two covs following NScomb procedure. Covariance of N and S 2PCF is neglected."
 
 from pycorr import TwoPointCorrelationFunction
 import numpy as np
@@ -7,7 +7,7 @@ import sys
 ## PARAMETERS
 if len(sys.argv) not in (9, 11):
     print("Usage: python combine_covs.py {RASCALC_RESULTS1} {RASCALC_RESULTS2} {PYCORR_FILE1} {PYCORR_FILE2} {N_R_BINS} {N_MU_BINS} {R_BINS_SKIP} {OUTPUT_COV_FILE} [{OUTPUT_COV_FILE1} {OUTPUT_COV_FILE2}].")
-    sys.exit()
+    sys.exit(1)
 rascalc_results1 = str(sys.argv[1])
 rascalc_results2 = str(sys.argv[2])
 pycorr_file1 = str(sys.argv[3])
@@ -34,13 +34,13 @@ if len(sys.argv) >= 11:
 
 # Read pycorr files to figure out weights
 result = TwoPointCorrelationFunction.load(pycorr_file1)
-result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].normalize()
+result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].wrap().normalize()
 result = result[r_bins_skip:]
-weight1 = (result.R1R2.wcounts[:, n_mu_bins:] + result.R1R2.wcounts[:, n_mu_bins-1::-1]).ravel()
+weight1 = result.R1R2.wcounts.ravel()
 result = TwoPointCorrelationFunction.load(pycorr_file2)
-result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].normalize()
+result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].wrap().normalize()
 result = result[r_bins_skip:]
-weight2 = (result.R1R2.wcounts[:, n_mu_bins:] + result.R1R2.wcounts[:, n_mu_bins-1::-1]).ravel()
+weight2 = result.R1R2.wcounts.ravel()
 
 # Produce and save combined cov
 # following xi = (xi1 * weight1 + xi2 * weight2) / (weight1 + weight2)

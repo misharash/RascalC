@@ -1,12 +1,12 @@
-## Script to correct normalization (number of data galaxies) after a RascalC run
-## Determines single-field vs multi-field and jackknife automatically, but by default does no rescaling for 2nd field
+## Script to correct jackknife disconnected term from runs of older versions of RascalC
+## Determines single-field vs multi-field and jackknife automatically, but by default does no changes for 2nd field
 
 import numpy as np
 import sys,os
 
 # PARAMETERS
 if len(sys.argv) not in (8, 10):
-    print("Usage: python correct_norm.py {N_R_BINS} {mN_MU_BINS/lMAX_L} {COVARIANCE_INPUT_DIR} {N_SAMPLES} {COVARIANCE_OUTPUT_DIR} {OLD_NORM1} {NEW_NORM1} [{OLD_NORM2} {NEW_NORM2}]")
+    print("Usage: python correct_disconnected.py {N_R_BINS} {mN_MU_BINS/lMAX_L} {COVARIANCE_INPUT_DIR} {N_SAMPLES} {COVARIANCE_OUTPUT_DIR} {NRANDOMS1} {NDATA1} [{NRANDOMS2} {NDATA2}]")
     sys.exit(1)
 
 n = int(sys.argv[1])
@@ -14,10 +14,10 @@ mstr = str(sys.argv[2])
 input_root = str(sys.argv[3])
 n_samples = int(sys.argv[4])
 output_root = str(sys.argv[5])
-alpha1 = float(sys.argv[6]) / float(sys.argv[7]) # old_norm1/new_norm1, akin to shot-noise rescaling
-alpha2 = float(sys.argv[8]) / float(sys.argv[9]) if len(sys.argv) >= 10 else 1 # old_norm2/new_norm2 if present, default 1
+norm1 = float(sys.argv[6]) / float(sys.argv[7]) # nrandoms1/ndata1, like in the C++ code
+norm2 = float(sys.argv[8]) / float(sys.argv[9]) if len(sys.argv) >= 10 else 1 # nrandoms2/ndata2 if present, default 1
 
-alpha = {1: alpha1, 2: alpha2}
+norm = {1: norm1, 2: norm2}
 
 input_root_all = os.path.join(input_root, 'CovMatricesAll/')
 input_root_jack = os.path.join(input_root, 'CovMatricesJack/')
@@ -54,9 +54,7 @@ for ii in range(len(I1)): # loop over all field combinations
         print("Some %s full samples missing: expected %d, found %d" % (index4, n_samples, len(c2)))
         break # end loop like above
     c2, c3, c4 = np.array(c2), np.array(c3), np.array(c4)
-    # rescale
-    c2 *= alpha[I1[ii]] * alpha[I2[ii]] # C_2^{XY} gets rescaled by \alpha^X \alpha^Y, see index2
-    c3 *= alpha[I2[ii]] # C_3^{Y,XZ} gets rescaled by \alpha^Y, see index3
+    # do nothing
     # write
     for i in range(n_samples):
         np.savetxt(output_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), c2[i])
@@ -67,7 +65,7 @@ for ii in range(len(I1)): # loop over all field combinations
     np.savetxt(output_root_all+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2), c2)
     np.savetxt(output_root_all+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3), c3)
     np.savetxt(output_root_all+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4), c4)
-    print("Done with %s full" % index4)
+    print("Done (nothing) with %s full (just copied)" % index4)
 
     # jackknife integrals
     c2j, c3j, c4j = [], [], []
@@ -90,11 +88,9 @@ for ii in range(len(I1)): # loop over all field combinations
         continue # skip the rest of the loop like above
     c2j, c3j, c4j = np.array(c2j), np.array(c3j), np.array(c4j)
     EEaA1, EEaA2, RRaA1, RRaA2 = np.array(EEaA1), np.array(EEaA2), np.array(RRaA1), np.array(RRaA2)
-    # rescale
-    c2j *= alpha[I1[ii]] * alpha[I2[ii]] # C_2^{XY} gets rescaled by \alpha^X \alpha^Y, see index2
-    c3j *= alpha[I2[ii]] # C_3^{Y,XZ} gets rescaled by \alpha^Y, see index3
-    RRaA1, RRaA2 = np.array((RRaA1, RRaA2)) / (alpha[I1[ii]] * alpha[I2[ii]]) # RR^{XY} scale as N^X N^Y thus 1/(\alpha^X \alpha^Y)
-    # EEaA1,2 don't scale with alpha anymore - check the normalization procedure in the main code
+    # rescale EE
+    EEaA1, EEaA2 = np.array((EEaA1, EEaA2)) * (norm[I1[ii]] * norm[I2[ii]]) # undo division by product of two norms done earlier
+    # do nothing else
     # write
     for i in range(n_samples):
         np.savetxt(output_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), c2j[i])

@@ -12,7 +12,7 @@ from scipy.optimize import curve_fit
 # PARAMETERS
 if (len(sys.argv)!=5) and (len(sys.argv)!=6):
     print("Usage: python compute_correction_function.py {GALAXY_FILE} {BIN_FILE} {OUTPUT_DIR} {PERIODIC} [{RR_COUNTS}] ")
-    sys.exit()
+    sys.exit(1)
 gal_file = str(sys.argv[1])
 binfile = str(sys.argv[2])
 outdir=str(sys.argv[3])
@@ -30,7 +30,6 @@ gal_x = all_gal[:,0]
 gal_y = all_gal[:,1]
 gal_z = all_gal[:,2]
 gal_w = all_gal[:,3]
-gal_n = (1./gal_w-1.)/20000.
 
 N_gal = len(all_gal)
 w_bar = np.mean(gal_w)
@@ -43,14 +42,7 @@ V=hull.volume # in (Mpc/h)^3
 ## Galaxy number density
 n_bar = N_gal/V
 
-if periodic:
-    nw2_bar = n_bar**2*w_bar**2
-else:
-    nw2_bar = np.mean(gal_n**2*gal_w**2)  #n_bar**2*np.mean(gal_w**2)#
-
-if nw2_bar==0:
-    print("Are we using FKP weights here? Couldn't compute number density from weights. Exiting.")
-    sys.exit()
+nw2_bar = n_bar**2*w_bar**2
 
 # Load in binning files 
 r_bins = np.loadtxt(binfile)
@@ -67,7 +59,7 @@ if periodic:
 
 else:
     ## load in RR counts
-    RR_flat = np.loadtxt(RR_file)*np.sum(gal_w)**2. # change normalization here
+    RR_flat = np.loadtxt(RR_file) # not change normalization here
     m=len(RR_flat)//n
     RR_true = RR_flat.reshape((n,m))
 
