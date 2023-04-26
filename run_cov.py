@@ -67,7 +67,7 @@ tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
 tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 10
+nrandoms = 20
 
 # data processing steps
 redshift_cut = 1
@@ -92,7 +92,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/LRG/Xi/Pre/jmena/pycorr_format/Xi_cutsky_LRG_z0.800_AbacusSummit_base_c000_ph{i:03d}_zmin{z_min}_zmax{z_max}.npy", fallback_dir="pycorr") for i in range(25)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/LRG/Xi/Post/jmena/pycorr_format/Xi_cutsky_LRG_z0.8-Abacus-base-c000_ph{i:03d}_{z_min}z{z_max}_shift_MultiGrid_randoms{nrandoms}X_reso7.8_smooth10_pad1.5_recsym_f0.839_b2.00.npy", fallback_dir="pycorr") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
