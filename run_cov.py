@@ -37,11 +37,11 @@ ndata = [None] * ntracers # number of data points for each tracer; set None to m
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
 nbin = 50 # radial bins for output cov
-mbin = 20 # angular (mu) bins for output cov; in Legendre mode number of bins for correction function instead
+mbin = 25 # angular (mu) bins for output cov; in Legendre mode number of bins for correction function instead
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
 nbin_cf = 200 # radial bins for input 2PCF
-mbin_cf = 20 # angular (mu) bins for input 2PCF
+mbin_cf = 25 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 30 # number of OMP threads to use
