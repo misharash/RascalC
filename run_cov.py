@@ -79,7 +79,7 @@ if redshift_cut or convert_to_xyz:
     masks = [0b1010] * ntracers # from the end and numbering from 0: bit 1 - object in Y5 footprint, bit 3 - subsampling matching LRG_main n(z) distribution based on DA02 results; both need to be set in the FITS data STATUS. Does nothing with plain text files.
 create_jackknives = jackknife and 1
 normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
-do_counts = 1 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
+do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"cutsky_{tlabel}_S100-{nrandoms}00_{nrandoms}X.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
@@ -92,7 +92,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/{corlabel}/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)] for corlabel in ["LRG"]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/LRG/Xi/Pre/jmena/pycorr_format/Xi_cutsky_LRG_z0.800_AbacusSummit_base_c000_ph{i:03d}_zmin{z_min}_zmax{z_max}.npy", fallback_dir="pycorr") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
