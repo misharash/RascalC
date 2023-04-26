@@ -65,6 +65,8 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
+reg = "NGC" # region
+recon = "sym" # reconstruction kind
 tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 20
@@ -92,7 +94,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CutSky/LRG/Xi/Post/jmena/pycorr_format/Xi_cutsky_LRG_z0.8-Abacus-base-c000_ph{i:03d}_{z_min}z{z_max}_shift_MultiGrid_randoms{nrandoms}X_reso7.8_smooth10_pad1.5_recsym_f0.839_b2.00.npy", fallback_dir="pycorr") for i in range(25)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/EZmock/CutSky_6Gpc/LRG/Xi/Post/forero/fiducial_settings/z0.800/cutsky_LRG_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed{i+1}/{reg}/{z_min}z{z_max}f0.830/{recon}_tpcf.pkl.npy", fallback_dir="pycorr") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -108,15 +110,15 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife:
-    data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/{tlabel}/z0.800/cutsky_{tlabel}_z0.800_AbacusSummit_base_c000_ph000.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/z0.800/cutsky_{tlabel}_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed1_{reg}.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/AbacusSummit/CutSky/{tlabel}/z0.800/cutsky_{tlabel}_random_S{i+1}00_1X.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/Random/cutsky_{tlabel}_S{i+1}00_{reg}.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = "cutsky_" + "_".join(tlabels) + f"_z{z_min}-{z_max}" # output file directory
+outdir = "cutsky_" + "_".join(["rec" + recon] * (len(recon) > 0) + tlabels + [reg]) + f"_z{z_min}-{z_max}" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
