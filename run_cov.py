@@ -78,7 +78,7 @@ convert_to_xyz = 1
 if redshift_cut or convert_to_xyz:
     # the following options are set for each tracer, possibly differently. Make sure that all the counts are compatible with the selected weighting and selection.
     use_weights = [1] * ntracers # For FITS files: 0 - do not use the WEIGHT column even if present. 1 - use WEIGHT column if present. Has no effect with plain text files
-    FKP_weights = [0] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
+    FKP_weights = [1] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
     masks = [0b1010] * ntracers # from the end and numbering from 0: bit 1 - object in Y5 footprint, bit 3 - subsampling matching LRG_main n(z) distribution based on DA02 results; both need to be set in the FITS data STATUS. Does nothing with plain text files.
 create_jackknives = jackknife and 1
 normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
