@@ -42,9 +42,9 @@ result = result_orig[:r_max:r_step, ::mu_factor].wrap() # rebin and wrap to posi
 n_bins = np.prod(result.corr.shape) # number of (s, mu) bins
 
 # start xi and weights arrays
-xi, weights = np.zeros((2, len(infile_names), n_bins * n_corr))
-weights[0, :n_bins] = result.R1R2.wcounts.ravel()
-xi[0, :n_bins] = result.corr.ravel()
+xi, weights = np.zeros((2, len(infile_names), n_corr, n_bins))
+weights[0, 0] = result.R1R2.wcounts.ravel()
+xi[0, 0] = result.corr.ravel()
 
 # load remaining input files if any
 for i in range(1, n_files):
@@ -54,8 +54,12 @@ for i in range(1, n_files):
     result = result_tmp[:r_max:r_step, ::mu_factor].wrap() # rebin and accumulate
     i_sample = i % n_samples # sample index
     i_corr = i // n_samples # correlation function index
-    weights[i_sample, i_corr*n_bins:(i_corr+1)*n_bins] = result.R1R2.wcounts.ravel()
-    xi[i_sample, i_corr*n_bins:(i_corr+1)*n_bins] = result.corr.ravel()
+    weights[i_sample, i_corr] = result.R1R2.wcounts.ravel()
+    xi[i_sample, i_corr] = result.corr.ravel()
+
+# convert arrays to 2D
+weights = weights.reshape(len(infile_names), n_corr * n_bins)
+xi = xi.reshape(len(infile_names), n_corr * n_bins)
 
 cov = np.cov(xi.T, aweights=np.sum(weights, axis=1)) # xi has to be transposed, because variables (bins) are in columns (2nd index) of it and cov expects otherwise. Weights are collapsed across the bins; the proper expression for covariance with weights changing for different variables within one sample has not been found yet; the jackknife expression is short by ~n_samples.
 np.savetxt(outfile_name, cov)
