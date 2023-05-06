@@ -33,6 +33,7 @@ assert not (make_randoms and not periodic), "Non-periodic random generation not 
 assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
+count_ndata = 1 # whether to count data galaxies if can't load useful info from pycorr
 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
@@ -108,8 +109,8 @@ if convert_to_xyz:
     w_dark_energy = -1
 
 # File names and directories
-if jackknife:
-    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
+if jackknife or count_ndata:
+    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
 input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
@@ -192,6 +193,10 @@ if convert_cf:
             exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
             cornames[c] = corname # save outside of the loop
 
+if count_ndata:
+    ndata_isbad = [not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
+    count_ndata = any(ndata_isbad) # no need to count data if all ndata are good
+
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
@@ -206,12 +211,18 @@ def change_extension(name, ext):
 def append_to_filename(name, appendage):
     return os.path.join(tmpdir, os.path.basename(name + appendage)) # append part and switch to tmpdir
 
-if create_jackknives and redshift_cut: # prepare reference file
+if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
     for t, data_ref_filename in enumerate(data_ref_filenames):
-        print_and_log(f"Processing data file for jackknife reference")
-        rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-        exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
-        data_ref_filenames[t] = rdzw_ref_filename
+        if create_jackknives or ndata_isbad[t]:
+            print_and_log("Processing data file for" + create_jackknives * " jackknife reference" + (create_jackknives and count_ndata) * " and" + count_ndata * " galaxy counts")
+            rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
+            exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
+            data_ref_filenames[t] = rdzw_ref_filename
+        if ndata_isbad[t]:
+            with open(data_ref_filenames[t]) as f:
+                for lineno, _ in enumerate(f):
+                    pass
+                ndata[t] = lineno + 1
 
 command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
 command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
