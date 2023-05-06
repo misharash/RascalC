@@ -193,8 +193,6 @@ if convert_cf:
             exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
             cornames[c] = corname # save outside of the loop
 
-ndata = 3223302.28 # override average number of data points, because it is not consistent with pycorr files here
-
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
