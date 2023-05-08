@@ -35,10 +35,9 @@ def fix_bad_bins(pycorr_result):
     for name in pycorr_result.count_names:
         counts = getattr(pycorr_result, name)
         bad_bins_mask = counts.wcounts < 0
-        if np.count_nonzero(bad_bins_mask) > 0:
-            for s_bin, mu_bin in np.where(bad_bins_mask):
-                print(f"WARNING: negative {name}.wcounts ({counts.wcounts[s_bin, mu_bin]:.2e}) found in bin {s_bin}, {mu_bin}; replacing them with reflected bin ({counts.wcounts[s_bin, -1-mu_bin]:.2e})")
-                counts.wcounts[s_bin, mu_bin] = counts.wcounts[s_bin, -1-mu_bin]
+        for s_bin, mu_bin in zip(*np.nonzero(bad_bins_mask)):
+            print(f"WARNING: negative {name}.wcounts ({counts.wcounts[s_bin, mu_bin]:.2e}) found in bin {s_bin}, {mu_bin}; replacing them with reflected bin ({counts.wcounts[s_bin, -1-mu_bin]:.2e})")
+            counts.wcounts[s_bin, mu_bin] = counts.wcounts[s_bin, -1-mu_bin]
         kw[name] = counts
     return cls(**kw)
 
