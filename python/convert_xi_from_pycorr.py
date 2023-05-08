@@ -30,7 +30,7 @@ r_step //= r_step_orig
 def fix_bad_bins(pycorr_result):
     # fixes bins with negative wcounts by overwriting their content by reflection
     # only known cause for now is self-counts (DD, RR) in bin 0, n_mu_orig/2-1 – subtraction is sometimes not precise enough, especially with float32
-    cls = pycorr_result.__class__.__bases__[0]
+    cls = pycorr_result.__class__
     kw = {}
     for name in pycorr_result.count_names:
         counts = getattr(pycorr_result, name)
