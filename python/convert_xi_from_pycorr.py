@@ -27,7 +27,21 @@ assert np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3), "Binnings o
 assert r_step % r_step_orig == 0, "Radial rebinning not possible"
 r_step //= r_step_orig
 
-result = result_orig[::r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
+def fix_bad_bins(pycorr_result):
+    # fixes bins with negative wcounts by overwriting their content by reflection
+    # only known cause for now is self-counts (DD, RR) in bin 0, n_mu_orig/2-1 – subtraction is sometimes not precise enough, especially with float32
+    cls = pycorr_result.__class__.__bases__[0]
+    kw = {}
+    for name in pycorr_result.count_names:
+        counts = getattr(pycorr_result, name)
+        bad_bins_mask = counts.wcounts < 0
+        for s_bin, mu_bin in np.where(bad_bins_mask):
+            print(f"WARNING: negative {name}.wcounts ({counts.wcounts[s_bin, mu_bin]:.2e}) found in bin {s_bin}, {mu_bin}; replacing them with reflected bin ({counts.wcounts[s_bin, -1-mu_bin]:.2e})")
+            counts.wcounts[s_bin, mu_bin] = counts.wcounts[s_bin, -1-mu_bin]
+        kw[name] = counts
+    return cls(**kw)
+
+result = fix_bad_bins(result_orig)[::r_step, ::mu_factor].wrap() # fix bins with negative wcounts, rebin and wrap to positive mu
 # retrieve data sizes
 data_size1_sum = result_orig.D1D2.size1
 data_size2_sum = result_orig.D1D2.size2
@@ -36,7 +50,7 @@ data_size2_sum = result_orig.D1D2.size2
 for infile_name in infile_names[1:]:
     result_tmp = TwoPointCorrelationFunction.load(infile_name)
     assert result_tmp.shape == result_orig.shape, "Different shape in file %s" % infile_name
-    result += result_tmp[::r_step, ::mu_factor].wrap() # rebin, wrap to positive mu and accumulate
+    result += fix_bad_bins(result_tmp)[::r_step, ::mu_factor].wrap() # fix bins with negative wcounts, rebin, wrap to positive mu and accumulate
     # accumulate data sizes
     data_size1_sum += result_tmp.D1D2.size1
     data_size2_sum += result_tmp.D1D2.size2
