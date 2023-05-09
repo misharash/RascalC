@@ -111,7 +111,7 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife or count_ndata:
-    data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/z0.800/cutsky_{tlabel}_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed1_{reg}.fits") for tlabel in tlabels] # for jackknife reference only, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/z0.800/cutsky_{tlabel}_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed1_{reg}.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
 input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/Random/cutsky_{tlabel}_S{i+10}00_{reg}.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
