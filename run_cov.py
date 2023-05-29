@@ -47,9 +47,9 @@ xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 128 # number of OMP threads to use
 maxloops = 128 # number of integration loops per filename
-N2 = 5 # number of secondary cells/particles per primary cell
-N3 = 10 # number of third cells/particles per secondary cell/particle
-N4 = 20 # number of fourth cells/particles per third cell/particle
+N2 = 20 # number of secondary cells/particles per primary cell
+N3 = 40 # number of third cells/particles per secondary cell/particle
+N4 = 80 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
 nside = 101 # grid size for accelerating pair count
