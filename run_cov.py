@@ -85,15 +85,13 @@ cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
-z_min, z_max = 0.4, 1.1 # for redshift cut and filenames
-
 # CF options
 convert_cf = 1
 if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Post/jmena/pycorr_format/Xi_LRG_snap20_ph{i:03d}.gcat_shift_MultiGrid_mesh512_smooth10_recsym_f0.838_b1.99.npy") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
