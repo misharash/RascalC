@@ -20,7 +20,7 @@ if ntracers > 1:
     cycle_randoms = 1
 periodic = 1 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 1 # whether to generate randoms, only works in periodic case (cubic box)
-jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
+jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 if jackknife:
     njack = 60 # number of jackknife regions
 legendre = 1
