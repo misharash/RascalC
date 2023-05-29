@@ -4,12 +4,13 @@
 
 import sys
 import numpy as np
+import math
 
 # PARAMETERS
 if len(sys.argv)!=13:
     if len(sys.argv)!=16:
         print("Usage: python xi_estimator_jack_cross.py {GALAXY_FILE_1} {GALAXY_FILE_2} {RANDOM_FILE_1_DR} {RANDOM_FILE_1_RR} {RANDOM_FILE_2_DR} {RANDOM_FILE_2_RR} {RADIAL_BIN_FILE} {MU_MAX} {N_MU_BINS} {NTHREADS} {PERIODIC} {OUTPUT_DIR} [{RR_jackknife_counts_11} {RR_jackknife_counts_12} {RR_jackknife_counts_22}]")
-        sys.exit()
+        sys.exit(1)
 Dname1 = str(sys.argv[1])
 Dname2 = str(sys.argv[2])
 Rname1_DR = str(sys.argv[3])
@@ -302,7 +303,7 @@ def compute_xi(random1_RR,random1_DR,data1,N_rand1_RR, N_rand1_DR, N_gal1,random
         
         # Compute xi for the periodic case (measuring mu from the Z-axis)
         print("Using periodic input data")
-        from Corrfunc.mocks.DDsmu import DDsmu
+        from Corrfunc.theory.DDsmu import DDsmu
         
         import time
         init = time.time()

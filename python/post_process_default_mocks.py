@@ -7,7 +7,7 @@ import sys,os
 # PARAMETERS
 if len(sys.argv) not in (7, 8):
     print("Usage: python post_process_default_mocks.py {MOCK_COV_FILE} {COVARIANCE_DIR} {N_R_BINS} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SKIP_R_BINS}]")
-    sys.exit()
+    sys.exit(1)
         
 mock_cov_file = str(sys.argv[1])
 file_root = str(sys.argv[2])
@@ -15,9 +15,7 @@ n = int(sys.argv[3])
 m = int(sys.argv[4])
 n_samples = int(sys.argv[5])
 outdir = str(sys.argv[6])
-skip_bins = 0
-if len(sys.argv) == 8:
-    skip_bins = int(sys.argv[7]) * m # convert from radial to total number of bins right away
+skip_bins = int(sys.argv[7]) * m if len(sys.argv) >= 8 else 0 # convert from radial to total number of bins right away
 
 mock_cov = np.loadtxt(mock_cov_file)[skip_bins:, skip_bins:] # load external mock covariance matrix
 
@@ -37,39 +35,39 @@ def load_matrices(index):
 
 # Load in full theoretical matrices
 print("Loading best estimate of covariance matrix")
-c2,c3,c4=load_matrices('full')
+c2f, c3f, c4f = load_matrices('full')
 
 # Check matrix convergence
 from numpy.linalg import eigvalsh
-eig_c4 = eigvalsh(c4)
-eig_c2 = eigvalsh(c2)
+eig_c4 = eigvalsh(c4f)
+eig_c2 = eigvalsh(c2f)
 if min(eig_c4)<-1.*min(eig_c2):
     print("4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
     print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
-    sys.exit()
+    sys.exit(1)
 
-n_bins = len(c4)
+n_bins = len(c4f)
 
 # Load in partial theoretical matrices
-c2s,c3s,c4s=[],[],[]
+c2s, c3s, c4s = [], [], []
 for i in range(n_samples):
     print("Loading full subsample %d of %d"%(i+1,n_samples))
     c2,c3,c4=load_matrices(i)
     c2s.append(c2)
     c3s.append(c3)
     c4s.append(c4)
+c2s, c3s, c4s = [np.array(a) for a in (c2s, c3s, c4s)]
 
 # Compute inverted matrix
 def Psi(alpha):
     """Compute precision matrix from covariance matrix, removing quadratic order bias terms."""
-    c_tot = c2*alpha**2.+c3*alpha+c4
-    partial_cov=[]
-    for i in range(n_samples):
-        partial_cov.append(alpha**2.*c2s[i]+alpha*c3s[i]+c4s[i])
+    c_tot = c2f * alpha**2 + c3f * alpha + c4f
+    partial_cov = alpha**2 * c2s + alpha * c3s + c4s
+    sum_partial_cov = np.sum(partial_cov, axis=0)
     tmp=0.
     for i in range(n_samples):
-        c_excl_i = np.mean(partial_cov[:i]+partial_cov[i+1:],axis=0)
-        tmp+=np.matmul(np.linalg.inv(c_excl_i),partial_cov[i])
+        c_excl_i = (sum_partial_cov - partial_cov[i]) / (n_samples - 1)
+        tmp+=np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
     D_est=(n_samples-1.)/n_samples * (-1.*np.eye(n_bins) + tmp/n_samples)
     Psi = np.matmul(np.eye(n_bins)-D_est,np.linalg.inv(c_tot))
     return Psi
@@ -91,17 +89,16 @@ print("Optimization complete - optimal rescaling parameter is %.6f" % alpha_best
 alpha = alpha_best # to save editing later
 
 # Compute full covariance matrices and precision
-full_cov = c4+c3*alpha+c2*alpha**2.
+full_cov = c4f + c3f*alpha + c2f*alpha**2
 
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")
-partial_cov=[]
-for i in range(n_samples):
-    partial_cov.append(alpha**2.*c2s[i]+alpha*c3s[i]+c4s[i])
+partial_cov = alpha**2 * c2s + alpha * c3s + c4s
+sum_partial_cov = np.sum(partial_cov, axis=0)
 tmp=0.
 for i in range(n_samples):
-    c_excl_i = np.mean(partial_cov[:i]+partial_cov[i+1:],axis=0)
-    tmp+=np.matmul(np.linalg.inv(c_excl_i),partial_cov[i])
+    c_excl_i = (sum_partial_cov - partial_cov[i]) / (n_samples - 1)
+    tmp+=np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
 full_D_est=(n_samples-1.)/n_samples * (-1.*np.eye(n_bins) + tmp/n_samples)
 full_prec = np.matmul(np.eye(n_bins)-full_D_est,np.linalg.inv(full_cov))
 print("Full precision matrix estimate computed")

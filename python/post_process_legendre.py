@@ -7,7 +7,7 @@ import sys,os
 # PARAMETERS
 if len(sys.argv) not in (6, 7, 8, 9):
     print("Usage: python post_process_legendre.py {COVARIANCE_DIR} {N_R_BINS} {MAX_L} {N_SUBSAMPLES} {OUTPUT_DIR} [{SHOT_NOISE_RESCALING} [{SKIP_R_BINS} [{SKIP_L}]]]")
-    sys.exit()
+    sys.exit(1)
 
 file_root = str(sys.argv[1])
 n = int(sys.argv[2])
@@ -33,7 +33,7 @@ def load_matrices(index):
     assert N % n == 0, "Number of bins mismatch"
     n_l = N // n # number of multipoles present
     l_mask = (np.arange(n_l) < n_l - skip_l) # this mask skips last skip_l multipoles
-    full_mask = np.append(np.zeros(skip_r_bins * n_l, dtype=bool), np.repeat(l_mask, n - skip_r_bins)) # start with zeros and then repeat the l_mask since cov terms are first ordered by r and then by l
+    full_mask = np.append(np.zeros(skip_r_bins * n_l, dtype=bool), np.tile(l_mask, n - skip_r_bins)) # start with zeros and then tile (append to itself n - skip_r_bins times) the l_mask since cov terms are first ordered by r and then by l
     c2, c3, c4 = (a[full_mask][:, full_mask] for a in (c2, c3, c4)) # select rows and columns
 
     # Now symmetrize and return matrices
@@ -50,7 +50,7 @@ eig_c2 = eigvalsh(c2)
 if min(eig_c4)<-1.*min(eig_c2):
     print("4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
     print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
-    sys.exit()
+    sys.exit(1)
 
 # Compute full covariance matrices and precision
 full_cov = c4+c3*alpha+c2*alpha**2.
@@ -59,20 +59,20 @@ n_bins = len(c4)
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")
 # Load in partial theoretical matrices
-c2s,c3s,c4s=[],[],[]
+c2s, c3s, c4s = [], [], []
 for i in range(n_samples):
     print("Loading full subsample %d of %d"%(i+1,n_samples))
     c2t,c3t,c4t=load_matrices(i)
     c2s.append(c2t)
     c3s.append(c3t)
     c4s.append(c4t)
-partial_cov=[]
-for i in range(n_samples):
-    partial_cov.append(alpha**2.*c2s[i]+alpha*c3s[i]+c4s[i])
+c2s, c3s, c4s = [np.array(a) for a in (c2s, c3s, c4s)]
+partial_cov = alpha**2 * c2s + alpha * c3s + c4s
+sum_partial_cov = np.sum(partial_cov, axis=0)
 tmp=0.
 for i in range(n_samples):
-    c_excl_i = np.mean(partial_cov[:i]+partial_cov[i+1:],axis=0)
-    tmp+=np.matmul(np.linalg.inv(c_excl_i),partial_cov[i])
+    c_excl_i = (sum_partial_cov - partial_cov[i]) / (n_samples - 1)
+    tmp += np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
 full_D_est=(n_samples-1.)/n_samples * (-1.*np.eye(n_bins) + tmp/n_samples)
 full_prec = np.matmul(np.eye(n_bins)-full_D_est,np.linalg.inv(full_cov))
 print("Full precision matrix estimate computed")
