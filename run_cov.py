@@ -76,7 +76,7 @@ zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.8, 1.1], [1.1, 1.6], [0.1, 0.4], [0
 
 tlabels = [tracers[id]] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 1
+nrandoms = 4
 
 # data processing steps
 redshift_cut = 1
