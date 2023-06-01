@@ -66,8 +66,15 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
-reg = "NGC" # region for filenames
-tlabels = ["LRG"] # tracer labels for filenames
+id = sys.argv[1] # SLURM_JOB_ID to decide what this one has to do
+reg = "NGC" if id%2 else "SGC" # region for filenames
+
+id //= 2 # extracted NGC/SGC from parity, move on
+tracers = ['LRG'] * 3 + ['ELG_LOPnotqso'] * 2 + ['BGS_BRIGHT-21.5', 'QSO']
+zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.8, 1.1], [1.1, 1.6], [0.1, 0.4], [0.8, 2.1]]
+# need 14 jobs in this array
+
+tlabels = tracers[id] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 1
 
@@ -86,7 +93,7 @@ cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
-z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
+z_min, z_max = zs[id] # for redshift cut and filenames
 
 # CF options
 convert_cf = 1
