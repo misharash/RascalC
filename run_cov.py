@@ -366,6 +366,7 @@ for i in range(nfiles):
     this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
     if legendre: # need correction function
+        os.makedirs(this_outdir, exist_ok=1)
         if ntracers == 1:
             exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
         elif ntracers == 2:
