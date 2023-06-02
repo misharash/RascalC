@@ -145,23 +145,6 @@ int main(int argc, char *argv[]) {
         if (par.qbalance) balance_weights(all_particles[index], all_np[index]);
     }
 
-    // Now compute bounding box using all particles
-    Float3 shift; // default value is zero
-    if (!par.make_random) {
-        par.perbox = compute_bounding_box(all_particles, all_np, no_fields, par.rect_boxsize, par.cellsize, par.rmax, shift, par.nside);
-#ifdef PERIODIC
-        par.rect_boxsize = {par.boxsize, par.boxsize, par.boxsize}; // restore the given boxsize if periodic
-        par.cellsize = par.boxsize / (Float)par.nside; // set cell size manually
-        // keep the shift from compute_bounding_box, allowing for coordinate ranges other than [0, par.boxsize) but still of length par.boxsize - this is quite generic and precise at the same time.
-#endif
-    }
-    else {
-        // If randoms particles were made we keep the boxsize
-        par.cellsize = par.boxsize / (Float)par.nside;
-        // set as periodic if we make the random particles
-        par.perbox = true;
-    }
-
     // Now put particles to grid(s)
     Grid all_grid[no_fields]; // create empty grids
     Float max_density = 16., min_density = 2.;
@@ -169,6 +152,24 @@ int main(int argc, char *argv[]) {
     bool nside_global_failure = true; // assume failure until success
 
     for (int no_attempt = 0; no_attempt <= nside_attempts; no_attempt++) {
+        // Compute bounding box using all particles. Do it inside the attempt loop because nside could change.
+        Float3 shift; // default value is zero
+        if (!par.make_random) {
+            par.perbox = compute_bounding_box(all_particles, all_np, no_fields, par.rect_boxsize, par.cellsize, par.rmax, shift, par.nside);
+#ifdef PERIODIC
+            par.rect_boxsize = {par.boxsize, par.boxsize, par.boxsize}; // restore the given boxsize if periodic
+            par.cellsize = par.boxsize / (Float)par.nside; // set cell size manually
+            // keep the shift from compute_bounding_box, allowing for coordinate ranges other than [0, par.boxsize) but still of length par.boxsize - this is quite generic and precise at the same time.
+#endif
+        }
+        else {
+            // If randoms particles were made we keep the boxsize
+            par.cellsize = par.boxsize / (Float)par.nside;
+            // set as periodic if we make the random particles
+            par.perbox = true;
+        }
+
+        // Create grid(s) and see if the particle density is acceptable
         bool nside_local_success = true; // assume this attempt succeeded be default, can be unset
         for (int index = 0; index < no_fields; index++) {
             // Now ready to compute!
