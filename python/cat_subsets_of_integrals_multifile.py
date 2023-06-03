@@ -7,7 +7,7 @@ import numpy as np
 import sys,os
 
 # PARAMETERS
-if len(sys.argv)<6: # if too few
+if len(sys.argv)<7: # if too few
     print("Usage: python cat_subsets_of_integrals_multifile.py {N_R_BINS} {mN_MU_BINS/lMAX_L} {N_FILES} {COVARIANCE_INPUT_DIR1} {N_SUBSAMPLES_TO_USE_PER_FILE1} [{COVARIANCE_INPUT_DIR2} {N_SUBSAMPLES_TO_USE_PER_FILE2} ...] [{COLLAPSE_FACTOR}] {COVARIANCE_OUTPUT_DIR}")
     sys.exit(1)
 
