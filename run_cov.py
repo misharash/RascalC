@@ -33,11 +33,12 @@ assert not (make_randoms and not periodic), "Non-periodic random generation not 
 assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
+count_ndata = 1 # whether to count data galaxies if can't load useful info from pycorr
 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
 nbin = 50 # radial bins for output cov
-mbin = 1 # angular (mu) bins for output cov
+mbin = 1 # angular (mu) bins for output cov; in Legendre mode number of bins for correction function instead
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
 nbin_cf = 200 # radial bins for input 2PCF
@@ -116,7 +117,7 @@ nfiles = [len(input_filenames_group) for input_filenames_group in input_filename
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = "antoine-HOD0" # output file directory
+outdir = "_".join(tlabels) + "-antoine-HOD0" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
@@ -191,6 +192,10 @@ if convert_cf:
             exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
             cornames[c] = corname # save outside of the loop
 
+if count_ndata:
+    ndata_isbad = [not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
+    count_ndata = any(ndata_isbad) # no need to count data if all ndata are good
+
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
@@ -205,12 +210,18 @@ def change_extension(name, ext):
 def append_to_filename(name, appendage):
     return os.path.join(tmpdir, os.path.basename(name + appendage)) # append part and switch to tmpdir
 
-if create_jackknives and redshift_cut: # prepare reference file
+if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
     for t, data_ref_filename in enumerate(data_ref_filenames):
-        print_and_log(f"Processing data file for jackknife reference")
-        rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-        exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
-        data_ref_filenames[t] = rdzw_ref_filename
+        if create_jackknives or ndata_isbad[t]:
+            print_and_log("Processing data file for" + create_jackknives * " jackknife reference" + (create_jackknives and count_ndata) * " and" + count_ndata * " galaxy counts")
+            rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
+            exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
+            data_ref_filenames[t] = rdzw_ref_filename
+        if ndata_isbad[t]:
+            with open(data_ref_filenames[t]) as f:
+                for lineno, _ in enumerate(f):
+                    pass
+                ndata[t] = lineno + 1
 
 command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
 command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
@@ -354,6 +365,7 @@ for i in range(nfiles):
     this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
     if legendre: # need correction function
+        os.makedirs(this_outdir, exist_ok=1)
         if ntracers == 1:
             exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
         elif ntracers == 2:

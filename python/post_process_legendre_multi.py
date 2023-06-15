@@ -76,7 +76,7 @@ def matrix_readin(suffix='full'):
         n_l = N // n # number of multipoles present
         assert n_l == m, "Number of multipoles mismatch"
         l_mask = (np.arange(n_l) < n_l - skip_l) # this mask skips last skip_l multipoles
-        full_mask = np.append(np.zeros(skip_r_bins * n_l, dtype=bool), np.repeat(l_mask, n - skip_r_bins)) # start with zeros and then repeat the l_mask since cov terms are first ordered by r and then by l
+        full_mask = np.append(np.zeros(skip_r_bins * n_l, dtype=bool), np.tile(l_mask, n - skip_r_bins)) # start with zeros and then tile (append to itself n - skip_r_bins times) the l_mask since cov terms are first ordered by r and then by l
         c2, c3, c4 = (a[full_mask][:, full_mask] for a in (c2, c3, c4)) # select rows and columns
 
         # Now save components
