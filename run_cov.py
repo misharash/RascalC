@@ -46,7 +46,7 @@ mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 128 # number of OMP threads to use
-maxloops = 256 # number of integration loops per filename
+maxloops = 128 # number of integration loops per filename
 N2 = 10 # number of secondary cells/particles per primary cell
 N3 = 20 # number of third cells/particles per secondary cell/particle
 N4 = 40 # number of fourth cells/particles per third cell/particle
