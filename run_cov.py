@@ -15,7 +15,7 @@ def check_path(filename, fallback_dir=""):
 
 terminate_on_error = 1 # whether to terminate if any of executed scripts returns nonzero
 
-ntracers = 1 # number of tracers
+ntracers = 2 # number of tracers
 if ntracers > 1:
     cycle_randoms = 1
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
@@ -45,9 +45,9 @@ nbin_cf = 100 # radial bins for input 2PCF
 mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
-nthread = 128 # number of OMP threads to use
-maxloops = 128 # number of integration loops per filename
-N2 = 10 # number of secondary cells/particles per primary cell
+nthread = 256 # number of OMP threads to use
+maxloops = 512 # number of integration loops per filename
+N2 = 5 # number of secondary cells/particles per primary cell
 N3 = 20 # number of third cells/particles per secondary cell/particle
 N4 = 40 # number of fourth cells/particles per third cell/particle
 
@@ -68,13 +68,10 @@ tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
+# need 2 jobs in this array
 
-id //= 2 # extracted NGC/SGC from parity, move on
-tracers = ['LRG'] * 3 + ['ELG_LOPnotqso'] * 2 + ['BGS_BRIGHT-21.5', 'QSO']
-zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.8, 1.1], [1.1, 1.6], [0.1, 0.4], [0.8, 2.1]]
-# need 14 jobs in this array
-
-tlabels = [tracers[id]] # tracer labels for filenames
+tlabels = ['LRG', 'ELG_LOPnotqso'] # tracer labels for filenames
+corlabels = [tlabels[0], "_".join(tlabels), tlabels[1]]
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 4
 
@@ -93,7 +90,7 @@ cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
-z_min, z_max = zs[id] # for redshift cut and filenames
+z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
 
 # CF options
 convert_cf = 1
@@ -101,7 +98,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/xi/smu/{f'njack{njack}/' if jackknife else ''}allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 0}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/xi/smu/{f'njack{njack}/' if jackknife else ''}allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 0}_nran{nrandoms}_split{split_above}.npy")] for corlabel in corlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
