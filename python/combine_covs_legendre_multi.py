@@ -29,16 +29,16 @@ with np.load(rascalc_results1) as f:
     n_bins = len(cov1)
     assert n_bins % (3*n_l) == 0, "Number of bins mismatch"
     n = n_bins // (3*n_l)
-    cov1 = cov1.reshape(3, n, n_l, 3, n, n_l) # convert to 4D from 2D with [t, r, l] ordering for both rows and columns
+    cov1 = cov1.reshape(3, n, n_l, 3, n, n_l) # convert to 6D from 2D with [t, r, l] ordering for both rows and columns
     cov1 = cov1.transpose(0, 2, 1, 3, 5, 4) # change ordering to [t, l, r] for both rows and columns
-    cov1 = cov1.reshape(n_bins, n_bins) # convert back from 4D to 2D
+    cov1 = cov1.reshape(n_bins, n_bins) # convert back from 6D to 2D
     print(f"Max abs eigenvalue of bias correction matrix in 1st results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 with np.load(rascalc_results2) as f:
     cov2 = f['full_theory_covariance']
     assert n_bins == len(cov2), "Number of bins mismatch"
-    cov2 = cov2.reshape(3, n, n_l, 3, n, n_l) # convert to 4D from 2D with [r, l] ordering for both rows and columns
-    cov2 = cov2.transpose(1, 0, 3, 2) # change ordering to [l, r] for both rows and columns
-    cov2 = cov2.reshape(n_bins, n_bins) # convert back from 4D to 2D
+    cov2 = cov2.reshape(3, n, n_l, 3, n, n_l) # convert to 6D from 2D with [t, r, l] ordering for both rows and columns
+    cov2 = cov2.transpose(0, 2, 1, 3, 5, 4) # change ordering to [t, l, r] for both rows and columns
+    cov2 = cov2.reshape(n_bins, n_bins) # convert back from 6D to 2D
     print(f"Max abs eigenvalue of bias correction matrix in 2nd results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 # Save to their files if any
 if len(sys.argv) >= 15:
