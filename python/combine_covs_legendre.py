@@ -1,4 +1,4 @@
-"This reads two sets of RascalC results and two cosmodesi/pycorr .npy files to combine two covs following NScomb procedure in Legendre mode. Covariance of N and S 2PCF is neglected."
+"This reads two sets of RascalC results and two cosmodesi/pycorr .npy files to combine two covs following NS/GCcomb procedure in Legendre mode. Covariance of N and S 2PCF is neglected."
 
 from pycorr import TwoPointCorrelationFunction
 from scipy.special import legendre
@@ -30,14 +30,14 @@ with np.load(rascalc_results1) as f:
     assert n_bins % n_l == 0, "Number of bins mismatch"
     n = n_bins // n_l
     cov1 = cov1.reshape(n, n_l, n, n_l) # convert to 4D from 2D with [r, l] ordering for both rows and columns
-    cov1 = cov1.transpose(1, 0, 3, 2) # change orderng to [l, r] for both rows and columns
+    cov1 = cov1.transpose(1, 0, 3, 2) # change ordering to [l, r] for both rows and columns
     cov1 = cov1.reshape(n_bins, n_bins) # convert back from 4D to 2D
     print(f"Max abs eigenvalue of bias correction matrix in 1st results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 with np.load(rascalc_results2) as f:
     cov2 = f['full_theory_covariance']
     assert n_bins == len(cov2), "Number of bins mismatch"
     cov2 = cov2.reshape(n, n_l, n, n_l) # convert to 4D from 2D with [r, l] ordering for both rows and columns
-    cov2 = cov2.transpose(1, 0, 3, 2) # change orderng to [l, r] for both rows and columns
+    cov2 = cov2.transpose(1, 0, 3, 2) # change ordering to [l, r] for both rows and columns
     cov2 = cov2.reshape(n_bins, n_bins) # convert back from 4D to 2D
     print(f"Max abs eigenvalue of bias correction matrix in 2nd results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 # Save to their files if any
