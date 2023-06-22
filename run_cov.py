@@ -45,9 +45,9 @@ nbin_cf = 100 # radial bins for input 2PCF
 mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
-nthread = 128 # number of OMP threads to use
-maxloops = 256 # number of integration loops per filename
-N2 = 10 # number of secondary cells/particles per primary cell
+nthread = 256 # number of OMP threads to use
+maxloops = 512 # number of integration loops per filename
+N2 = 4 # number of secondary cells/particles per primary cell
 N3 = 20 # number of third cells/particles per secondary cell/particle
 N4 = 40 # number of fourth cells/particles per third cell/particle
 
@@ -72,11 +72,15 @@ reg = "NGC" if id%2 else "SGC" # region for filenames
 id //= 2 # extracted NGC/SGC from parity, move on
 tracers = ['LRG'] * 3 + ['ELG_LOPnotqso'] * 2 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.8, 1.1], [1.1, 1.6], [0.1, 0.4], [0.8, 2.1]]
+sms = [10] * 5 + [15] * 2
+rectypes = ['MGrecsym'] * 5 + ['IFTrecsym'] * 2
 # need 14 jobs in this array
 
 tlabels = [tracers[id]] # tracer labels for filenames
+sm = sms[id] # smoothing scale in Mpc/h
+rectype = rectypes[id] # reconstruction type
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 4
+nrandoms = 5
 
 # data processing steps
 redshift_cut = 1
@@ -101,7 +105,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/xi/smu/{f'njack{njack}/' if jackknife else ''}allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 0}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/recon_sm{sm}/xi/smu/{f'njack{njack}/' if jackknife else ''}allcounts_{corlabel}_{rectype}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 0}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -117,9 +121,9 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife or count_ndata:
-    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/recon_sm{sm}/{tlabel}_{rectype}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/recon_sm{sm}/{tlabel}_{rectype}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
