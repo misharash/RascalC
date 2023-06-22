@@ -17,8 +17,8 @@ n_samples = int(sys.argv[4])
 outdir = str(sys.argv[5])
 alpha_1 = float(sys.argv[6]) if len(sys.argv) >= 7 else 1
 alpha_2 = float(sys.argv[7]) if len(sys.argv) >= 8 else 1
-skip_r_bins = int(sys.argv[7]) if len(sys.argv) >= 9 else 0
-skip_l = int(sys.argv[8]) if len(sys.argv) >= 10 else 0
+skip_r_bins = int(sys.argv[8]) if len(sys.argv) >= 9 else 0
+skip_l = int(sys.argv[9]) if len(sys.argv) >= 10 else 0
 
 n_bins = (n - skip_r_bins) * (m - skip_l)
 alphas = [alpha_1, alpha_2]
