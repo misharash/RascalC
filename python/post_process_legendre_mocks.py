@@ -20,10 +20,11 @@ outdir = str(sys.argv[6])
 skip_r_bins = int(sys.argv[7]) if len(sys.argv) >= 8 else 0
 skip_l = int(sys.argv[8]) if len(sys.argv) >= 9 else 0
 
-n_bins = n_l * n
+n_bins0 = n_l * n
+n_bins = (n_l - skip_l) * (n - skip_r_bins)
 
 mock_cov = np.loadtxt(mock_cov_file) # load external mock covariance matrix
-assert mock_cov.shape == (n_bins, n_bins), "Wrong shape of cov matrix"
+assert mock_cov.shape == (n_bins0, n_bins0), "Wrong shape of cov matrix"
 mock_cov = mock_cov.reshape(n_l, n, n_l, n) # convert from 2D to 4D with [l, r] ordering in rows and columns
 mock_cov = mock_cov.transpose(1, 0, 3, 2) # change ordering to [r, l] for both rows and columns, like in RascalC results
 mock_cov = mock_cov[skip_r_bins:, :, skip_r_bins:, :] # skip r bins while the dimensions are nicely separated
@@ -38,11 +39,11 @@ def load_matrices(index):
     """Load intermediate or full covariance matrices"""
     cov_root = os.path.join(file_root, 'CovMatricesAll/')
     c2 = np.loadtxt(cov_root + 'c2_n%d_l%d_11_%s.txt' % (n, max_l, index))
-    assert c2.shape == (n_bins, n_bins), "Wrong shape of cov matrix"
+    assert c2.shape == (n_bins0, n_bins0), "Wrong shape of cov matrix"
     c3 = np.loadtxt(cov_root + 'c3_n%d_l%d_1,11_%s.txt' % (n, max_l, index))
-    assert c3.shape == (n_bins, n_bins), "Wrong shape of cov matrix"
+    assert c3.shape == (n_bins0, n_bins0), "Wrong shape of cov matrix"
     c4 = np.loadtxt(cov_root + 'c4_n%d_l%d_11,11_%s.txt' % (n, max_l, index))
-    assert c4.shape == (n_bins, n_bins), "Wrong shape of cov matrix"
+    assert c4.shape == (n_bins0, n_bins0), "Wrong shape of cov matrix"
 
     l_mask = (np.arange(n_l) < n_l - skip_l) # this mask skips last skip_l multipoles
     full_mask = np.append(np.zeros(skip_r_bins * n_l, dtype=bool), np.tile(l_mask, n - skip_r_bins)) # start with zeros and then tile (append to itself n - skip_r_bins times) the l_mask since cov terms are first ordered by r and then by l
