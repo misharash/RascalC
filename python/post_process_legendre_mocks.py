@@ -6,7 +6,7 @@ import sys,os
 
 # PARAMETERS
 if len(sys.argv) not in (7, 8, 9):
-    print("Usage: python post_process_default_mocks.py {MOCK_COV_FILE} {COVARIANCE_DIR} {N_R_BINS} {N_MU_BINS} {N_SUBSAMPLES} {OUTPUT_DIR} [{SKIP_R_BINS} [{SKIP_L}]]")
+    print("Usage: python post_process_legendre_mocks.py {MOCK_COV_FILE} {COVARIANCE_DIR} {N_R_BINS} {MAX_L} {N_SUBSAMPLES} {OUTPUT_DIR} [{SKIP_R_BINS} [{SKIP_L}]]")
     sys.exit(1)
         
 mock_cov_file = str(sys.argv[1])
@@ -26,7 +26,7 @@ mock_cov = np.loadtxt(mock_cov_file) # load external mock covariance matrix
 assert mock_cov.shape == (n_bins, n_bins), "Wrong shape of cov matrix"
 mock_cov = mock_cov.reshape(n_l, n, n_l, n) # convert from 2D to 4D with [l, r] ordering in rows and columns
 mock_cov = mock_cov.transpose(1, 0, 3, 2) # change ordering to [r, l] for both rows and columns, like in RascalC results
-mock_cov = mock_cov[skip_r_bins:, :, skip_r_bins, :] # skip r bins while the dimensions are nicely separated
+mock_cov = mock_cov[skip_r_bins:, :, skip_r_bins:, :] # skip r bins while the dimensions are nicely separated
 if skip_l > 0: mock_cov = mock_cov[:, :-skip_l, :, :-skip_l] # skip multipoles while the dimensions are nicely separated; would be wrong for skip_l=0 so need to skip in this case
 mock_cov = mock_cov.reshape(n_bins, n_bins) # convert back to 2D
 
