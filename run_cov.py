@@ -73,7 +73,7 @@ reg = "NGC" if id%2 else "SGC" # region for filenames
 tlabels = ['LRG', 'ELG_LOPnotqso'] # tracer labels for filenames
 corlabels = [tlabels[0], "_".join(tlabels), tlabels[1]]
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 4
+nrandoms = 5
 
 # data processing steps
 redshift_cut = 1
@@ -98,7 +98,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/xi/smu/{f'njack{njack}/' if jackknife else ''}allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 0}_nran{nrandoms}_split{split_above}.npy")] for corlabel in corlabels]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Overlap/Y1/{fname}")] for fname in [f"xi_LRG_Y1_z{z_min}_{z_max}_data_nran{nrandoms}_{reg}_RECsr10.npy", f"xi_LRG_x_ELG_Y1_z{z_min}_{z_max}_data_nran{nrandoms}_{reg}_RECsr10_CROSS.npy", f"xi_ELG_Y1_z{z_min}_{z_max}_data_nran{nrandoms}_{reg}_RECsr10.npy"]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -114,15 +114,15 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife or count_ndata:
-    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/recon_sm10/{tlabel}_{reg}_clustering.MGrecsym.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/recon_sm10/{tlabel}_{reg}_{i}_clustering.MGrecsym.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = "_".join(tlabels) + "_" + reg + f"_z{z_min}-{z_max}" # output file directory
+outdir = "recon_sm10/" + "_".join(tlabels) + "_MGrecsym_" + reg + f"_z{z_min}-{z_max}" # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]

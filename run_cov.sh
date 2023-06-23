@@ -5,7 +5,7 @@
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --job-name=RascalC-Y1-blinded-LRGxELG-batch
+#SBATCH --job-name=RascalC-Y1-blinded-LRGxELG-recon-batch
 #SBATCH --array=0-1
 
 # load cosmodesi environment
