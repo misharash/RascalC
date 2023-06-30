@@ -62,7 +62,7 @@ for ii in range(len(I1)): # loop over all field combinations
                 read_all = False
             except (FileNotFoundError, IOError): pass
         if read_all:
-            for i in tqdm(range(n_samples), desc="Reading %s full samples from %s" % (index4, input_root_all)):
+            for i in tqdm(range(n_samples), desc="Reading %s full samples" % index4):
                 try:
                     c2.append(np.loadtxt(input_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
                     c3.append(np.loadtxt(input_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i)))
@@ -82,7 +82,7 @@ for ii in range(len(I1)): # loop over all field combinations
             np.savetxt(output_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), c4[i])
     else: # can copy files, which should be faster
         for input_root_all, n_samples, sample_offset in zip(input_roots_all, ns_samples, sample_offsets):
-            for i in tqdm(range(n_samples), desc="Copying %s full samples from %s to %s" % (index4, input_root_all, output_root_all)):
+            for i in tqdm(range(n_samples), desc="Copying %s full samples" % index4):
                 copy2(input_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
                 copy2(input_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), output_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i + sample_offset))
                 copy2(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), output_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i + sample_offset))
@@ -112,7 +112,7 @@ for ii in range(len(I1)): # loop over all field combinations
                 read_all = False
             except (FileNotFoundError, IOError): pass
         if read_all:
-            for i in tqdm(range(n_samples), desc="Reading %s jack samples from %s" % (index4, input_root_jack)):
+            for i in tqdm(range(n_samples), desc="Reading %s jack samples" % index4):
                 try:
                     c2j.append(np.loadtxt(input_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
                     # cxj components - 2-point
@@ -142,7 +142,7 @@ for ii in range(len(I1)): # loop over all field combinations
             np.savetxt(output_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), RRaA2[i])
     else: # can copy files, which should be faster
         for input_root_jack, n_samples, sample_offset in zip(input_roots_jack, ns_samples, sample_offsets):
-            for i in tqdm(range(n_samples), desc="Copying %s full samples from %s to %s" % (index4, input_root_jack, output_root_jack)):
+            for i in tqdm(range(n_samples), desc="Copying %s full samples" % index4):
                 copy2(input_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
                 copy2(input_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), output_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i + sample_offset))
                 copy2(input_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), output_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i + sample_offset))
