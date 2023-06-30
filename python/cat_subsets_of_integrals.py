@@ -62,12 +62,12 @@ for ii in range(len(I1)): # loop over all field combinations
                 read_all = False
             except (FileNotFoundError, IOError): pass
         if read_all:
-            for i in tqdm(range(n_samples), desc="Reading %s full samples" % index4):
-                try:
+            if os.path.isfile(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, n_samples-1)):
+                for i in tqdm(range(n_samples), desc="Reading %s full samples" % index4):
                     c2.append(np.loadtxt(input_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
                     c3.append(np.loadtxt(input_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i)))
                     c4.append(np.loadtxt(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i)))
-                except (FileNotFoundError, IOError): break # end loop if c2/3/4 full not found
+            else: break # end loop if last c4 full not found
     if len(c4) == 0: break # end loop if no full integral has been found
     if len(c4) < n_samples_tot:
         print("ERROR: some %s full samples missing: expected %d, found %d" % (index4, n_samples_tot, len(c2)))
@@ -112,17 +112,17 @@ for ii in range(len(I1)): # loop over all field combinations
                 read_all = False
             except (FileNotFoundError, IOError): pass
         if read_all:
-            for i in tqdm(range(n_samples), desc="Reading %s jack samples" % index4):
-                try:
+            if os.path.isfile(input_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, n_samples-1)):
+                for i in tqdm(range(n_samples), desc="Reading %s jack samples" % index4):
                     c2j.append(np.loadtxt(input_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
-                    # cxj components - 2-point
+                    c3j.append(np.loadtxt(input_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i)))
+                    c4j.append(np.loadtxt(input_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i)))
+                    # cxj components
                     EEaA1.append(np.loadtxt(input_root_jack+'EE1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
                     EEaA2.append(np.loadtxt(input_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
                     RRaA1.append(np.loadtxt(input_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
                     RRaA2.append(np.loadtxt(input_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
-                    c3j.append(np.loadtxt(input_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i)))
-                    c4j.append(np.loadtxt(input_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i)))
-                except (FileNotFoundError, IOError): break # end loop if any jack not found
+            else: break # end loop if last c4 jack not found
     if len(c4j) == 0: continue # skip rest of the loop if no jack integral has been found
     if len(c4j) < n_samples_tot:
         print("ERROR: some %s jack samples missing: expected %d, found %d" % (index4, n_samples_tot, len(c2j)))
