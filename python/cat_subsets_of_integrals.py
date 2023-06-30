@@ -6,6 +6,7 @@
 import numpy as np
 import sys,os
 from tqdm import tqdm
+from shutil import copy2
 
 # PARAMETERS
 if len(sys.argv)<6: # if too few
@@ -18,11 +19,13 @@ input_roots = [str(s) for s in sys.argv[3:-1:2]]
 ns_samples = [int(s) for s in sys.argv[4:-1:2]]
 output_root = str(sys.argv[-1])
 collapse_factor = int(input_roots.pop()) if len(input_roots) > len(ns_samples) else 1 # recover the collapse factor if present
+assert collapse_factor > 0, "Collapsing factor must be positive"
 assert len(ns_samples) == len(input_roots), "Number of input dirs and subsamples to use from them must be the same"
 
 n_samples_tot = sum(ns_samples)
 assert n_samples_tot % collapse_factor == 0, "Collapse factor must divide the total number of samples"
 n_samples_out = n_samples_tot // collapse_factor
+if collapse_factor == 1: sample_offsets = [0] + list(np.cumsum(ns_samples[:-1]))
 
 input_roots_all = [os.path.join(input_root, 'CovMatricesAll/') for input_root in input_roots]
 input_roots_jack = [os.path.join(input_root, 'CovMatricesJack/') for input_root in input_roots]
@@ -49,23 +52,40 @@ for ii in range(len(I1)): # loop over all field combinations
     c2, c3, c4 = [], [], []
     # read
     for input_root_all, n_samples in zip(input_roots_all, ns_samples):
-        for i in tqdm(range(n_samples), desc="Reading %s full samples from %s" % (index4, input_root_all)):
+        read_all = True
+        if collapse_factor == 1 and not os.path.isfile(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, n_samples)):
+            # if don't want to collapse and there are no more samples than we are using, can read averages from full file
             try:
-                c2.append(np.loadtxt(input_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
-            except (FileNotFoundError, IOError): break # end loop if c2 full not found
-            c3.append(np.loadtxt(input_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i)))
-            c4.append(np.loadtxt(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i)))
-    if len(c2) == 0: break # end loop if no full integral has been found
-    if len(c2) < n_samples_tot:
+                c2 += [np.loadtxt(input_root_all+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
+                c3 += [np.loadtxt(input_root_all+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3))] * n_samples
+                c4 += [np.loadtxt(input_root_all+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4))] * n_samples
+                read_all = False
+            except (FileNotFoundError, IOError): pass
+        if read_all:
+            for i in tqdm(range(n_samples), desc="Reading %s full samples from %s" % (index4, input_root_all)):
+                try:
+                    c2.append(np.loadtxt(input_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
+                    c3.append(np.loadtxt(input_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i)))
+                    c4.append(np.loadtxt(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i)))
+                except (FileNotFoundError, IOError): break # end loop if c2/3/4 full not found
+    if len(c4) == 0: break # end loop if no full integral has been found
+    if len(c4) < n_samples_tot:
         print("ERROR: some %s full samples missing: expected %d, found %d" % (index4, n_samples_tot, len(c2)))
         break # end loop like above
     c2, c3, c4 = [np.array(a) for a in (c2, c3, c4)]
-    if collapse_factor > 1: c2, c3, c4 = [np.mean(a.reshape(-1, collapse_factor, *np.shape(a)[1:]), axis=1) for a in (c2, c3, c4)] # average adjacent chunks of collapse_factor samples
-    # write
-    for i in tqdm(range(n_samples_out), desc="Writing %s full samples" % index4):
-        np.savetxt(output_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), c2[i])
-        np.savetxt(output_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), c3[i])
-        np.savetxt(output_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), c4[i])
+    if collapse_factor > 1:
+        c2, c3, c4 = [np.mean(a.reshape(n_samples_out, collapse_factor, *np.shape(a)[1:]), axis=1) for a in (c2, c3, c4)] # average adjacent chunks of collapse_factor samples
+        # write the collapsed data
+        for i in tqdm(range(n_samples_out), desc="Writing %s full samples" % index4):
+            np.savetxt(output_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), c2[i])
+            np.savetxt(output_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), c3[i])
+            np.savetxt(output_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), c4[i])
+    else: # can copy files, which should be faster
+        for input_root_all, n_samples, sample_offset in zip(input_roots_all, ns_samples, sample_offsets):
+            for i in tqdm(range(n_samples), desc="Copying %s full samples from %s to %s" % (index4, input_root_all, output_root_all)):
+                copy2(input_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
+                copy2(input_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), output_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i + sample_offset))
+                copy2(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), output_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i + sample_offset))
     # average and save
     c2, c3, c4 = [np.mean(a, axis=0) for a in (c2, c3, c4)]
     np.savetxt(output_root_all+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2), c2)
@@ -78,33 +98,59 @@ for ii in range(len(I1)): # loop over all field combinations
     EEaA1, EEaA2, RRaA1, RRaA2 = [], [], [], []
     # read
     for input_root_jack, n_samples in zip(input_roots_jack, ns_samples):
-        for i in tqdm(range(n_samples), desc="Reading %s jack samples from %s" % (index4, input_root_jack)):
+        read_all = True
+        if collapse_factor == 1 and not os.path.isfile(input_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, n_samples)):
+            # if don't want to collapse and there are no more samples than we are using, can read averages from full file
             try:
-                c2j.append(np.loadtxt(input_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
-            except (FileNotFoundError, IOError): break # end loop if c2 jack not found
-            c3j.append(np.loadtxt(input_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i)))
-            c4j.append(np.loadtxt(input_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i)))
-            # cxj components
-            EEaA1.append(np.loadtxt(input_root_jack+'EE1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
-            EEaA2.append(np.loadtxt(input_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
-            RRaA1.append(np.loadtxt(input_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
-            RRaA2.append(np.loadtxt(input_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
-    if len(c2j) == 0: continue # skip rest of the loop if no jack integral has been found
-    if len(c2j) < n_samples_tot:
+                c2j += [np.loadtxt(input_root_jack+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
+                c3j += [np.loadtxt(input_root_jack+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3))] * n_samples
+                c4j += [np.loadtxt(input_root_jack+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4))] * n_samples
+                EEaA1 += [np.loadtxt(input_root_jack+'EE1_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
+                EEaA2 += [np.loadtxt(input_root_jack+'EE2_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
+                RRaA1 += [np.loadtxt(input_root_jack+'RR1_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
+                RRaA2 += [np.loadtxt(input_root_jack+'RR2_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
+                read_all = False
+            except (FileNotFoundError, IOError): pass
+        if read_all:
+            for i in tqdm(range(n_samples), desc="Reading %s jack samples from %s" % (index4, input_root_jack)):
+                try:
+                    c2j.append(np.loadtxt(input_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
+                    # cxj components - 2-point
+                    EEaA1.append(np.loadtxt(input_root_jack+'EE1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
+                    EEaA2.append(np.loadtxt(input_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
+                    RRaA1.append(np.loadtxt(input_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
+                    RRaA2.append(np.loadtxt(input_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
+                    c3j.append(np.loadtxt(input_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i)))
+                    c4j.append(np.loadtxt(input_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i)))
+                except (FileNotFoundError, IOError): break # end loop if any jack not found
+    if len(c4j) == 0: continue # skip rest of the loop if no jack integral has been found
+    if len(c4j) < n_samples_tot:
         print("ERROR: some %s jack samples missing: expected %d, found %d" % (index4, n_samples_tot, len(c2j)))
         continue # skip the rest of the loop like above
     c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2 = [np.array(a) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)]
-    if collapse_factor > 1: c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2 = [np.mean(a.reshape(-1, collapse_factor, *np.shape(a)[1:]), axis=1) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)] # average adjacent chunks of collapse_factor samples
-    # write
-    for i in tqdm(range(n_samples_out), desc="Writing %s jack samples" % index4):
-        np.savetxt(output_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), c2j[i])
-        np.savetxt(output_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), c3j[i])
-        np.savetxt(output_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), c4j[i])
-        # cxj components
-        np.savetxt(output_root_jack+'EE1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), EEaA1[i])
-        np.savetxt(output_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), EEaA2[i])
-        np.savetxt(output_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), RRaA1[i])
-        np.savetxt(output_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), RRaA2[i])
+    if collapse_factor > 1:
+        c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2 = [np.mean(a.reshape(n_samples_out, collapse_factor, *np.shape(a)[1:]), axis=1) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)] # average adjacent chunks of collapse_factor samples
+        # write the collapsed data
+        for i in tqdm(range(n_samples_out), desc="Writing %s jack samples" % index4):
+            np.savetxt(output_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), c2j[i])
+            np.savetxt(output_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), c3j[i])
+            np.savetxt(output_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), c4j[i])
+            # cxj components
+            np.savetxt(output_root_jack+'EE1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), EEaA1[i])
+            np.savetxt(output_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), EEaA2[i])
+            np.savetxt(output_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), RRaA1[i])
+            np.savetxt(output_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), RRaA2[i])
+    else: # can copy files, which should be faster
+        for input_root_jack, n_samples, sample_offset in zip(input_roots_jack, ns_samples, sample_offsets):
+            for i in tqdm(range(n_samples), desc="Copying %s full samples from %s to %s" % (index4, input_root_jack, output_root_jack)):
+                copy2(input_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
+                copy2(input_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), output_root_jack+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i + sample_offset))
+                copy2(input_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), output_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i + sample_offset))
+                # cxj components
+                copy2(input_root_jack+'EE1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'EE1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
+                copy2(input_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
+                copy2(input_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
+                copy2(input_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
     # average and save
     c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2 = [np.mean(a, axis=0) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)]
     np.savetxt(output_root_jack+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2), c2j)
