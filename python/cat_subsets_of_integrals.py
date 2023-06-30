@@ -78,7 +78,7 @@ for ii in range(len(I1)): # loop over all field combinations
     EEaA1, EEaA2, RRaA1, RRaA2 = [], [], [], []
     # read
     for input_root_jack, n_samples in zip(input_roots_jack, ns_samples):
-        for i in tqdm(range(n_samples), desc="Reading %s jack samples from %s" % (index4, input_root_all)):
+        for i in tqdm(range(n_samples), desc="Reading %s jack samples from %s" % (index4, input_root_jack)):
             try:
                 c2j.append(np.loadtxt(input_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
             except (FileNotFoundError, IOError): break # end loop if c2 jack not found
