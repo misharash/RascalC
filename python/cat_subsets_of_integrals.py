@@ -50,15 +50,17 @@ for ii in range(len(I1)): # loop over all field combinations
 
     # full integrals
     c2, c3, c4 = [], [], []
+    repeats = []
     # read
     for input_root_all, n_samples in zip(input_roots_all, ns_samples):
         read_all = True
         if collapse_factor == 1 and not os.path.isfile(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, n_samples)):
             # if don't want to collapse and there are no more samples than we are using, can read averages from full file
             try:
-                c2 += [np.loadtxt(input_root_all+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
-                c3 += [np.loadtxt(input_root_all+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3))] * n_samples
-                c4 += [np.loadtxt(input_root_all+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4))] * n_samples
+                c2.append(np.loadtxt(input_root_all+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2)))
+                c3.append(np.loadtxt(input_root_all+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3)))
+                c4.append(np.loadtxt(input_root_all+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4)))
+                repeats.append(n_samples)
                 read_all = False
             except (FileNotFoundError, IOError): pass
         if read_all:
@@ -67,19 +69,20 @@ for ii in range(len(I1)): # loop over all field combinations
                     c2.append(np.loadtxt(input_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
                     c3.append(np.loadtxt(input_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i)))
                     c4.append(np.loadtxt(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i)))
+                    repeats.append(1)
             else: break # end loop if last c4 full not found
     if len(c4) == 0: break # end loop if no full integral has been found
-    if len(c4) < n_samples_tot:
-        print("ERROR: some %s full samples missing: expected %d, found %d" % (index4, n_samples_tot, len(c2)))
+    if sum(repeats) < n_samples_tot:
+        print("ERROR: some %s full samples missing: expected %d, found %d" % (index4, n_samples_tot, sum(repeats)))
         break # end loop like above
-    c2, c3, c4 = [np.array(a) for a in (c2, c3, c4)]
+    c2, c3, c4, repeats = [np.array(a) for a in (c2, c3, c4, repeats)]
     # average and save
-    c2f, c3f, c4f = [np.mean(a, axis=0) for a in (c2, c3, c4)]
+    c2f, c3f, c4f = [np.average(a, axis=0, weights=repeats) for a in (c2, c3, c4)]
     np.savetxt(output_root_all+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2), c2f)
     np.savetxt(output_root_all+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3), c3f)
     np.savetxt(output_root_all+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4), c4f)
     if collapse_factor > 1:
-        c2, c3, c4 = [np.mean(a.reshape(n_samples_out, collapse_factor, *np.shape(a)[1:]), axis=1) for a in (c2, c3, c4)] # average adjacent chunks of collapse_factor samples
+        c2, c3, c4 = [np.mean(a.reshape(n_samples_out, collapse_factor, *np.shape(a)[1:]), axis=1) for a in (c2, c3, c4)] # average adjacent chunks of collapse_factor samples; repeats must be trivial in this case
         # write the collapsed data
         for i in tqdm(range(n_samples_out), desc="Writing %s full samples" % index4):
             np.savetxt(output_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), c2[i])
@@ -97,19 +100,21 @@ for ii in range(len(I1)): # loop over all field combinations
     # jackknife integrals
     c2j, c3j, c4j = [], [], []
     EEaA1, EEaA2, RRaA1, RRaA2 = [], [], [], []
+    repeats = []
     # read
     for input_root_jack, n_samples in zip(input_roots_jack, ns_samples):
         read_all = True
         if collapse_factor == 1 and not os.path.isfile(input_root_jack+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, n_samples)):
             # if don't want to collapse and there are no more samples than we are using, can read averages from full file
             try:
-                c2j += [np.loadtxt(input_root_jack+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
-                c3j += [np.loadtxt(input_root_jack+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3))] * n_samples
-                c4j += [np.loadtxt(input_root_jack+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4))] * n_samples
-                EEaA1 += [np.loadtxt(input_root_jack+'EE1_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
-                EEaA2 += [np.loadtxt(input_root_jack+'EE2_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
-                RRaA1 += [np.loadtxt(input_root_jack+'RR1_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
-                RRaA2 += [np.loadtxt(input_root_jack+'RR2_n%d_%s_%s_full.txt' % (n, mstr, index2))] * n_samples
+                c2j.append(np.loadtxt(input_root_jack+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2)))
+                c3j.append(np.loadtxt(input_root_jack+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3)))
+                c4j.append(np.loadtxt(input_root_jack+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4)))
+                EEaA1.append(np.loadtxt(input_root_jack+'EE1_n%d_%s_%s_full.txt' % (n, mstr, index2)))
+                EEaA2.append(np.loadtxt(input_root_jack+'EE2_n%d_%s_%s_full.txt' % (n, mstr, index2)))
+                RRaA1.append(np.loadtxt(input_root_jack+'RR1_n%d_%s_%s_full.txt' % (n, mstr, index2)))
+                RRaA2.append(np.loadtxt(input_root_jack+'RR2_n%d_%s_%s_full.txt' % (n, mstr, index2)))
+                repeats.append(n_samples)
                 read_all = False
             except (FileNotFoundError, IOError): pass
         if read_all:
@@ -123,14 +128,15 @@ for ii in range(len(I1)): # loop over all field combinations
                     EEaA2.append(np.loadtxt(input_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
                     RRaA1.append(np.loadtxt(input_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
                     RRaA2.append(np.loadtxt(input_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i)))
+                    repeats.append(1)
             else: break # end loop if last c4 jack not found
     if len(c4j) == 0: continue # skip rest of the loop if no jack integral has been found
-    if len(c4j) < n_samples_tot:
-        print("ERROR: some %s jack samples missing: expected %d, found %d" % (index4, n_samples_tot, len(c2j)))
-        continue # skip the rest of the loop like above
-    c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2 = [np.array(a) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)]
+    if sum(repeats) < n_samples_tot:
+        print("ERROR: some %s jack samples missing: expected %d, found %d" % (index4, n_samples_tot, sum(repeats)))
+        continue # skip the rest of the loop
+    c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2, repeats = [np.array(a) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2, repeats)]
     # average and save
-    c2jf, c3jf, c4jf, EEaA1f, EEaA2f, RRaA1f, RRaA2f = [np.mean(a, axis=0) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)]
+    c2jf, c3jf, c4jf, EEaA1f, EEaA2f, RRaA1f, RRaA2f = [np.average(a, axis=0, weights=repeats) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)]
     np.savetxt(output_root_jack+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2), c2jf)
     np.savetxt(output_root_jack+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3), c3jf)
     np.savetxt(output_root_jack+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4), c4jf)
