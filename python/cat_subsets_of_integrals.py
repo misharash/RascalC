@@ -73,6 +73,11 @@ for ii in range(len(I1)): # loop over all field combinations
         print("ERROR: some %s full samples missing: expected %d, found %d" % (index4, n_samples_tot, len(c2)))
         break # end loop like above
     c2, c3, c4 = [np.array(a) for a in (c2, c3, c4)]
+    # average and save
+    c2f, c3f, c4f = [np.mean(a, axis=0) for a in (c2, c3, c4)]
+    np.savetxt(output_root_all+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2), c2f)
+    np.savetxt(output_root_all+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3), c3f)
+    np.savetxt(output_root_all+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4), c4f)
     if collapse_factor > 1:
         c2, c3, c4 = [np.mean(a.reshape(n_samples_out, collapse_factor, *np.shape(a)[1:]), axis=1) for a in (c2, c3, c4)] # average adjacent chunks of collapse_factor samples
         # write the collapsed data
@@ -81,16 +86,12 @@ for ii in range(len(I1)): # loop over all field combinations
             np.savetxt(output_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), c3[i])
             np.savetxt(output_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), c4[i])
     else: # can copy files, which should be faster
+        c2, c3, c4 = [None] * 3 # won't be needed, so can free memory
         for input_root_all, n_samples, sample_offset in zip(input_roots_all, ns_samples, sample_offsets):
             for i in tqdm(range(n_samples), desc="Copying %s full samples" % index4):
                 copy2(input_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_all+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
                 copy2(input_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i), output_root_all+'c3_n%d_%s_%s_%s.txt' % (n, mstr, index3, i + sample_offset))
                 copy2(input_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i), output_root_all+'c4_n%d_%s_%s_%s.txt' % (n, mstr, index4, i + sample_offset))
-    # average and save
-    c2, c3, c4 = [np.mean(a, axis=0) for a in (c2, c3, c4)]
-    np.savetxt(output_root_all+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2), c2)
-    np.savetxt(output_root_all+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3), c3)
-    np.savetxt(output_root_all+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4), c4)
     print("Done with %s full" % index4)
 
     # jackknife integrals
@@ -128,6 +129,16 @@ for ii in range(len(I1)): # loop over all field combinations
         print("ERROR: some %s jack samples missing: expected %d, found %d" % (index4, n_samples_tot, len(c2j)))
         continue # skip the rest of the loop like above
     c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2 = [np.array(a) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)]
+    # average and save
+    c2jf, c3jf, c4jf, EEaA1f, EEaA2f, RRaA1f, RRaA2f = [np.mean(a, axis=0) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)]
+    np.savetxt(output_root_jack+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2), c2jf)
+    np.savetxt(output_root_jack+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3), c3jf)
+    np.savetxt(output_root_jack+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4), c4jf)
+    # cxj components
+    np.savetxt(output_root_jack+'EE1_n%d_%s_%s_full.txt' % (n, mstr, index2), EEaA1f)
+    np.savetxt(output_root_jack+'EE2_n%d_%s_%s_full.txt' % (n, mstr, index2), EEaA2f)
+    np.savetxt(output_root_jack+'RR1_n%d_%s_%s_full.txt' % (n, mstr, index2), RRaA1f)
+    np.savetxt(output_root_jack+'RR2_n%d_%s_%s_full.txt' % (n, mstr, index2), RRaA2f)
     if collapse_factor > 1:
         c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2 = [np.mean(a.reshape(n_samples_out, collapse_factor, *np.shape(a)[1:]), axis=1) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)] # average adjacent chunks of collapse_factor samples
         # write the collapsed data
@@ -141,6 +152,7 @@ for ii in range(len(I1)): # loop over all field combinations
             np.savetxt(output_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), RRaA1[i])
             np.savetxt(output_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), RRaA2[i])
     else: # can copy files, which should be faster
+        c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2 = [None] * 7 # won't be needed, so can free memory
         for input_root_jack, n_samples, sample_offset in zip(input_roots_jack, ns_samples, sample_offsets):
             for i in tqdm(range(n_samples), desc="Copying %s full samples" % index4):
                 copy2(input_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'c2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
@@ -151,14 +163,4 @@ for ii in range(len(I1)): # loop over all field combinations
                 copy2(input_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'EE2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
                 copy2(input_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'RR1_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
                 copy2(input_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i), output_root_jack+'RR2_n%d_%s_%s_%s.txt' % (n, mstr, index2, i + sample_offset))
-    # average and save
-    c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2 = [np.mean(a, axis=0) for a in (c2j, c3j, c4j, EEaA1, EEaA2, RRaA1, RRaA2)]
-    np.savetxt(output_root_jack+'c2_n%d_%s_%s_full.txt' % (n, mstr, index2), c2j)
-    np.savetxt(output_root_jack+'c3_n%d_%s_%s_full.txt' % (n, mstr, index3), c3j)
-    np.savetxt(output_root_jack+'c4_n%d_%s_%s_full.txt' % (n, mstr, index4), c4j)
-    # cxj components
-    np.savetxt(output_root_jack+'EE1_n%d_%s_%s_full.txt' % (n, mstr, index2), EEaA1)
-    np.savetxt(output_root_jack+'EE2_n%d_%s_%s_full.txt' % (n, mstr, index2), EEaA2)
-    np.savetxt(output_root_jack+'RR1_n%d_%s_%s_full.txt' % (n, mstr, index2), RRaA1)
-    np.savetxt(output_root_jack+'RR2_n%d_%s_%s_full.txt' % (n, mstr, index2), RRaA2)
     print("Done with %s jack" % index4)
