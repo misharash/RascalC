@@ -47,6 +47,7 @@ xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 256 # number of OMP threads to use
 maxloops = 2048 # number of integration loops per filename
+grouploopsout = 256 # number of loops to collapse into one subsample
 N2 = 4 # number of secondary cells/particles per primary cell
 N3 = 10 # number of third cells/particles per secondary cell/particle
 N4 = 20 # number of fourth cells/particles per third cell/particle
@@ -81,6 +82,9 @@ sm = sms[id] # smoothing scale in Mpc/h
 rectype = rectypes[id] # reconstruction type
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 5
+
+assert maxloops % grouploopsout == 0, "Group size need to divide the number of loops"
+no_subsamples_per_file = maxloops // grouploopsout
 
 # data processing steps
 redshift_cut = 1
@@ -235,7 +239,7 @@ if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
                     pass
                 ndata[t] = lineno + 1
 
-command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
+command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -grouploopsout {grouploopsout} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
 command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
 command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
 if legendre: # only provide max multipole l for now
@@ -395,7 +399,7 @@ print_and_log(datetime.now())
 # Concatenate samples
 if nfiles > 1:
     print_and_log("Concatenating samples")
-    exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {maxloops}" for i in range(nfiles)]) + f" {outdir}")
+    exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
     print_and_log(datetime.now())
 
 # Post-process
@@ -408,7 +412,7 @@ if not jackknife:
 if legendre:
     skip_l = 0
 
-n_subsamples = maxloops * nfiles # every case needs this number
+n_subsamples = no_subsamples_per_file * nfiles # every case needs this number
 if ntracers == 1:
     if legendre:
         exec_print_and_log(f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}")
