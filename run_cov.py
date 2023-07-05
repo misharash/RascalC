@@ -72,6 +72,9 @@ tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 10
 
+assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
+no_subsamples_per_file = maxloops // loopspersample
+
 # data processing steps
 redshift_cut = 1
 convert_to_xyz = 1
@@ -385,7 +388,7 @@ print_and_log(datetime.now())
 # Concatenate samples
 if nfiles > 1:
     print_and_log("Concatenating samples")
-    exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {maxloops}" for i in range(nfiles)]) + f" {outdir}")
+    exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
     print_and_log(datetime.now())
 
 # Post-process
@@ -398,7 +401,7 @@ if not jackknife:
 if legendre:
     skip_l = 0
 
-n_subsamples = maxloops * nfiles # every case needs this number
+n_subsamples = no_subsamples_per_file * nfiles # every case needs this number
 if ntracers == 1:
     if legendre:
         exec_print_and_log(f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}")
