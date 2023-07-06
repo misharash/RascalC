@@ -216,8 +216,8 @@
 
     //-----------INITIALIZE OPENMP + CLASSES----------
             std::random_device urandom("/dev/urandom");
-            std::uniform_int_distribution<unsigned int> dist(1, std::numeric_limits<unsigned int>::max());
-            unsigned long int steps = dist(urandom);
+            std::uniform_int_distribution<unsigned long> dist(1, std::numeric_limits<unsigned long>::max() / (unsigned long)(par->nthread));
+            unsigned long steps = dist(urandom); // thread seeds will use steps*(thread+1), where thread runs from 0 to nthread-1, thus the upper limit in the line above guarantees no overflow and thus different seeds for each thread
 
             gsl_rng_env_setup(); // initialize gsl rng
             int completed_loops = 0; // counter of completed loops, since may not finish in index order
@@ -305,7 +305,7 @@
             Integrals locint(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4); // Accumulates the integral contribution of each thread
 #endif
             gsl_rng* locrng = gsl_rng_alloc(gsl_rng_default); // one rng per thread
-            gsl_rng_set(locrng, steps*(thread+1));
+            gsl_rng_set(locrng, steps * (unsigned long)(thread + 1)); // the second number, seed, will not overflow due to limits of steps/dist and thus the seeds are guaranteed to be different fot each thread
 
             // Assign memory for intermediate steps
             int ec=0;
