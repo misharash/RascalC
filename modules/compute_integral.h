@@ -442,7 +442,7 @@
     #pragma omp critical // only one processor can access at once
     #endif
             {
-                int subsample_index = completed_loops / par->group_loops_out; // index of output subsample for this loop
+                int subsample_index = completed_loops / par->loops_per_sample; // index of output subsample for this loop
                 completed_loops++; // increment completed loops counter, since they may be done not according to n_loops order
                 if (completed_loops % par->nthread == 0) { // Print every nthread completed loops
                     TotalTime.Stop(); // interrupt timing to access .Elapsed()
@@ -472,7 +472,7 @@
                 used_quads_per_sample += loc_used_quads;
 
                 // Save output if the group is done
-                if (completed_loops % par->group_loops_out == 0) {
+                if (completed_loops % par->loops_per_sample == 0) {
                     sumint.sum_ints(&outint); // add to grand total
                     char output_string[50];
                     snprintf(output_string, 50, "%d", subsample_index);

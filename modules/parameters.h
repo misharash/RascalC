@@ -82,7 +82,7 @@ public:
     // Maximum number of iterations to compute the C_ab integrals over
     int max_loops = 120;
     // Number of loops to output into each subsample/file
-    int group_loops_out = 1;
+    int loops_per_sample = 1;
     // Number of output subsamples/files
     int no_subsamples = 120;
 
@@ -223,7 +223,7 @@ public:
                 rect_boxsize = {tmp_box,tmp_box,tmp_box};
                 }
         else if (!strcmp(argv[i],"-maxloops")) max_loops = atoi(argv[++i]);
-        else if (!strcmp(argv[i],"-grouploopsout")) group_loops_out = atoi(argv[++i]);
+        else if (!strcmp(argv[i],"-loopspersample")) loops_per_sample = atoi(argv[++i]);
         else if (!strcmp(argv[i],"-rescale")) rescale = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-mumax")) mumax = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-mumin")) mumin = atof(argv[++i]);
@@ -321,8 +321,8 @@ public:
 	    assert(nside%2!=0); // The probability integrator needs an odd grid size
 
 	    assert(nofznorm>0); // need some galaxies!
-        assert(max_loops % group_loops_out == 0); // group size need to divide the number of loops
-        no_subsamples = max_loops / group_loops_out;
+        assert(max_loops % loops_per_sample == 0); // group size need to divide the number of loops
+        no_subsamples = max_loops / loops_per_sample;
 #ifndef THREE_PCF
 	    //assert(mumin>=0); // We take the absolte value of mu
 #endif
@@ -569,7 +569,7 @@ private:
         fprintf(stderr, "   -jackknife2 <filename>: (Optional) File containing the {2,2} jackknife weights (normally computed from Corrfunc)\n");
 #endif
         fprintf(stderr, "   -maxloops <max_loops>: Maximum number of integral loops\n");
-        fprintf(stderr, "   -grouploopsout <group_loops_out>: Number of loops to collapse into each subsample. Default 1.\n");
+        fprintf(stderr, "   -loopspersample <loops_per_sample>: Number of loops to collapse into each subsample. Default 1.\n");
         fprintf(stderr, "   -N2 <N2>: Number of secondary particles to choose per primary particle\n");
         fprintf(stderr, "   -N3 <N3>: Number of tertiary particles to choose per secondary particle\n");
         fprintf(stderr, "   -N4 <N4>: Number of quaternary particles to choose per tertiary particle\n");
