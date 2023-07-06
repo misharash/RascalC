@@ -222,26 +222,17 @@
             unsigned long int steps = dist(urandom);
 
             gsl_rng_env_setup(); // initialize gsl rng
-            Integrals* outints = new Integrals[par->no_subsamples]; // integral objects for output
-            int* completed_loops_per_sample = new int[par->no_subsamples]; // will store number of completed iterations per each output subsample
-            uint64 *used_pairs_per_sample = new uint64[par->no_subsamples], *used_triples_per_sample = new uint64[par->no_subsamples],*used_quads_per_sample = new uint64[par->no_subsamples]; // per-sample pair, triple and quad counts for normalization
-            for (int i = 0; i < par->no_subsamples; i++) {
-                completed_loops_per_sample[i] = 0;
-                used_pairs_per_sample[i] = used_triples_per_sample[i] = used_triples_per_sample[i] = 0;
-            }
-            int completed_loops_total = 0;
+            int completed_loops = 0; // counter of completed loops, since may not finish in index order
+            uint64 used_pairs_per_sample = 0, used_triples_per_sample = 0, used_quads_per_sample = 0; // pair, triple and quad counts for the normalization of the current output sample
 #if (defined LEGENDRE || defined POWER)
             Integrals sumint(par, cf12, cf13, cf24, I1, I2, I3, I4,survey_corr_12,survey_corr_23,survey_corr_34); // total integral
-            for (int i = 0; i < par->no_subsamples; i++)
-                new(&outints[i]) Integrals(par, cf12, cf13, cf24, I1, I2, I3, I4, survey_corr_12, survey_corr_23,survey_corr_34); // properly construct each output integral. No need to destroy because the default constructor called within the new above does nothing
+            Integrals outint(par, cf12, cf13, cf24, I1, I2, I3, I4, survey_corr_12, survey_corr_23, survey_corr_34); // current output integral
 #elif defined JACKKNIFE
             Integrals sumint(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4,product_weights12_12,product_weights12_23,product_weights12_34); // total integral
-            for (int i = 0; i < par->no_subsamples; i++)
-                new(&outints[i]) Integrals(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4, product_weights12_12,product_weights12_23, product_weights12_34); // properly construct each output integral. No need to destroy because the default constructor called within the new above does nothing
+            Integrals outint(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4, product_weights12_12,product_weights12_23, product_weights12_34); // current output integral
 #else
             Integrals sumint(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4); // total integral
-            for (int i = 0; i < par->no_subsamples; i++)
-                new(&outints[i]) Integrals(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4); // properly construct each output integral. No need to destroy because the default constructor called within the new above does nothing
+            Integrals outint(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4); // current output integral
 #endif
             uint64 tot_pairs=0, tot_triples=0, tot_quads=0; // global number of particle pairs/triples/quads used (including those rejected for being in the wrong bins)
             uint64 cell_attempt2=0,cell_attempt3=0,cell_attempt4=0; // number of j,k,l cells attempted
@@ -259,11 +250,11 @@
 #ifdef OPENMP
 
 #if (defined LEGENDRE || defined POWER)
-    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outints,completed_loops_per_sample,completed_loops_total,used_pairs_per_sample,used_triples_per_sample,used_quads_per_sample,TotalTime,gsl_rng_default,rd13,rd24) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outint,completed_loops,used_pairs_per_sample,used_triples_per_sample,used_quads_per_sample,TotalTime,gsl_rng_default,rd13,rd24) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
 #elif defined JACKKNIFE
-    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outints,completed_loops_per_sample,completed_loops_total,used_triples_per_sample,used_quads_per_sample,TotalTime,ThreadTimes,gsl_rng_default,rd13,rd24,JK12,JK23,JK34,product_weights12_12,product_weights12_23,product_weights12_34) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outint,completed_loops,used_triples_per_sample,used_quads_per_sample,TotalTime,ThreadTimes,gsl_rng_default,rd13,rd24,JK12,JK23,JK34,product_weights12_12,product_weights12_23,product_weights12_34) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
 #else
-    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outints,completed_loops_per_sample,completed_loops_total,used_triples_per_sample,used_quads_per_sample,TotalTime,gsl_rng_default,rd13,rd24,JK12,JK23,JK34) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outint,completed_loops,used_triples_per_sample,used_quads_per_sample,TotalTime,gsl_rng_default,rd13,rd24,JK12,JK23,JK34) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
 #endif
             { // start parallel loop
             // Decide which thread we are in
@@ -458,56 +449,54 @@
     #pragma omp critical // only one processor can access at once
     #endif
             {
-                completed_loops_total++; // increment completed loops counter, since they may be done not according to n_loops order
-                int subsample_index = n_loops/par->group_loops_out; // index of output subsample for this loop
-                completed_loops_per_sample[subsample_index]++; // increment the completed loop counter for this group
-                if (completed_loops_total % par->nthread == 0){ // Print every nthread completed loops
+                int subsample_index = completed_loops / par->group_loops_out; // index of output subsample for this loop
+                completed_loops++; // increment completed loops counter, since they may be done not according to n_loops order
+                if (completed_loops % par->nthread == 0) { // Print every nthread completed loops
                     TotalTime.Stop(); // interrupt timing to access .Elapsed()
                     int current_runtime = TotalTime.Elapsed();
-                    int remaining_time = current_runtime*(par->max_loops - completed_loops_total)/completed_loops_total;  // estimated remaining time
-                    fprintf(stderr,"\nFinished integral loop %d of %d after %d s. Estimated time left:  %2.2d:%2.2d:%2.2d hms, i.e. %d s.\n",n_loops+1,par->max_loops, current_runtime,remaining_time/3600,remaining_time/60%60, remaining_time%60,remaining_time);
+                    int remaining_time = current_runtime*(par->max_loops - completed_loops)/completed_loops;  // estimated remaining time
+                    fprintf(stderr, "\nFinished %d integral loops of %d after %d s. Estimated time left:  %2.2d:%2.2d:%2.2d hms, i.e. %d s.\n", completed_loops, par->max_loops, current_runtime, remaining_time/3600, remaining_time/60%60, remaining_time%60, remaining_time);
 
                     TotalTime.Start(); // Restart the timer
                     Float frob_C2, frob_C3, frob_C4;
 #ifndef JACKKNIFE
-                    sumint.frobenius_difference_sum(&locint,n_loops, frob_C2, frob_C3, frob_C4);
+                    sumint.frobenius_difference_sum(&locint, n_loops, frob_C2, frob_C3, frob_C4);
                     if(frob_C4 < par->convergence_threshold_percent) convergence_counter++;
-                    if (n_loops!=0){
-                        fprintf(stderr,"Frobenius percent difference after loop %d is %.3f (C2), %.3f (C3), %.3f (C4)\n",n_loops,frob_C2, frob_C3, frob_C4);
-                    }
+                    fprintf(stderr, "Frobenius percent difference after %d loops is %.3f (C2), %.3f (C3), %.3f (C4)\n", completed_loops, frob_C2, frob_C3, frob_C4);
 #else
                     Float frob_C2j, frob_C3j, frob_C4j;
-                    sumint.frobenius_difference_sum(&locint,n_loops, frob_C2, frob_C3, frob_C4, frob_C2j, frob_C3j, frob_C4j);
+                    sumint.frobenius_difference_sum(&locint, n_loops, frob_C2, frob_C3, frob_C4, frob_C2j, frob_C3j, frob_C4j);
                     if((frob_C4 < par->convergence_threshold_percent) && (frob_C4j < par->convergence_threshold_percent)) convergence_counter++;
-                    if (n_loops!=0){
-                        fprintf(stderr,"Frobenius percent difference after loop %d is %.3f (C2), %.3f (C3), %.3f (C4)\n",n_loops,frob_C2, frob_C3, frob_C4);
-                        fprintf(stderr,"Frobenius jackknife percent difference after loop %d is %.3f (C2j), %.3f (C3j), %.3f (C4j)\n",n_loops,frob_C2j, frob_C3j, frob_C4j);
-                    }
+                    fprintf(stderr, "Frobenius percent difference after %d loops is %.3f (C2), %.3f (C3), %.3f (C4)\n", completed_loops, frob_C2, frob_C3, frob_C4);
+                    fprintf(stderr, "Frobenius jackknife percent difference after %d loops is %.3f (C2j), %.3f (C3j), %.3f (C4j)\n", completed_loops, frob_C2j, frob_C3j, frob_C4j);
 #endif
                 }
 
                 // Sum up integrals
-                sumint.sum_ints(&locint); // grand total
-                outints[subsample_index].sum_ints(&locint); // subsample total
+                outint.sum_ints(&locint); // subsample total
 
                 // Sum up pairs, triples, quads for the group
-                used_pairs_per_sample[subsample_index] += loc_used_pairs;
-                used_triples_per_sample[subsample_index] += loc_used_triples;
-                used_quads_per_sample[subsample_index] += loc_used_quads;
+                used_pairs_per_sample += loc_used_pairs;
+                used_triples_per_sample += loc_used_triples;
+                used_quads_per_sample += loc_used_quads;
 
                 // Save output if the group is done
-                if (completed_loops_per_sample[subsample_index] == par->group_loops_out) {
+                if (completed_loops % par->group_loops_out == 0) {
+                    sumint.sum_ints(&outint); // add to grand total
                     char output_string[50];
                     snprintf(output_string, 50, "%d", subsample_index);
 #ifndef POWER
-                    outints[subsample_index].normalize(grid1->norm, grid2->norm, grid3->norm, grid4->norm, (Float)used_pairs_per_sample[subsample_index], (Float)used_triples_per_sample[subsample_index], (Float)used_quads_per_sample[subsample_index]);
+                    outint.normalize(grid1->norm, grid2->norm, grid3->norm, grid4->norm, (Float)used_pairs_per_sample, (Float)used_triples_per_sample, (Float)used_quads_per_sample);
 #else
-                    outints[subsample_index].normalize(grid1->norm, grid2->norm, grid3->norm, grid4->norm, (Float)used_pairs_per_sample[subsample_index], (Float)used_triples_per_sample[subsample_index], (Float)used_quads_per_sample[subsample_index], par->power_norm);
+                    outint.normalize(grid1->norm, grid2->norm, grid3->norm, grid4->norm, (Float)used_pairs_per_sample, (Float)used_triples_per_sample, (Float)used_quads_per_sample, par->power_norm);
 #endif
-                    outints[subsample_index].save_integrals(output_string,0);
+                    outint.save_integrals(output_string, 0);
 #ifdef JACKKNIFE
-                    outints[subsample_index].save_jackknife_integrals(output_string);
+                    outint.save_jackknife_integrals(output_string);
 #endif
+                    // Reset the current output sample variables
+                    outint.reset();
+                    used_pairs_per_sample = used_triples_per_sample = used_quads_per_sample = 0;
                 }
                 locint.sum_total_counts(cnt2, cnt3, cnt4);
                 locint.reset();
