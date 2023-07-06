@@ -47,6 +47,7 @@ xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 30 # number of OMP threads to use
 maxloops = 30 # number of integration loops per filename
+loopspersample = 1 # number of loops to collapse into one subsample
 N2 = 20 # number of secondary cells/particles per primary cell
 N3 = 40 # number of third cells/particles per secondary cell/particle
 N4 = 80 # number of fourth cells/particles per third cell/particle
@@ -224,7 +225,7 @@ if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
                     pass
                 ndata[t] = lineno + 1
 
-command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
+command = f"./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -loopspersample {loopspersample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
 command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
 command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
 if legendre: # only provide max multipole l for now
