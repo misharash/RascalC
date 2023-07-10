@@ -70,7 +70,7 @@ tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # known cases where more loops are needed consistently
-if id == 0 or id == 8: maxloops *= 2
+if id == 0: maxloops *= 2
 elif id == 2: maxloops //= 2; maxloops *= 3 # 1.5x but stay integer
 
 id //= 2 # extracted all needed info from parity, move on
