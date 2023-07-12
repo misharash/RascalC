@@ -67,6 +67,8 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
+version_label = "v0.1"
+
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # known cases where more loops are needed consistently
@@ -105,7 +107,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/xi/smu/{f'njack{njack}/' if jackknife else ''}allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 0}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/xi/smu/{f'njack{njack}/' if jackknife else ''}allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 0}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -121,9 +123,9 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife or count_ndata:
-    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/v0.1/blinded/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
