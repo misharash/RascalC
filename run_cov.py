@@ -5,9 +5,10 @@ import os, sys
 from datetime import datetime
 import numpy as np
 
-def check_path(filename, fallback_dir=""):
-    if os.path.isfile(filename): return filename
-    filename = os.path.join(fallback_dir, os.path.basename(filename))
+def check_path(filename, fallback_dir=None):
+    if fallback_dir is not None:
+        if os.path.isfile(filename): return filename
+        filename = os.path.join(fallback_dir, os.path.basename(filename))
     assert os.path.isfile(filename), f"{filename} missing"
     return filename
 
