@@ -76,10 +76,10 @@ if id == 0: maxloops *= 2
 elif id == 2: maxloops //= 2; maxloops *= 3 # 1.5x but stay integer
 
 id //= 2 # extracted all needed info from parity, move on
-tracers = ['LRG'] * 3 + ['ELG_LOPnotqso'] * 2 + ['BGS_BRIGHT-21.5', 'QSO', 'LRG', 'ELG_LOPnotqso']
-zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.8, 1.1], [1.1, 1.6], [0.1, 0.4], [0.8, 2.1], [0.4, 1.1], [0.8, 1.6]]
-sms = [10] * 5 + [15] * 2 + [10] * 2
-rectypes = ['MGrecsym'] * 5 + ['IFTrecsym'] * 2 + ['MGrecsym'] * 2
+tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
+zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
+sms = [10] * 7 + [15] * 2
+rectypes = ['MGrecsym'] * 7 + ['IFTrecsym'] * 2
 # need 18 jobs in this array
 
 tlabels = [tracers[id]] # tracer labels for filenames
