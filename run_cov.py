@@ -48,7 +48,7 @@ xicutoff = 250 # beyond this assume xi/2PCF=0
 nthread = 256 # number of OMP threads to use
 maxloops = 2048 # number of integration loops per filename
 loopspersample = 256 # number of loops to collapse into one subsample
-N2 = 4 # number of secondary cells/particles per primary cell
+N2 = 5 # number of secondary cells/particles per primary cell
 N3 = 10 # number of third cells/particles per secondary cell/particle
 N4 = 20 # number of fourth cells/particles per third cell/particle
 
@@ -85,7 +85,7 @@ sms = [10] * 7 + [15] * 2
 tlabels = [tracers[id]] # tracer labels for filenames
 sm = sms[id] # smoothing scale in Mpc/h
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 5
+nrandoms = 4
 
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
 no_subsamples_per_file = maxloops // loopspersample
