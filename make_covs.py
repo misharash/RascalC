@@ -70,8 +70,8 @@ for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
     reg_results, reg_pycorr_names = [], []
     for reg in regs:
         outdir = os.path.join(f"recon_sm{sm}", "_".join(tlabels + [rectype, reg]) + f"_z{z_min}-{z_max}") # output file directory
-        first_output_name = os.path.join(outdir, "CovMatricesAll/0/c4_n%d_l%d_11_0.txt" % (nbin, max_l))
-        full_output_name = os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11_full.txt" % (nbin, max_l))
+        first_output_name = os.path.join(outdir, "CovMatricesAll/0/c4_n%d_l%d_11,11_0.txt" % (nbin, max_l))
+        full_output_name = os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_full.txt" % (nbin, max_l))
         results_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
         cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg, z_min, z_max]) + f"_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
