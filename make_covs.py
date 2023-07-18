@@ -36,8 +36,8 @@ r_step = rmax // nbin
 nbin_final = nbin - skip_bins
 rmin_real = r_step * skip_bins
 
-def my_make(goal, deps, *cmds, force=False):
-    if force or need_make(goal, deps):
+def my_make(goal, deps, *cmds, force=False, verbose=False):
+    if force or need_make(goal, deps, verbose=verbose):
         print(f"Making {goal} from {deps}")
         for cmd in cmds:
             ret = exec_function(cmd)
@@ -46,17 +46,17 @@ def my_make(goal, deps, *cmds, force=False):
                 return
         print()
 
-def need_make(goal, srcs):
+def need_make(goal, srcs, verbose=False):
     src_mtime = float('-inf')
     for src in srcs:
         if not os.path.exists(src):
-            print(f"Can not make {goal} from {srcs}: {src} missing\n")
+            if verbose: print(f"Can not make {goal} from {srcs}: {src} missing\n")
             return False
         src_mtime = max(src_mtime, os.path.getmtime(src))
     if not os.path.exists(goal): return True
     dest_mtime = os.path.getmtime(goal)
     if src_mtime < dest_mtime:
-        print(f"{goal} is newer than {srcs}, not making\n")
+        if verbose: print(f"{goal} is newer than {srcs}, not making\n")
         return False
     return True
 
