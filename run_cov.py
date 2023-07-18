@@ -74,8 +74,8 @@ rectype = "IFTrecsym" # reconstruction type
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # known cases where more loops are needed consistently
-if id == 0: maxloops *= 2
-elif id == 2: maxloops //= 2; maxloops *= 3 # 1.5x but stay integer
+if id == 0 or id == 4 or id == 10 or id == 14: maxloops *= 2
+elif id == 1 or id == 2: maxloops //= 2; maxloops *= 3 # 1.5x but stay integer
 
 id //= 2 # extracted all needed info from parity, move on
 tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
