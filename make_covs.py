@@ -34,7 +34,7 @@ n_subsamples = no_subsamples_per_file * nfiles
 
 r_step = rmax // nbin
 nbin_final = nbin - skip_bins
-rmin_real = r_step * nbin_final
+rmin_real = r_step * skip_bins
 
 def my_make(goal, deps, *cmds, force=False):
     if force or need_make(goal, deps):
