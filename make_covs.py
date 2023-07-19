@@ -75,7 +75,7 @@ for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
         full_output_name = os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_full.txt" % (nbin, max_l))
         results_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
-        cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
+        cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
         cov_names.append(cov_name)
         reg_pycorr_names.append(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/recon_sm{sm}/xi/smu/allcounts_{tracer}_{rectype}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{0}_nran{nrandoms}_split{split_above}.npy")
 
@@ -92,7 +92,7 @@ for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
         my_make(cov_name, [results_name], f"python python/convert_cov_legendre.py {results_name} {nbin_final} {cov_name}")
         # Recipe: run convert cov
     
-    cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
+    cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
 
     # Comb cov depends on the region RascalC results
     my_make(cov_name, reg_results, "python python/combine_covs_legendre.py " + " ".join(reg_results) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name}")
