@@ -1,6 +1,7 @@
 # This script generates all covs
 
 import os
+import itertools
 
 max_l = 4
 nbin = 50 # radial bins for output cov
@@ -27,10 +28,6 @@ nrandoms = 4
 split_above = 20
 
 xilabel = "".join([str(i) for i in range(0, max_l+1, 2)])
-
-nfiles = nrandoms
-no_subsamples_per_file = maxloops // loopspersample
-n_subsamples = no_subsamples_per_file * nfiles
 
 r_step = rmax // nbin
 nbin_final = nbin - skip_bins
@@ -71,20 +68,40 @@ for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
     reg_results, reg_pycorr_names = [], []
     for reg in regs:
         outdir = os.path.join(f"recon_sm{sm}", "_".join(tlabels + [rectype, reg]) + f"_z{z_min}-{z_max}") # output file directory
-        first_output_name = os.path.join(outdir, "CovMatricesAll/0/c4_n%d_l%d_11,11_0.txt" % (nbin, max_l))
-        full_output_name = os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_full.txt" % (nbin, max_l))
+        all_output_names = []
+        # Generate full list of output names
+        # First, find number of subsamples per file
+        no_subsamples_per_file = 0
+        while True:
+            ith_output_names = [os.path.join(outdir, "CovMatricesAll/0/c%d_n%d_l%d_11,11_%d.txt" % (npoints, nbin, max_l, no_subsamples_per_file)) for npoints in (2, 3, 4)]
+            no_subsamples_per_file += 1
+            if all(os.path.isfile(fname) for fname in ith_output_names):
+                all_output_names += ith_output_names
+            else: break
+        # no_subsamples_per_file should be now accurate for this tracer, redshift range and region
+        # Second, find number of sequential files that have all the samples
+        nfiles = 1 # there is at least one if the above succeeded
+        while True:
+            these_output_names = list(itertools.chain.from_iterable([os.path.join(outdir, "CovMatricesAll/%d/c%d_n%d_l%d_11,11_%d.txt" % (nfiles, npoints, nbin, max_l, i)) for npoints in (2, 3, 4)] for i in range(no_subsamples_per_file))) # filenames for all npoints and subsample indices
+            if all(os.path.isfile(fname) for fname in these_output_names):
+                all_output_names += these_output_names
+                nfiles += 1
+            else: break
+        # nfiles should be now accurate for this tracer, redshift range and region
+        n_subsamples = no_subsamples_per_file * nfiles # set the number of subsamples which can be used straightforwardly
+        full_output_names = [os.path.join(outdir, "CovMatricesAll/c%d_n%d_l%d_11,11_full.txt" % (npoints, nbin, max_l)) for npoints in (2, 3, 4)]
         results_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
         cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
         cov_names.append(cov_name)
         reg_pycorr_names.append(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/recon_sm{sm}/xi/smu/allcounts_{tracer}_{rectype}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{0}_nran{nrandoms}_split{split_above}.npy")
 
-        # Full output depends on first output name
-        my_make(full_output_name, [first_output_name], f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
+        # Full output depends on all output names. Use only one name for goal
+        my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
         # Recipe: run subsample catenation
 
-        # RascalC results depend on full output
-        my_make(results_name, [full_output_name], f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}", f"python python/convergence_check_extra.py {results_name}")
+        # RascalC results depend on full output (most straightforwardly)
+        my_make(results_name, full_output_names, f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}", f"python python/convergence_check_extra.py {results_name}")
         # Recipe: run post-processing
         # Also perform convergence check (optional but nice)
 
