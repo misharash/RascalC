@@ -1,6 +1,8 @@
 # This script generates all covs
 
 import os
+import pickle
+import hashlib
 import itertools
 
 max_l = 4
@@ -33,33 +35,55 @@ r_step = rmax // nbin
 nbin_final = nbin - skip_bins
 rmin_real = r_step * skip_bins
 
-def my_make(goal, deps, *cmds, force=False, verbose=False):
-    if force or need_make(goal, deps, verbose=verbose):
+hash_dict_file = "make_covs.hash_dict.pkl"
+if os.path.isfile(hash_dict_file):
+    # Load hash dictionary from file
+    with open(hash_dict_file, "rb") as f:
+        hash_dict = pickle.load(f)
+else:
+    # Initialize hash dictionary as empty
+    hash_dict = {}
+# Hash dict keys are goal filenames, the elements are also dictionaries with dependencies/sources filenames as keys
+
+def my_make(goal: str, deps: list[str], *cmds, force=False, verbose=False) -> None:
+    need_make, current_dep_hashes = hash_check(goal, deps, verbose=verbose)
+    if need_make or force: # execute need_make anyway
         print(f"Making {goal} from {deps}")
         for cmd in cmds:
             ret = exec_function(cmd)
             if ret:
                 print(f"{cmd} exited with error (code {ret}). Aborting\n")
                 return
+        hash_dict[goal] = current_dep_hashes # update the dependency hashes only if the make was successfully performed
         print()
 
-def need_make(goal, srcs, verbose=False):
-    src_mtime = float('-inf')
+def hash_check(goal: str, srcs: list[str], verbose=False) -> (bool, dict):
+    # First output indicates whether we need/should to execute the recipe to make goal from srcs
+    # Also returns the src hashes in the dictionary current_src_hashes
+    current_src_hashes = {}
     for src in srcs:
         if not os.path.exists(src):
-            if verbose: print(f"Can not make {goal} from {srcs}: {src} missing\n")
-            return False
-        src_mtime = max(src_mtime, os.path.getmtime(src))
-    if not os.path.exists(goal): return True
-    dest_mtime = os.path.getmtime(goal)
-    if src_mtime < dest_mtime:
-        if verbose: print(f"{goal} is newer than {srcs}, not making\n")
-        return False
-    return True
+            if verbose: print(f"Can not make {goal} from {srcs}: {src} missing\n") # and next operations can be omitted
+            return False, current_src_hashes
+        current_src_hashes[src] = sha256sum(src)
+    if not os.path.exists(goal): return True, current_src_hashes # need to make if goal is missing, but hashes needed to be collected beforehand
+    if set(current_src_hashes.values()) == set(hash_dict[goal].values()): # comparing to hashes of sources used to build the goal last, regardless of order and names. Collisions seem unlikely
+        if verbose: print(f"{goal} uses the same {srcs} as previously, no need to make\n")
+        return False, current_src_hashes
+    return True, current_src_hashes
 
-def exec_function(cmdline): # common function to invoke other processes
+def exec_function(cmdline: str) -> int: # common function to invoke other processes
     print(f"Running command: {cmdline}")
     return os.system(cmdline) # simple now but could be changed quickly later
+
+def sha256sum(filename: str, buffer_size=128*1024) -> str: # from https://stackoverflow.com/a/44873382
+    h = hashlib.sha256()
+    b = bytearray(buffer_size)
+    mv = memoryview(b)
+    with open(filename, 'rb', buffering=0) as f:
+        while n := f.readinto(mv):
+            h.update(mv[:n])
+    return h.hexdigest()
 
 cov_names = []
 # Make steps for making covs
@@ -114,3 +138,7 @@ for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
     # Comb cov depends on the region RascalC results
     my_make(cov_name, reg_results, "python python/combine_covs_legendre.py " + " ".join(reg_results) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name}")
     # Recipe: run combine covs
+
+# Save the updated hash dictionary
+with open(hash_dict_file, "wb") as f:
+    pickle.dump(hash_dict, f)
