@@ -44,7 +44,7 @@ else:
 weights = []
 for pycorr_file in pycorr_files:
     result = TwoPointCorrelationFunction.load(pycorr_file)
-    result = result[::result.shape[0]//n_r_bins].wrap().normalize()
+    result = result[::result.shape[0]//n_r_bins].wrap() # there should be no normalization here
     result = result[r_bins_skip:]
     weights.append(result.R1R2.wcounts)
 weights = np.array(weights)
