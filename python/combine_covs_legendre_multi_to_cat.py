@@ -75,8 +75,6 @@ weights2 *= bias_weights[:, None, None]
 # Function for multiplying all the counts by a factor
 def multiply_counts_pycorr(pycorr_result, factor):
     new = pycorr_result.copy()
-    if isinstance(wnorm, str):
-        wnorm = getattr(pycorr_result, wnorm).wnorm
     for name in new.count_names:
         counts = getattr(new, name)
         setattr(new, name, counts.normalize(wnorm = counts.wnorm * factor))
