@@ -6,7 +6,7 @@ import numpy as np
 import sys
 
 ## PARAMETERS
-if len(sys.argv) not in (13, 15):
+if len(sys.argv) not in (13, 15, 17):
     print("Usage: python combine_covs_multi_to_cat.py {RASCALC_RESULTS1} {RASCALC_RESULTS2} {PYCORR_FILE1_11} {PYCORR_FILE2_11} {PYCORR_FILE1_12} {PYCORR_FILE2_12} {PYCORR_FILE1_22} {PYCORR_FILE2_22} {N_R_BINS} {MAX_L} {R_BINS_SKIP} {OUTPUT_COV_FILE} [{BIAS1} {BIAS2} [{OUTPUT_COV_FILE1} {OUTPUT_COV_FILE2}]].")
     sys.exit(1)
 rascalc_results1 = str(sys.argv[1])
