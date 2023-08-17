@@ -69,8 +69,8 @@ assert weights2.shape == (3, n, n_mu_bins), "Wrong shape of weights 2"
 
 # Add weighting by bias for each tracer
 bias_weights = np.array((bias1**2, 2*bias1*bias2, bias2**2)) # auto1, cross12, auto2 are multiplied by product of biases of tracers involved in each. Moreover, cross12 enters twice because wrapped cross21 is the same.
-weights1 *= bias_weights[:, None]
-weights2 *= bias_weights[:, None]
+weights1 *= bias_weights[:, None, None]
+weights2 *= bias_weights[:, None, None]
 
 # Function for multiplying all the counts by a factor
 def multiply_counts_pycorr(pycorr_result, factor):
@@ -97,8 +97,8 @@ sum_weight = weight1 + weight2
 weight1 /= sum_weight
 weight2 /= sum_weight
 # Normalize the full weights across correlation function labels
-weights1 /= np.sum(weights1, axis=0)[None, :]
-weights2 /= np.sum(weights2, axis=0)[None, :]
+weights1 /= np.sum(weights1, axis=0)[None, :, :]
+weights2 /= np.sum(weights2, axis=0)[None, :, :]
 
 ells = np.arange(0, max_l+1, 2)
 # Legendre multipoles integrated over mu bins, do not depend on radial binning and tracers
