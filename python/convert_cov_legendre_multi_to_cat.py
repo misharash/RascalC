@@ -17,8 +17,8 @@ assert max_l % 2 == 0, "Odd multipoles not supported"
 n_l = max_l // 2 + 1
 r_bins_skip = int(sys.argv[7])
 output_cov_file = str(sys.argv[8])
-bias1 = str(sys.argv[9]) if len(sys.argv) >= 10 else 1
-bias2 = str(sys.argv[10]) if len(sys.argv) >= 11 else 1
+bias1 = float(sys.argv[9]) if len(sys.argv) >= 10 else 1
+bias2 = float(sys.argv[10]) if len(sys.argv) >= 11 else 1
 
 # Read RascalC results
 if any(rascalc_results.endswith(ext) for ext in (".npy", ".npz")):

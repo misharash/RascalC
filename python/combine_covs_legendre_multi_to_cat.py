@@ -19,8 +19,8 @@ assert max_l % 2 == 0, "Odd multipoles not supported"
 n_l = max_l // 2 + 1
 r_bins_skip = int(sys.argv[11])
 output_cov_file = str(sys.argv[12])
-bias1 = str(sys.argv[13]) if len(sys.argv) >= 14 else 1
-bias2 = str(sys.argv[14]) if len(sys.argv) >= 15 else 1
+bias1 = float(sys.argv[13]) if len(sys.argv) >= 14 else 1
+bias2 = float(sys.argv[14]) if len(sys.argv) >= 15 else 1
 if len(sys.argv) >= 17:
     output_cov_file1 = str(sys.argv[15])
     output_cov_file2 = str(sys.argv[16])
