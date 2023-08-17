@@ -17,8 +17,8 @@ assert max_l % 2 == 0, "Odd multipoles not supported"
 n_l = max_l // 2 + 1
 r_bins_skip = int(sys.argv[7])
 output_cov_file = str(sys.argv[8])
-bias1 = str(sys.argv[9]) if len(sys.argv) >= 10 else 1
-bias2 = str(sys.argv[10]) if len(sys.argv) >= 11 else 1
+bias1 = float(sys.argv[9]) if len(sys.argv) >= 10 else 1
+bias2 = float(sys.argv[10]) if len(sys.argv) >= 11 else 1
 
 # Read RascalC results
 if any(rascalc_results.endswith(ext) for ext in (".npy", ".npz")):
@@ -55,10 +55,10 @@ mu_edges = result.edges[1]
 
 # Add weighting by bias for each tracer
 bias_weights = np.array((bias1**2, 2*bias1*bias2, bias2**2)) # auto1, cross12, auto2 are multiplied by product of biases of tracers involved in each. Moreover, cross12 enters twice because wrapped cross21 is the same.
-weights *= bias_weights[:, None]
+weights *= bias_weights[:, None, None]
 
 # Normalize weights across the correlation type axis
-weights /= np.sum(weights, axis=0)[None, :]
+weights /= np.sum(weights, axis=0)[None, :, :]
 
 ells = np.arange(0, max_l+1, 2)
 # Legendre multipoles integrated over mu bins, do not depend on radial binning

@@ -6,7 +6,7 @@ import numpy as np
 import sys
 
 ## PARAMETERS
-if len(sys.argv) not in (13, 15):
+if len(sys.argv) not in (13, 15, 17):
     print("Usage: python combine_covs_multi_to_cat.py {RASCALC_RESULTS1} {RASCALC_RESULTS2} {PYCORR_FILE1_11} {PYCORR_FILE2_11} {PYCORR_FILE1_12} {PYCORR_FILE2_12} {PYCORR_FILE1_22} {PYCORR_FILE2_22} {N_R_BINS} {MAX_L} {R_BINS_SKIP} {OUTPUT_COV_FILE} [{BIAS1} {BIAS2} [{OUTPUT_COV_FILE1} {OUTPUT_COV_FILE2}]].")
     sys.exit(1)
 rascalc_results1 = str(sys.argv[1])
@@ -19,8 +19,8 @@ assert max_l % 2 == 0, "Odd multipoles not supported"
 n_l = max_l // 2 + 1
 r_bins_skip = int(sys.argv[11])
 output_cov_file = str(sys.argv[12])
-bias1 = str(sys.argv[13]) if len(sys.argv) >= 14 else 1
-bias2 = str(sys.argv[14]) if len(sys.argv) >= 15 else 1
+bias1 = float(sys.argv[13]) if len(sys.argv) >= 14 else 1
+bias2 = float(sys.argv[14]) if len(sys.argv) >= 15 else 1
 if len(sys.argv) >= 17:
     output_cov_file1 = str(sys.argv[15])
     output_cov_file2 = str(sys.argv[16])
@@ -69,14 +69,12 @@ assert weights2.shape == (3, n, n_mu_bins), "Wrong shape of weights 2"
 
 # Add weighting by bias for each tracer
 bias_weights = np.array((bias1**2, 2*bias1*bias2, bias2**2)) # auto1, cross12, auto2 are multiplied by product of biases of tracers involved in each. Moreover, cross12 enters twice because wrapped cross21 is the same.
-weights1 *= bias_weights[:, None]
-weights2 *= bias_weights[:, None]
+weights1 *= bias_weights[:, None, None]
+weights2 *= bias_weights[:, None, None]
 
 # Function for multiplying all the counts by a factor
 def multiply_counts_pycorr(pycorr_result, factor):
     new = pycorr_result.copy()
-    if isinstance(wnorm, str):
-        wnorm = getattr(pycorr_result, wnorm).wnorm
     for name in new.count_names:
         counts = getattr(new, name)
         setattr(new, name, counts.normalize(wnorm = counts.wnorm * factor))
@@ -97,8 +95,8 @@ sum_weight = weight1 + weight2
 weight1 /= sum_weight
 weight2 /= sum_weight
 # Normalize the full weights across correlation function labels
-weights1 /= np.sum(weights1, axis=0)[None, :]
-weights2 /= np.sum(weights2, axis=0)[None, :]
+weights1 /= np.sum(weights1, axis=0)[None, :, :]
+weights2 /= np.sum(weights2, axis=0)[None, :, :]
 
 ells = np.arange(0, max_l+1, 2)
 # Legendre multipoles integrated over mu bins, do not depend on radial binning and tracers
