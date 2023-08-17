@@ -1,4 +1,4 @@
-"This reads two sets of RascalC results and two triplets of cosmodesi/pycorr .npy files to combine two covs following NS/GCcomb procedure for 2 tracers in Legendre mode. Covariance of N and S 2PCF is neglected."
+"This reads two sets of RascalC results and two triplets of cosmodesi/pycorr .npy files to combine two full 2-tracer covs following NS/GCcomb procedure for 2 tracers in Legendre mode. Covariance of N(GC) and S(GC) 2PCF is neglected."
 
 from pycorr import TwoPointCorrelationFunction
 from scipy.special import legendre
@@ -65,7 +65,7 @@ for pycorr_file2 in pycorr_files2:
     result = result[r_bins_skip:]
     weight2.append(result.R1R2.wcounts)
 weight2 = np.array(weight2)
-assert weight2.shape[:-1] == (3, n), "Wrong shape of weights 2"
+assert weight2.shape == (3, n, n_mu_bins), "Wrong shape of weights 2"
 
 # Normalize weights
 sum_weight = weight1 + weight2
@@ -73,7 +73,7 @@ weight1 /= sum_weight
 weight2 /= sum_weight
 
 ells = np.arange(0, max_l+1, 2)
-# Legendre multipoles integrated over mu bins, do not depend on radial binning
+# Legendre multipoles integrated over mu bins, do not depend on radial binning and tracers
 leg_mu_ints = np.zeros((n_l, n_mu_bins))
 
 for i, ell in enumerate(ells):
