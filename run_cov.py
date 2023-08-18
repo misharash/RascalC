@@ -33,7 +33,7 @@ njack = 60 if jackknife else 0 # number of jackknife regions; if jackknife flag 
 legendre_orig = 0 # original Legendre mode - when each pair's contribution is accumulated to multipoles of 2PCF directly
 legendre_mix = 1 # mixed Legendre mode - when the s,mu-binned 2PCF is estimated and then projected into Legendre multipoles using integrals of Legendre polynomials 
 legendre = legendre_orig or legendre_mix # any Legendre
-if legendre_orig:
+if legendre:
     max_l = 4
 
 assert ntracers in (1, 2), "Only single- and two-tracer modes are currently supported"
