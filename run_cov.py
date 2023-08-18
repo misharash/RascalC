@@ -28,16 +28,18 @@ if ntracers > 1:
     cycle_randoms = 1
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # whether to generate randoms, only works in periodic case (cubic box)
-jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
+jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
 njack = 60 if jackknife else 0 # number of jackknife regions; if jackknife flag is not set this is used for the pycorr filenames and should be 0
-legendre = 1
-if legendre:
+legendre_orig = 0 # original Legendre mode - when each pair's contribution is accumulated to multipoles of 2PCF directly
+legendre_mix = 1 # mixed Legendre mode - when the s,mu-binned 2PCF is estimated and then projected into Legendre multipoles using integrals of Legendre polynomials 
+legendre = legendre_orig or legendre_mix # any Legendre
+if legendre_orig:
     max_l = 4
 
 assert ntracers in (1, 2), "Only single- and two-tracer modes are currently supported"
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
 assert not (make_randoms and not periodic), "Non-periodic random generation not supported"
-assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
+assert not (jackknife and legendre_orig), "Jackknife and original Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
 count_ndata = 1 # whether to count data galaxies if can't load useful info from pycorr
@@ -45,7 +47,7 @@ count_ndata = 1 # whether to count data galaxies if can't load useful info from 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
 nbin = 50 # radial bins for output cov
-mbin = 20 # angular (mu) bins for output cov; in Legendre mode number of bins for correction function instead
+mbin = 120 # angular (mu) bins for output cov; in original Legendre mode number of bins for correction function; in mixed Legendre mode the number of bins of the intermediate s,mu correlation function projected into multipoles
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
 nbin_cf = 100 # radial bins for input 2PCF
@@ -150,8 +152,10 @@ if jackknife:
     if convert_cf:
         xi_jack_names = [os.path.join(tmpdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
         jackknife_pairs_names = [os.path.join(tmpdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
-if legendre:
+if legendre_orig:
     phi_names = [f"BinCorrectionFactor_n{nbin}_" + ("periodic" if periodic else f'm{mbin}') + f"_{index}.txt" for index in indices_corr]
+if legendre_mix:
+    mu_bin_legendre_file = os.path.join(tmpdir, f"weights/mu_bin_legendre_factors_m{mbin}_l{max_l}.txt")
 
 if do_counts or cat_randoms: # move concatenated randoms file to tmpdir as well
     cat_randoms_files = [os.path.join(tmpdir, cat_randoms_file) for cat_randoms_file in cat_randoms_files]
@@ -203,6 +207,9 @@ def exec_print_and_log(commandline):
 
 print("Starting Computation")
 
+if legendre_mix: # write mu bin Legendre factors for the code
+    exec_print_and_log(f"python python/mu_bin_legendre_factors.py {mbin} {max_l} {os.path.dirname(mu_bin_legendre_file)}")
+
 # full-survey CF conversion, will also load number of data points from pycorr
 if convert_cf:
     r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
@@ -252,7 +259,9 @@ command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntra
 command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
 if legendre: # only provide max multipole l for now
     command += f" -max_l {max_l}"
-else: # provide binned pair counts files and number of mu bin
+if legendre_mix: # provide factors filename
+    command += f" -mu_bin_legendre_file {mu_bin_legendre_file}"
+if not legendre_orig: # provide binned pair counts files and number of mu bin
     command += "".join([f" -RRbin{suffixes_corr[c]} {binned_pair_names[c]}" for c in range(ncorr)]) + f" -mbin {mbin}"
 if periodic: # append periodic flag
     command += " -perbox"
@@ -388,7 +397,7 @@ for i in range(nfiles):
     # define output subdirectory
     this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
-    if legendre: # need correction function
+    if legendre_orig: # need correction function
         os.makedirs(this_outdir, exist_ok=1)
         if ntracers == 1:
             exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
@@ -398,7 +407,7 @@ for i in range(nfiles):
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
     # run code
-    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre else ""))
+    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre_orig else ""))
     print_and_log(f"Finished main computation {i+1} of {nfiles}")
 # end running main code for each random file/part
 
