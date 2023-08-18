@@ -160,12 +160,6 @@ if legendre_mix:
 if do_counts or cat_randoms: # move concatenated randoms file to tmpdir as well
     cat_randoms_files = [os.path.join(tmpdir, cat_randoms_file) for cat_randoms_file in cat_randoms_files]
 
-# binning files to be created automatically
-binfile = "radial_binning_cov.csv"
-binfile_cf = "radial_binning_corr.csv"
-os.system(f"python python/write_binning_file_linear.py {nbin} {rmin} {rmax} {binfile}")
-os.system(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax_cf} {binfile_cf}")
-
 ##########################################################
 
 # Create intermediate directory
@@ -206,6 +200,12 @@ def exec_print_and_log(commandline):
             sys.exit(1)
 
 print("Starting Computation")
+
+# binning files to be created automatically
+binfile = os.path.join(tmpdir, "radial_binning_cov.csv")
+binfile_cf = os.path.join(tmpdir, "radial_binning_corr.csv")
+exec_print_and_log(f"python python/write_binning_file_linear.py {nbin} {rmin} {rmax} {binfile}")
+exec_print_and_log(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax_cf} {binfile_cf}")
 
 if legendre_mix: # write mu bin Legendre factors for the code
     exec_print_and_log(f"python python/mu_bin_legendre_factors.py {mbin} {max_l} {os.path.dirname(mu_bin_legendre_file)}")
