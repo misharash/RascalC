@@ -5,8 +5,8 @@
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --job-name=RascalC-Y1-v0.1-blinded
-#SBATCH --array=0-17
+#SBATCH --job-name=RascalC-Y1-v0.1-blinded-testing
+#SBATCH --array=8 # ELG z=0.8-1.1 SGC - the fastest and used to converge well
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
