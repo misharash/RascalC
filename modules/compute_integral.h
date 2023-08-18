@@ -280,7 +280,9 @@
             int *bin_ij; // i-j separation bin
             int mnp = grid1->maxnp; // max number of particles in a grid1 cell
             Float *xi_ik, *w_ijk, *w_ij; // arrays to store xi and weight values
+#ifdef PRINTPERCENTS
             Float percent_counter;
+#endif
             int x, prim_id_1D;
             integer3 delta2, delta3, delta4, prim_id, sec_id, thi_id;
             Float3 cell_sep2,cell_sep3;
@@ -324,18 +326,22 @@
     #pragma omp for schedule(dynamic)
     #endif
             for (int n_loops = 0; n_loops<par->max_loops; n_loops++){
+#ifdef PRINTPERCENTS
                 percent_counter=0.;
+#endif
                 loc_used_pairs=0; loc_used_triples=0; loc_used_quads=0;
                 LoopTimes[n_loops].Start();
 
                 // LOOP OVER ALL FILLED I CELLS
                 for (int n1=0; n1<grid1->nf;n1++){
 
+#ifdef PRINTPERCENTS
                     // Print time left
                     if((float(n1)/float(grid1->nf)*100)>=percent_counter){
                         printf("Integral %d of %d, iteration %d of %d on thread %d: Using cell %d of %d - %.0f percent complete\n", iter_no, tot_iter, 1+n_loops, par->max_loops, thread, n1+1, grid1->nf, percent_counter);
                         percent_counter+=5.;
                     }
+#endif
 
                     // Pick first particle
                     prim_id_1D = grid1-> filled[n1]; // 1d ID for cell i
@@ -442,6 +448,7 @@
     #pragma omp critical // only one processor can access at once
     #endif
             {
+                printf("Integral %d of %d, iteration %d of %d on thread %d completed\n", iter_no, tot_iter, 1+n_loops, par->max_loops, thread);
                 int subsample_index = completed_loops / par->loops_per_sample; // index of output subsample for this loop
                 completed_loops++; // increment completed loops counter, since they may be done not according to n_loops order
                 if (completed_loops % par->nthread == 0) { // Print every nthread completed loops
@@ -453,11 +460,11 @@
                     TotalTime.Start(); // Restart the timer
                     Float frob_C2, frob_C3, frob_C4;
 #ifndef JACKKNIFE
-                    sumint.frobenius_difference_sum(&locint, n_loops, frob_C2, frob_C3, frob_C4);
+                    sumint.frobenius_difference_sum(&locint, subsample_index * par->loops_per_sample, frob_C2, frob_C3, frob_C4); // since sumint is only incremented every loops_per_sample iterations, subsample_index * loops_per_sample is exactly how many loops are stored in the sumint at the moment. Thus if loops_per_sample>1 the Frobenius percent difference may be an overestimate.
                     fprintf(stderr, "Frobenius percent difference after %d loops is %.3f (C2), %.3f (C3), %.3f (C4)\n", completed_loops, frob_C2, frob_C3, frob_C4);
 #else
                     Float frob_C2j, frob_C3j, frob_C4j;
-                    sumint.frobenius_difference_sum(&locint, n_loops, frob_C2, frob_C3, frob_C4, frob_C2j, frob_C3j, frob_C4j);
+                    sumint.frobenius_difference_sum(&locint, subsample_index * par->loops_per_sample, frob_C2, frob_C3, frob_C4, frob_C2j, frob_C3j, frob_C4j); // since sumint is only incremented every loops_per_sample iterations, subsample_index * loops_per_sample is exactly how many loops are stored in the sumint at the moment. Thus if loops_per_sample>1 the Frobenius percent difference may be an overestimate.
                     fprintf(stderr, "Frobenius percent difference after %d loops is %.3f (C2), %.3f (C3), %.3f (C4)\n", completed_loops, frob_C2, frob_C3, frob_C4);
                     fprintf(stderr, "Frobenius jackknife percent difference after %d loops is %.3f (C2j), %.3f (C3j), %.3f (C4j)\n", completed_loops, frob_C2j, frob_C3j, frob_C4j);
 #endif
