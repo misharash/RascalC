@@ -5,8 +5,8 @@ import numpy as np
 import sys, os
 
 # PARAMETERS
-if len(sys.argv) != 8:
-    print("Usage: python post_process_legendre_mix_jackknife.py {XI_JACKKNIFE_FILE} {WEIGHTS_DIR} {COVARIANCE_DIR} {N_MU_BINS} {MAX_L} {N_SUBSAMPLES} {OUTPUT_DIR}")
+if len(sys.argv) not in (8, 9, 10):
+    print("Usage: python post_process_legendre_mix_jackknife.py {XI_JACKKNIFE_FILE} {WEIGHTS_DIR} {COVARIANCE_DIR} {N_MU_BINS} {MAX_L} {N_SUBSAMPLES} {OUTPUT_DIR} [{SKIP_R_BINS} [{SKIP_L}]]")
     sys.exit(1)
         
 jackknife_file = str(sys.argv[1])
@@ -18,6 +18,8 @@ assert max_l % 2 == 0, "Only even multipoles supported"
 n_l = max_l//2 + 1 # number of multipoles
 n_samples = int(sys.argv[6])
 outdir = str(sys.argv[7])
+skip_r_bins = int(sys.argv[8]) if len(sys.argv) >= 9 else 0
+skip_l = int(sys.argv[9]) if len(sys.argv) >= 10 else 0
 
 # Create output directory
 if not os.path.exists(outdir):
@@ -29,7 +31,7 @@ xi_jack = np.loadtxt(jackknife_file, skiprows=2)
 n_bins_smu = xi_jack.shape[1] # total s,mu bins
 n_jack = xi_jack.shape[0] # total jackknives
 n = n_bins_smu // m # radial bins
-n_bins = n_l * n # total Legendre bins
+n_bins = (n_l - skip_l) * (n - skip_r_bins) # total Legendre bins to work with
 
 weight_file = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_11.dat' % (n, m, n_jack))
 mu_bin_legendre_file = os.path.join(weight_dir, 'mu_bin_legendre_factors_m%d_l%d.txt' % (m, max_l))
@@ -54,11 +56,17 @@ data_cov /= (np.ones_like(denom)-denom)
 
 print("Loading mu bin Legendre factors from %s" % mu_bin_legendre_file)
 mu_bin_legendre_factors = np.loadtxt(mu_bin_legendre_file) # rows correspond to mu bins, columns to multipoles
+if skip_l > 0: mu_bin_legendre_factors = mu_bin_legendre_factors[:, :-skip_l] # discard unneeded l; the expression works wrong for skip_l=0
 
 # Project the data jackknife covariance from mu bins to Legendre multipoles
 data_cov = data_cov.reshape(n, m, n, m) # make the array 4D with [r_bin, mu_bin] indices for rows and columns
+data_cov = data_cov[skip_r_bins:, :, skip_r_bins:, :] # discard the extra radial bins now since it is convenient
 data_cov = np.einsum("imjn,mp,nq->ipjq", data_cov, mu_bin_legendre_factors, mu_bin_legendre_factors) # use mu bin Legendre factors to project mu bins into Legendre multipoles, staying within the same radial bins. The indices are now [r_bin, ell] for rows and columns
 data_cov = data_cov.reshape(n_bins, n_bins)
+
+# Prepare for cutting the covariances we will load
+l_mask = (np.arange(n_l) < n_l - skip_l) # this mask skips last skip_l multipoles
+full_mask = np.append(np.zeros(skip_r_bins * n_l, dtype=bool), np.tile(l_mask, n - skip_r_bins)) # start with zeros and then tile (append to itself n - skip_r_bins times) the l_mask since cov terms are first ordered by r and then by l
 
 def load_matrices(index,jack=True):
     """Load intermediate or full covariance matrices"""
@@ -69,6 +77,9 @@ def load_matrices(index,jack=True):
     c2 = np.diag(np.loadtxt(cov_root+'c2_n%d_l%d_11_%s.txt' % (n, max_l, index)))
     c3 = np.loadtxt(cov_root+'c3_n%d_l%d_1,11_%s.txt' % (n, max_l, index))
     c4 = np.loadtxt(cov_root+'c4_n%d_l%d_11,11_%s.txt' % (n, max_l, index))
+
+    c2, c3, c4 = (a[full_mask][:, full_mask] for a in (c2, c3, c4)) # select only needed rows and columns
+
     # Now symmetrize and return matrices
     return c2, 0.5*(c3+c3.T), 0.5*(c4+c4.T)
 
