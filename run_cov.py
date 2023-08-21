@@ -432,8 +432,12 @@ if legendre:
 n_subsamples = no_subsamples_per_file * nfiles # every case needs this number
 if ntracers == 1:
     if legendre:
-        exec_print_and_log(f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}")
-        results_file = 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
+        if jackknife:
+            exec_print_and_log(f"python python/post_process_legendre_mix_jackknife.py {xi_jack_names[0]} {os.path.dirname(jackknife_weights_names[0])} {outdir} {mbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}")
+            results_file = 'Rescaled_Covariance_Matrices_Legendre_Jackknife_n%d_l%d_j%d.npz' % (nbin, max_l, njack)
+        else:
+            exec_print_and_log(f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}")
+            results_file = 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
     elif jackknife:
         exec_print_and_log(f"python python/post_process_jackknife.py {xi_jack_names[0]} {os.path.dirname(jackknife_weights_names[0])} {outdir} {mbin} {n_subsamples} {outdir} {skip_bins}")
         results_file = 'Rescaled_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (nbin, mbin, njack)
