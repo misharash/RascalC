@@ -44,45 +44,35 @@ with np.load(rascalc_results2) as f:
     print(f"Max abs eigenvalue of bias correction matrix in 2nd results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 
 # Read pycorr files to figure out weights
-weights1, results1 = [], []
+results1 = []
 for pycorr_file1 in pycorr_files1:
     result = TwoPointCorrelationFunction.load(pycorr_file1)
     result = result[::result.shape[0]//n_r_bins].wrap()
     result = result[r_bins_skip:]
+    assert result.shape[:-1] == (n,), "Wrong shape of xi1"
     results1.append(result)
-    weights1.append(result.R1R2.wcounts)
-weights1 = np.array(weights1)
-assert weights1.shape[:-1] == (3, n), "Wrong shape of weights 1"
+assert len(results1) == 3, "Wrong number of xi1s"
 
 n_mu_bins = result.shape[1]
 mu_edges = result.edges[1]
 
-weights2, results2 = [], []
+results2 = []
 for pycorr_file2 in pycorr_files2:
     result = TwoPointCorrelationFunction.load(pycorr_file2)
     result = result[::result.shape[0]//n_r_bins].wrap()
     result = result[r_bins_skip:]
+    assert result.shape == (n, n_mu_bins), "Wrong shape of xi2"
     results2.append(result)
-    weights2.append(result.R1R2.wcounts)
-weights2 = np.array(weights2)
-assert weights2.shape == (3, n, n_mu_bins), "Wrong shape of weights 2"
+assert len(results2) == 3, "Wrong number of xi2s"
 
 # Add weighting by bias for each tracer
-bias_weights = np.array((bias1**2, 2*bias1*bias2, bias2**2)) # auto1, cross12, auto2 are multiplied by product of biases of tracers involved in each. Moreover, cross12 enters twice because wrapped cross21 is the same.
-weights1 *= bias_weights[:, None, None]
-weights2 *= bias_weights[:, None, None]
-
-# Function for multiplying all the counts by a factor
-def multiply_counts_pycorr(pycorr_result, factor):
-    new = pycorr_result.copy()
-    for name in new.count_names:
-        counts = getattr(new, name)
-        setattr(new, name, counts.normalize(wnorm = counts.wnorm * factor))
-    return new
-
+bias_weights = (bias1**2, 2*bias1*bias2, bias2**2) # auto1, cross12, auto2 are multiplied by product of biases of tracers involved in each. Moreover, cross12 enters twice because wrapped cross21 is the same.
 # Now multiply ALL the counts
-results1 = [multiply_counts_pycorr(result, factor) for result, factor in zip(results1, bias_weights)]
-results2 = [multiply_counts_pycorr(result, factor) for result, factor in zip(results2, bias_weights)]
+results1 = [result * factor for result, factor in zip(results1, bias_weights)]
+results2 = [result * factor for result, factor in zip(results2, bias_weights)]
+# Extract not normalized RR counts
+weights1 = np.array((result.R1R2.wcounts for result in results1))
+weights2 = np.array((result.R1R2.wcounts for result in results2))
 # Sum and normalize the counts
 result1 = sum(results1).normalize()
 result2 = sum(results2).normalize()
