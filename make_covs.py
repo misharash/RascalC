@@ -3,7 +3,6 @@
 import os
 import pickle
 import hashlib
-import itertools
 
 max_l = 4
 nbin = 50 # radial bins for output cov
@@ -100,20 +99,21 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
         # First, find number of subsamples per file
         no_subsamples_per_file = 0
         while True:
-            ith_output_names = [os.path.join(outdir, "CovMatricesAll/0/c%d_n%d_l%d_11,11_%d.txt" % (npoints, nbin, max_l, no_subsamples_per_file)) for npoints in (2, 3, 4)]
-            no_subsamples_per_file += 1
+            ith_output_names = [os.path.join(outdir, "0/CovMatricesAll/c2_n%d_l%d_11_%d.txt" % (nbin, max_l, no_subsamples_per_file)), os.path.join(outdir, "0/CovMatricesAll/c3_n%d_l%d_1,11_%d.txt" % (nbin, max_l, no_subsamples_per_file)), os.path.join(outdir, "0/CovMatricesAll/c4_n%d_l%d_11,11_%d.txt" % (nbin, max_l, no_subsamples_per_file))]
             if all(os.path.isfile(fname) for fname in ith_output_names):
                 all_output_names += ith_output_names
+                no_subsamples_per_file += 1
             else: break
         # no_subsamples_per_file should be now accurate for this tracer, redshift range and region
         # Second, find number of sequential files that have all the samples
         nfiles = 1 # there is at least one if the above succeeded
-        while True:
-            these_output_names = list(itertools.chain.from_iterable([os.path.join(outdir, "CovMatricesAll/%d/c%d_n%d_l%d_11,11_%d.txt" % (nfiles, npoints, nbin, max_l, i)) for npoints in (2, 3, 4)] for i in range(no_subsamples_per_file))) # filenames for all npoints and subsample indices
-            if all(os.path.isfile(fname) for fname in these_output_names):
-                all_output_names += these_output_names
-                nfiles += 1
-            else: break
+        if no_subsamples_per_file > 0: # otherwise no point, and can get into an endless loop
+            while True:
+                these_output_names = [os.path.join(outdir, "%d/CovMatricesAll/c2_n%d_l%d_11_%d.txt" % (nfiles, nbin, max_l, i)) for i in range(no_subsamples_per_file)] + [os.path.join(outdir, "%d/CovMatricesAll/c3_n%d_l%d_1,11_%d.txt" % (nfiles, nbin, max_l, i)) for i in range(no_subsamples_per_file)] + [ os.path.join(outdir, "%d/CovMatricesAll/c4_n%d_l%d_11,11_%d.txt" % (nfiles, nbin, max_l, i)) for i in range(no_subsamples_per_file)] # filenames for all npoints and subsample indices
+                if all(os.path.isfile(fname) for fname in these_output_names):
+                    all_output_names += these_output_names
+                    nfiles += 1
+                else: break
         # nfiles should be now accurate for this tracer, redshift range and region
         n_subsamples = no_subsamples_per_file * nfiles # set the number of subsamples which can be used straightforwardly
         full_output_names = [os.path.join(outdir, "CovMatricesAll/c%d_n%d_l%d_11,11_full.txt" % (npoints, nbin, max_l)) for npoints in (2, 3, 4)]
