@@ -152,7 +152,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
             # Also perform convergence check (optional but nice)
 
             # Load shot-noise rescaling and make name
-            with np.load(results_name_jack) as f: shot_noise_rescaling = f['shot_noise_rescaling']
+            with np.load(results_name_jack) as f: shot_noise_rescaling = f['shot_noise_rescaling'][0]
             cov_name_jack = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled{shot_noise_rescaling:.2f}.txt"
             # Individual cov file depends on RascalC results
             my_make(cov_name_jack, [results_name_jack], f"python python/convert_cov_legendre.py {results_name_jack} {nbin_final} {cov_name_jack}")
