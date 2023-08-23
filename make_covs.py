@@ -8,6 +8,9 @@ max_l = 4
 nbin = 50 # radial bins for output cov
 rmax = 200 # maximum output cov radius in Mpc/h
 
+jackknife = 1
+njack = 60 if jackknife else 0
+
 version_label = "v0.4.4"
 
 regs = ('SGC', 'NGC') # regions for filenames
@@ -121,7 +124,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
         reg_results.append(results_name)
         cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
         cov_names.append(cov_name)
-        reg_pycorr_names.append(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/xi/smu/allcounts_{tracer}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{0}_nran{nrandoms}_split{split_above}.npy")
+        reg_pycorr_names.append(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/xi/smu/allcounts_{tracer}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")
 
         # Full output depends on all output names. Use only one name for goal
         my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
