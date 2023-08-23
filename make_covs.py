@@ -47,9 +47,6 @@ else:
 # Hash dict keys are goal filenames, the elements are also dictionaries with dependencies/sources filenames as keys
 
 def my_make(goal: str, deps: list[str], *cmds, force=False, verbose=False) -> None:
-    if len(deps) == 0: # skip if no dependencies at all
-        if verbose: print(f"Can not make {goal}: no dependencies\n") # and next operations can be omitted
-        return
     need_make, current_dep_hashes = hash_check(goal, deps, verbose=verbose)
     if need_make or force: # execute need_make anyway
         print(f"Making {goal} from {deps}")
@@ -118,6 +115,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
                     all_output_names += these_output_names
                     nfiles += 1
                 else: break
+        else: continue # if no subsamples found nothing else to do with this region
         # nfiles should be now accurate for this tracer, redshift range and region
         n_subsamples = no_subsamples_per_file * nfiles # set the number of subsamples which can be used straightforwardly
         full_output_names = [os.path.join(outdir, "CovMatricesAll/c2_n%d_l%d_11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c3_n%d_l%d_1,11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_full.txt" % (nbin, max_l))]
@@ -159,22 +157,24 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
             # Individual cov file depends on RascalC results
             my_make(cov_name_jack, [results_name], f"python python/convert_cov_legendre.py {results_name} {nbin_final} {cov_name}")
             # Recipe: run convert cov
-    
-    # Combined Gaussian cov
 
-    cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
+    if len(reg_pycorr_names) == len(regs): # if we have pycorr files for all regions
+        if len(reg_results) == len(regs): # if we have RascalC results for all regions
+            # Combined Gaussian cov
 
-    # Comb cov depends on the region RascalC results
-    my_make(cov_name, reg_results, "python python/combine_covs_legendre.py " + " ".join(reg_results) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name}")
-    # Recipe: run combine covs
+            cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
 
-    # Combined rescaled cov
-    if jackknife:
-        cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
+            # Comb cov depends on the region RascalC results
+            my_make(cov_name, reg_results, "python python/combine_covs_legendre.py " + " ".join(reg_results) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name}")
+            # Recipe: run combine covs
 
-        # Comb cov depends on the region RascalC results
-        my_make(cov_name, reg_results_jack, "python python/combine_covs_legendre.py " + " ".join(reg_results_jack) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name}")
-        # Recipe: run combine covs
+        if jackknife and len(reg_results_jack) == len(regs): # if jackknife and we have RascalC jack results for all regions
+            # Combined rescaled cov
+            cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
+
+            # Comb cov depends on the region RascalC results
+            my_make(cov_name, reg_results_jack, "python python/combine_covs_legendre.py " + " ".join(reg_results_jack) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name}")
+            # Recipe: run combine covs
 
 # Save the updated hash dictionary
 with open(hash_dict_file, "wb") as f:
