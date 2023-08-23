@@ -44,6 +44,9 @@ else:
 # Hash dict keys are goal filenames, the elements are also dictionaries with dependencies/sources filenames as keys
 
 def my_make(goal: str, deps: list[str], *cmds, force=False, verbose=False) -> None:
+    if len(deps) == 0: # skip if no dependencies at all
+        if verbose: print(f"Can not make {goal}: no dependencies\n") # and next operations can be omitted
+        return
     need_make, current_dep_hashes = hash_check(goal, deps, verbose=verbose)
     if need_make or force: # execute need_make anyway
         print(f"Making {goal} from {deps}")
@@ -65,9 +68,11 @@ def hash_check(goal: str, srcs: list[str], verbose=False) -> (bool, dict):
             return False, current_src_hashes
         current_src_hashes[src] = sha256sum(src)
     if not os.path.exists(goal): return True, current_src_hashes # need to make if goal is missing, but hashes needed to be collected beforehand
-    if set(current_src_hashes.values()) == set(hash_dict[goal].values()): # comparing to hashes of sources used to build the goal last, regardless of order and names. Collisions seem unlikely
-        if verbose: print(f"{goal} uses the same {srcs} as previously, no need to make\n")
-        return False, current_src_hashes
+    try:
+        if set(current_src_hashes.values()) == set(hash_dict[goal].values()): # comparing to hashes of sources used to build the goal last, regardless of order and names. Collisions seem unlikely
+            if verbose: print(f"{goal} uses the same {srcs} as previously, no need to make\n")
+            return False, current_src_hashes
+    except KeyError: pass # if hash dict is empty need to make, just proceed
     return True, current_src_hashes
 
 def exec_function(cmdline: str) -> int: # common function to invoke other processes
