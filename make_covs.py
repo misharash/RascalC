@@ -142,7 +142,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
 
         # Jackknife post-processing
         if jackknife:
-            results_name_jack = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
+            results_name_jack = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_Jackknife_n%d_l%d_j%d.npz' % (nbin, max_l, njack))
             reg_results_jack.append(results_name_jack)
             xi_jack_name = os.path.join(outdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat")
 
@@ -170,10 +170,10 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
 
         if jackknife and len(reg_results_jack) == len(regs): # if jackknife and we have RascalC jack results for all regions
             # Combined rescaled cov
-            cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
+            cov_name_jack = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
 
             # Comb cov depends on the region RascalC results
-            my_make(cov_name, reg_results_jack, "python python/combine_covs_legendre.py " + " ".join(reg_results_jack) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name}")
+            my_make(cov_name_jack, reg_results_jack, "python python/combine_covs_legendre.py " + " ".join(reg_results_jack) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name_jack}")
             # Recipe: run combine covs
 
 # Save the updated hash dictionary
