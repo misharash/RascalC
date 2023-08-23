@@ -116,7 +116,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
                 else: break
         # nfiles should be now accurate for this tracer, redshift range and region
         n_subsamples = no_subsamples_per_file * nfiles # set the number of subsamples which can be used straightforwardly
-        full_output_names = [os.path.join(outdir, "CovMatricesAll/c%d_n%d_l%d_11,11_full.txt" % (npoints, nbin, max_l)) for npoints in (2, 3, 4)]
+        full_output_names = [os.path.join(outdir, "CovMatricesAll/c2_n%d_l%d_11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c3_n%d_l%d_1,11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_full.txt" % (nbin, max_l))]
         results_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
         cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
