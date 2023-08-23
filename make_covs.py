@@ -147,7 +147,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
             xi_jack_name = os.path.join(outdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat")
 
             # RascalC results depend on full output (most straightforwardly)
-            my_make(results_name, full_output_names, f"python python/post_process_legendre_mix_jackknife.py {xi_jack_name} {os.path.join(outdir, 'weights')} {outdir} {mbin} {max_l} {n_subsamples} {outdir} {skip_bins} {skip_l}", f"python python/convergence_check_extra.py {results_name}")
+            my_make(results_name_jack, full_output_names, f"python python/post_process_legendre_mix_jackknife.py {xi_jack_name} {os.path.join(outdir, 'weights')} {outdir} {mbin} {max_l} {n_subsamples} {outdir} {skip_bins} {skip_l}", f"python python/convergence_check_extra.py {results_name_jack}")
             # Recipe: run post-processing
             # Also perform convergence check (optional but nice)
 
@@ -155,7 +155,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
             with np.load(results_name_jack) as f: shot_noise_rescaling = f['shot_noise_rescaling']
             cov_name_jack = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled{shot_noise_rescaling:.2f}.txt"
             # Individual cov file depends on RascalC results
-            my_make(cov_name_jack, [results_name], f"python python/convert_cov_legendre.py {results_name} {nbin_final} {cov_name}")
+            my_make(cov_name_jack, [results_name_jack], f"python python/convert_cov_legendre.py {results_name_jack} {nbin_final} {cov_name_jack}")
             # Recipe: run convert cov
 
     if len(reg_pycorr_names) == len(regs): # if we have pycorr files for all regions
