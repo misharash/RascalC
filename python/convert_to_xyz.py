@@ -53,10 +53,10 @@ dirname=os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, str(dirname)+'/wcdm/')
 import wcdm
 
+print("Reading in data")
 if input_file.endswith(".fits"):
     # read fits file, correct for DESI format
     from astropy.io import fits
-    print("Reading in data")
     with fits.open(input_file) as f:
         data = f[1].data
         all_ra = data["RA"]
