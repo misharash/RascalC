@@ -55,7 +55,7 @@ mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 256 # number of OMP threads to use
-maxloops = 2048 # number of integration loops per filename
+maxloops = 1024 # number of integration loops per filename
 loopspersample = 256 # number of loops to collapse into one subsample
 N2 = 5 # number of secondary cells/particles per primary cell
 N3 = 10 # number of third cells/particles per secondary cell/particle
@@ -76,18 +76,17 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
-version_label = "v0.4.4"
+version_label = "v0.6"
 
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # known cases where more loops are needed consistently
-if id == 0 or id == 4 or id == 10 or id == 14: maxloops *= 2
-elif id == 1 or id == 2: maxloops //= 2; maxloops *= 3 # 1.5x but stay integer
+# have been reset, need to refill
 
 id //= 2 # extracted all needed info from parity, move on
 tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
-# need 18 jobs in this array
+# need 2 * 9 = 18 jobs in this array
 
 tlabels = [tracers[id]] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"

@@ -13,7 +13,7 @@ jackknife = 1
 njack = 60 if jackknife else 0
 if jackknife: mbin = 100
 
-version_label = "v0.4.4"
+version_label = "v0.6"
 
 regs = ('SGC', 'NGC') # regions for filenames
 reg_comb = "GCcomb"

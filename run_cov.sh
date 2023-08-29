@@ -2,11 +2,11 @@
 #SBATCH --account=desi
 #SBATCH --constraint=cpu
 #SBATCH --qos=regular
-#SBATCH --time=24:00:00
+#SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --job-name=RascalC-Y1-v0.4.4-blinded
-#SBATCH --array=8-13 # all ELG
+#SBATCH --job-name=RascalC-Y1-v0.6-blinded
+#SBATCH --array=0-17 # all tracers
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
