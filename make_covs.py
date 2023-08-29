@@ -5,6 +5,7 @@ import pickle
 import hashlib
 import numpy as np
 from glob import glob
+import fnmatch
 
 max_l = 4
 nbin = 50 # radial bins for output cov
@@ -169,11 +170,15 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
                 my_make(cov_name_jack, [results_name_jack], f"python python/convert_cov_legendre.py {results_name_jack} {nbin_final} {cov_name_jack}")
                 # Recipe: run convert cov
 
-                # Here is a special case where goal name can change, so let us delete the alternative versions if any
+                # Here is a special case where the goal name can change (with shot-noise rescaling), so let us delete alternative versions from the directory and the hash dictionary if any
+                # Change of filename does not break the general make logic – the same jack results file must yield the same shot-noise rescaling anyway
                 cov_name_jack_pattern = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled*.txt"
-                for fname in glob(cov_name_jack_pattern):
-                    if not os.path.samefile(fname, cov_name_jack):
-                        os.remove(fname)
+                # Filenames
+                for fname in glob(cov_name_jack_pattern): # all existing files matching the pattern
+                    if not os.path.samefile(fname, cov_name_jack): os.remove(fname) # if not our result file, delete it
+                # Hash dictionary keys (goal names) - could be independent
+                for key in fnmatch.filter(hash_dict.keys(), cov_name_jack_pattern): # all hash dictionary keys matching the pattern
+                    if key != cov_name_jack: hash_dict.pop(key) # if not our goal name, remove the key (and its value)
 
     if len(reg_pycorr_names) == len(regs): # if we have pycorr files for all regions
         if len(reg_results) == len(regs): # if we have RascalC results for all regions
