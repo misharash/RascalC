@@ -4,6 +4,7 @@ import os
 import pickle
 import hashlib
 import numpy as np
+from glob import glob
 
 max_l = 4
 nbin = 50 # radial bins for output cov
@@ -167,6 +168,12 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
                 # Individual cov file depends on RascalC results
                 my_make(cov_name_jack, [results_name_jack], f"python python/convert_cov_legendre.py {results_name_jack} {nbin_final} {cov_name_jack}")
                 # Recipe: run convert cov
+
+                # Here is a special case where goal name can change, so let us delete the alternative versions if any
+                cov_name_jack_pattern = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled*.txt"
+                for fname in glob(cov_name_jack_pattern):
+                    if not os.path.samefile(fname, cov_name_jack):
+                        os.remove(fname)
 
     if len(reg_pycorr_names) == len(regs): # if we have pycorr files for all regions
         if len(reg_results) == len(regs): # if we have RascalC results for all regions
