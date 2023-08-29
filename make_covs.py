@@ -24,9 +24,6 @@ zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0
 skip_bins = 5
 skip_l = 0
 
-maxloops = 2048 # number of integration loops per filename
-loopspersample = 256 # number of loops to collapse into one subsample
-
 nrandoms = 4
 split_above = 20
 
