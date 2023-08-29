@@ -129,7 +129,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
             # no_subsamples_per_file should be now accurate for this tracer, redshift range and region
             if n_subsamples > 0:
                 # Full output depends on all output names. Use only one name for goal
-                my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} {outdir} {no_subsamples_per_file} {outdir}")
+                my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} {outdir} {n_subsamples} {outdir}")
                 # Recipe: run subsample catenation, somewhat redundant in this case, but assures that the full outputs exist and are averages of existing samples
             else: continue # no samples detected => skip the tracer, can not do anything
 
