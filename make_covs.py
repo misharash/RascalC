@@ -92,8 +92,9 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
     if jackknife: reg_results_jack = []
     for reg in regs:
         outdir = "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}" # output file directory
+        full_output_names = [os.path.join(outdir, "CovMatricesAll/c2_n%d_l%d_11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c3_n%d_l%d_1,11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_full.txt" % (nbin, max_l))]
         all_output_names = []
-        # Generate full list of output names
+        # Generate complete list of output names
         # First, find number of subsamples per file
         no_subsamples_per_file = 0
         while True:
@@ -103,23 +104,34 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
                 no_subsamples_per_file += 1
             else: break
         # no_subsamples_per_file should be now accurate for this tracer, redshift range and region
-        # Second, find number of sequential files that have all the samples
-        nfiles = 1 # there is at least one if the above succeeded
-        if no_subsamples_per_file > 0: # otherwise no point, and can get into an endless loop
+        if no_subsamples_per_file > 0: # i.e., have samples in per-file subdirectories
+            # Second, find number of sequential files that have all the samples
+            nfiles = 1 # there is at least one if the above succeeded
             while True:
                 these_output_names = [os.path.join(outdir, "%d/CovMatricesAll/c2_n%d_l%d_11_%d.txt" % (nfiles, nbin, max_l, i)) for i in range(no_subsamples_per_file)] + [os.path.join(outdir, "%d/CovMatricesAll/c3_n%d_l%d_1,11_%d.txt" % (nfiles, nbin, max_l, i)) for i in range(no_subsamples_per_file)] + [ os.path.join(outdir, "%d/CovMatricesAll/c4_n%d_l%d_11,11_%d.txt" % (nfiles, nbin, max_l, i)) for i in range(no_subsamples_per_file)] # filenames for all npoints and subsample indices
                 if all(os.path.isfile(fname) for fname in these_output_names):
                     all_output_names += these_output_names
                     nfiles += 1
                 else: break
-        else: continue # if no subsamples found nothing else to do with this region
-        # nfiles should be now accurate for this tracer, redshift range and region
-        n_subsamples = no_subsamples_per_file * nfiles # set the number of subsamples which can be used straightforwardly
-        full_output_names = [os.path.join(outdir, "CovMatricesAll/c2_n%d_l%d_11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c3_n%d_l%d_1,11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_full.txt" % (nbin, max_l))]
-
-        # Full output depends on all output names. Use only one name for goal
-        my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
-        # Recipe: run subsample catenation
+            # nfiles should be now accurate for this tracer, redshift range and region
+            n_subsamples = no_subsamples_per_file * nfiles # set the number of subsamples which can be used straightforwardly
+            # Full output depends on all output names. Use only one name for goal
+            my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
+            # Recipe: run subsample catenation
+        else: # if no subsamples found in per-file subdirectories, try to detect in the root of directory
+            n_subsamples = 0
+            while True:
+                ith_output_names = [os.path.join(outdir, "CovMatricesAll/c2_n%d_l%d_11_%d.txt" % (nbin, max_l, n_subsamples)), os.path.join(outdir, "CovMatricesAll/c3_n%d_l%d_1,11_%d.txt" % (nbin, max_l, n_subsamples)), os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_%d.txt" % (nbin, max_l, n_subsamples))]
+                if all(os.path.isfile(fname) for fname in ith_output_names):
+                    all_output_names += ith_output_names
+                    n_subsamples += 1
+                else: break
+            # no_subsamples_per_file should be now accurate for this tracer, redshift range and region
+            if n_subsamples > 0:
+                # Full output depends on all output names. Use only one name for goal
+                my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} {outdir} {no_subsamples_per_file} {outdir}")
+                # Recipe: run subsample catenation, somewhat redundant in this case, but assures that the full outputs exist and are averages of existing samples
+            else: continue # no samples detected => skip the tracer, can not do anything
 
         # Gaussian covariances
 
