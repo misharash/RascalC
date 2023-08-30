@@ -26,7 +26,6 @@ zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0
 skip_bins = 5
 skip_l = 0
 
-nrandoms = 4
 split_above = 20
 
 xilabel = "".join([str(i) for i in range(0, max_l+1, 2)])
@@ -89,6 +88,7 @@ def sha256sum(filename: str, buffer_size=128*1024) -> str: # from https://stacko
 
 # Make steps for making covs
 for tracer, (z_min, z_max) in zip(tracers, zs):
+    nrandoms = 1 if tracer.startswith("BGS") else 4 # 1 random for BGS only
     tlabels = [tracer]
     reg_results, reg_pycorr_names = [], []
     if jackknife: reg_results_jack = []
