@@ -60,23 +60,7 @@ if input_file.endswith(".fits"):
         if mask: filt = (data["STATUS"] & mask == mask) # all 1-bits from mask have to be set in STATUS; skip if mask=0
 else:
     # read text file
-    # Load in data:
-    print("Counting lines in file")
-    total_lines=0
-    for n, line in enumerate(open(input_file, 'r')):
-        total_lines+=1
-
-    all_ra,all_dec,all_z,all_w=[np.zeros(total_lines) for _ in range(4)]
-
-    print("Reading in data");
-    for n, line in enumerate(open(input_file, 'r')):
-        if n%1000000==0:
-            print("Reading line %d of %d" %(n,total_lines))
-        split_line=np.array(line.strip().split(), dtype=float) 
-        all_ra[n]=split_line[0];
-        all_dec[n]=split_line[1];
-        all_z[n]=split_line[2];
-        all_w[n]=split_line[3];
+    all_ra, all_dec, all_z, all_w = np.loadtxt(input_file, usecols=range(4)).T
 
 # perform redshift cut
 filt = np.logical_and(filt, np.logical_and(z_min <= all_z, all_z < z_max)) # full filtering condition

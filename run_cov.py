@@ -28,17 +28,18 @@ if ntracers > 1:
     cycle_randoms = 1
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # whether to generate randoms, only works in periodic case (cubic box)
-jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
-if jackknife:
-    njack = 60 # number of jackknife regions
-legendre = 1
+jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
+njack = 60 if jackknife else 0 # number of jackknife regions; if jackknife flag is not set this is used for the pycorr filenames and should be 0
+legendre_orig = 0 # original Legendre mode - when each pair's contribution is accumulated to multipoles of 2PCF directly
+legendre_mix = 1 # mixed Legendre mode - when the s,mu-binned 2PCF is estimated and then projected into Legendre multipoles using integrals of Legendre polynomials 
+legendre = legendre_orig or legendre_mix # any Legendre
 if legendre:
     max_l = 4
 
 assert ntracers in (1, 2), "Only single- and two-tracer modes are currently supported"
 assert not (make_randoms and jackknife), "Jackknives with generated randoms not implemented"
 assert not (make_randoms and not periodic), "Non-periodic random generation not supported"
-assert not (jackknife and legendre), "Jackknife and Legendre modes are incompatible"
+assert not (jackknife and legendre_orig), "Jackknife and original Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
 count_ndata = 1 # whether to count data galaxies if can't load useful info from pycorr
@@ -46,7 +47,7 @@ count_ndata = 1 # whether to count data galaxies if can't load useful info from 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
 nbin = 50 # radial bins for output cov
-mbin = 20 # angular (mu) bins for output cov; in Legendre mode number of bins for correction function instead
+mbin = 100 # angular (mu) bins for output cov; in original Legendre mode number of bins for correction function; in mixed Legendre mode the number of bins of the intermediate s,mu correlation function projected into multipoles
 rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
 rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
 nbin_cf = 100 # radial bins for input 2PCF
@@ -54,8 +55,8 @@ mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 256 # number of OMP threads to use
-maxloops = 2048 # number of integration loops per filename
-loopspersample = 256 # number of loops to collapse into one subsample
+maxloops = 1024 # number of integration loops per filename
+loopspersample = 64 # number of loops to collapse into one subsample
 N2 = 5 # number of secondary cells/particles per primary cell
 N3 = 10 # number of third cells/particles per secondary cell/particle
 N4 = 20 # number of fourth cells/particles per third cell/particle
@@ -75,25 +76,26 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
-version_label = "v0.4"
+version_label = "v0.6"
 rectype = "IFTrecsym" # reconstruction type
 
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # known cases where more loops are needed consistently
-if id == 0 or id == 4 or id == 10 or id == 14: maxloops *= 2
-elif id == 1 or id == 2: maxloops //= 2; maxloops *= 3 # 1.5x but stay integer
+if id in (0, 1, 3, 4): maxloops *= 2
+elif id in (2, 15): maxloops *= 3
+elif id in (14,): maxloops *= 4
 
 id //= 2 # extracted all needed info from parity, move on
 tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
 sms = [10] * 7 + [15] * 2
-# need 18 jobs in this array
+# need 2 * 9 = 18 jobs in this array
 
 tlabels = [tracers[id]] # tracer labels for filenames
 sm = sms[id] # smoothing scale in Mpc/h
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 4
+nrandoms = 1 if tlabels[0].startswith("BGS") else 4 # 1 random for BGS only
 
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
 no_subsamples_per_file = maxloops // loopspersample
@@ -109,7 +111,7 @@ if redshift_cut or convert_to_xyz:
 create_jackknives = jackknife and 1
 normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
-cat_randoms = 0 # concatenate random files for RascalC input
+cat_randoms = 1 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
@@ -121,7 +123,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/recon_sm{sm}/xi/smu/{f'njack{njack}/' if jackknife else ''}allcounts_{corlabel}_{rectype}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack if jackknife else 0}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/recon_sm{sm}/xi/smu/allcounts_{corlabel}_{rectype}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -154,17 +156,13 @@ if jackknife:
     if convert_cf:
         xi_jack_names = [os.path.join(tmpdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
         jackknife_pairs_names = [os.path.join(tmpdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
-if legendre:
+if legendre_orig:
     phi_names = [f"BinCorrectionFactor_n{nbin}_" + ("periodic" if periodic else f'm{mbin}') + f"_{index}.txt" for index in indices_corr]
+if legendre_mix:
+    mu_bin_legendre_file = os.path.join(tmpdir, f"weights/mu_bin_legendre_factors_m{mbin}_l{max_l}.txt")
 
 if do_counts or cat_randoms: # move concatenated randoms file to tmpdir as well
     cat_randoms_files = [os.path.join(tmpdir, cat_randoms_file) for cat_randoms_file in cat_randoms_files]
-
-# binning files to be created automatically
-binfile = "radial_binning_cov.csv"
-binfile_cf = "radial_binning_corr.csv"
-os.system(f"python python/write_binning_file_linear.py {nbin} {rmin} {rmax} {binfile}")
-os.system(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax_cf} {binfile_cf}")
 
 ##########################################################
 
@@ -206,6 +204,15 @@ def exec_print_and_log(commandline):
             sys.exit(1)
 
 print("Starting Computation")
+
+# binning files to be created automatically
+binfile = os.path.join(tmpdir, "radial_binning_cov.csv")
+binfile_cf = os.path.join(tmpdir, "radial_binning_corr.csv")
+exec_print_and_log(f"python python/write_binning_file_linear.py {nbin} {rmin} {rmax} {binfile}")
+exec_print_and_log(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax_cf} {binfile_cf}")
+
+if legendre_mix: # write mu bin Legendre factors for the code
+    exec_print_and_log(f"python python/mu_bin_legendre_factors.py {mbin} {max_l} {os.path.dirname(mu_bin_legendre_file)}")
 
 # full-survey CF conversion, will also load number of data points from pycorr
 if convert_cf:
@@ -256,7 +263,9 @@ command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntra
 command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
 if legendre: # only provide max multipole l for now
     command += f" -max_l {max_l}"
-else: # provide binned pair counts files and number of mu bin
+if legendre_mix: # provide factors filename
+    command += f" -mu_bin_legendre_file {mu_bin_legendre_file}"
+if not legendre_orig: # provide binned pair counts files and number of mu bin
     command += "".join([f" -RRbin{suffixes_corr[c]} {binned_pair_names[c]}" for c in range(ncorr)]) + f" -mbin {mbin}"
 if periodic: # append periodic flag
     command += " -perbox"
@@ -392,7 +401,7 @@ for i in range(nfiles):
     # define output subdirectory
     this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
     this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
-    if legendre: # need correction function
+    if legendre_orig: # need correction function
         os.makedirs(this_outdir, exist_ok=1)
         if ntracers == 1:
             exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
@@ -402,7 +411,7 @@ for i in range(nfiles):
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
     # run code
-    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre else ""))
+    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre_orig else ""))
     print_and_log(f"Finished main computation {i+1} of {nfiles}")
 # end running main code for each random file/part
 
@@ -427,8 +436,12 @@ if legendre:
 n_subsamples = no_subsamples_per_file * nfiles # every case needs this number
 if ntracers == 1:
     if legendre:
-        exec_print_and_log(f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}")
-        results_file = 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
+        if jackknife:
+            exec_print_and_log(f"python python/post_process_legendre_mix_jackknife.py {xi_jack_names[0]} {os.path.dirname(jackknife_weights_names[0])} {outdir} {mbin} {max_l} {n_subsamples} {outdir} {skip_bins} {skip_l}")
+            results_file = 'Rescaled_Covariance_Matrices_Legendre_Jackknife_n%d_l%d_j%d.npz' % (nbin, max_l, njack)
+        else:
+            exec_print_and_log(f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}")
+            results_file = 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
     elif jackknife:
         exec_print_and_log(f"python python/post_process_jackknife.py {xi_jack_names[0]} {os.path.dirname(jackknife_weights_names[0])} {outdir} {mbin} {n_subsamples} {outdir} {skip_bins}")
         results_file = 'Rescaled_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (nbin, mbin, njack)

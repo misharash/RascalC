@@ -5,8 +5,8 @@
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --job-name=RascalC-Y1-v0.4-blinded-recon
-#SBATCH --array=0-17
+#SBATCH --job-name=RascalC-Y1-v0.6-blinded-recon
+#SBATCH --array=0-17 # all tracers
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
@@ -20,5 +20,7 @@ export OMP_NUM_THREADS=256 # should match what is set in python script
 
 # Hopefully let numpy use all threads
 export NUMEXPR_MAX_THREADS=256
+# Limit OpenBLAS thread usage (for jackknife assignment, error otherwise)
+export OPENBLAS_NUM_THREADS=1
 
 srun python -u run_cov.py $SLURM_ARRAY_TASK_ID

@@ -3,13 +3,19 @@
 import os
 import pickle
 import hashlib
-import itertools
+import numpy as np
+from glob import glob
+import fnmatch
 
 max_l = 4
 nbin = 50 # radial bins for output cov
 rmax = 200 # maximum output cov radius in Mpc/h
 
-version_label = "v0.4"
+jackknife = 1
+njack = 60 if jackknife else 0
+if jackknife: mbin = 100
+
+version_label = "v0.6"
 rectype = "IFTrecsym" # reconstruction type
 
 regs = ('SGC', 'NGC') # regions for filenames
@@ -21,12 +27,7 @@ sms = [10] * 7 + [15] * 2
 
 skip_bins = 5
 skip_l = 0
-shot_noise_rescaling = 1
 
-maxloops = 2048 # number of integration loops per filename
-loopspersample = 256 # number of loops to collapse into one subsample
-
-nrandoms = 4
 split_above = 20
 
 xilabel = "".join([str(i) for i in range(0, max_l+1, 2)])
@@ -67,9 +68,11 @@ def hash_check(goal: str, srcs: list[str], verbose=False) -> (bool, dict):
             return False, current_src_hashes
         current_src_hashes[src] = sha256sum(src)
     if not os.path.exists(goal): return True, current_src_hashes # need to make if goal is missing, but hashes needed to be collected beforehand
-    if set(current_src_hashes.values()) == set(hash_dict[goal].values()): # comparing to hashes of sources used to build the goal last, regardless of order and names. Collisions seem unlikely
-        if verbose: print(f"{goal} uses the same {srcs} as previously, no need to make\n")
-        return False, current_src_hashes
+    try:
+        if set(current_src_hashes.values()) == set(hash_dict[goal].values()): # comparing to hashes of sources used to build the goal last, regardless of order and names. Collisions seem unlikely
+            if verbose: print(f"{goal} uses the same {srcs} as previously, no need to make\n")
+            return False, current_src_hashes
+    except KeyError: pass # if hash dict is empty need to make, just proceed
     return True, current_src_hashes
 
 def exec_function(cmdline: str) -> int: # common function to invoke other processes
@@ -85,59 +88,117 @@ def sha256sum(filename: str, buffer_size=128*1024) -> str: # from https://stacko
             h.update(mv[:n])
     return h.hexdigest()
 
-cov_names = []
 # Make steps for making covs
 for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
+    nrandoms = 1 if tracer.startswith("BGS") else 4 # 1 random for BGS only
     tlabels = [tracer]
     reg_results, reg_pycorr_names = [], []
+    if jackknife: reg_results_jack = []
     for reg in regs:
         outdir = os.path.join(f"recon_sm{sm}", "_".join(tlabels + [rectype, reg]) + f"_z{z_min}-{z_max}") # output file directory
+        full_output_names = [os.path.join(outdir, "CovMatricesAll/c2_n%d_l%d_11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c3_n%d_l%d_1,11_full.txt" % (nbin, max_l)), os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_full.txt" % (nbin, max_l))]
         all_output_names = []
-        # Generate full list of output names
+        # Generate complete list of output names
         # First, find number of subsamples per file
         no_subsamples_per_file = 0
         while True:
-            ith_output_names = [os.path.join(outdir, "CovMatricesAll/0/c%d_n%d_l%d_11,11_%d.txt" % (npoints, nbin, max_l, no_subsamples_per_file)) for npoints in (2, 3, 4)]
-            no_subsamples_per_file += 1
+            ith_output_names = [os.path.join(outdir, "0/CovMatricesAll/c2_n%d_l%d_11_%d.txt" % (nbin, max_l, no_subsamples_per_file)), os.path.join(outdir, "0/CovMatricesAll/c3_n%d_l%d_1,11_%d.txt" % (nbin, max_l, no_subsamples_per_file)), os.path.join(outdir, "0/CovMatricesAll/c4_n%d_l%d_11,11_%d.txt" % (nbin, max_l, no_subsamples_per_file))]
             if all(os.path.isfile(fname) for fname in ith_output_names):
                 all_output_names += ith_output_names
+                no_subsamples_per_file += 1
             else: break
         # no_subsamples_per_file should be now accurate for this tracer, redshift range and region
-        # Second, find number of sequential files that have all the samples
-        nfiles = 1 # there is at least one if the above succeeded
-        while True:
-            these_output_names = list(itertools.chain.from_iterable([os.path.join(outdir, "CovMatricesAll/%d/c%d_n%d_l%d_11,11_%d.txt" % (nfiles, npoints, nbin, max_l, i)) for npoints in (2, 3, 4)] for i in range(no_subsamples_per_file))) # filenames for all npoints and subsample indices
-            if all(os.path.isfile(fname) for fname in these_output_names):
-                all_output_names += these_output_names
-                nfiles += 1
-            else: break
-        # nfiles should be now accurate for this tracer, redshift range and region
-        n_subsamples = no_subsamples_per_file * nfiles # set the number of subsamples which can be used straightforwardly
-        full_output_names = [os.path.join(outdir, "CovMatricesAll/c%d_n%d_l%d_11,11_full.txt" % (npoints, nbin, max_l)) for npoints in (2, 3, 4)]
+        if no_subsamples_per_file > 0: # i.e., have samples in per-file subdirectories
+            # Second, find number of sequential files that have all the samples
+            nfiles = 1 # there is at least one if the above succeeded
+            while True:
+                these_output_names = [os.path.join(outdir, "%d/CovMatricesAll/c2_n%d_l%d_11_%d.txt" % (nfiles, nbin, max_l, i)) for i in range(no_subsamples_per_file)] + [os.path.join(outdir, "%d/CovMatricesAll/c3_n%d_l%d_1,11_%d.txt" % (nfiles, nbin, max_l, i)) for i in range(no_subsamples_per_file)] + [ os.path.join(outdir, "%d/CovMatricesAll/c4_n%d_l%d_11,11_%d.txt" % (nfiles, nbin, max_l, i)) for i in range(no_subsamples_per_file)] # filenames for all npoints and subsample indices
+                if all(os.path.isfile(fname) for fname in these_output_names):
+                    all_output_names += these_output_names
+                    nfiles += 1
+                else: break
+            # nfiles should be now accurate for this tracer, redshift range and region
+            n_subsamples = no_subsamples_per_file * nfiles # set the number of subsamples which can be used straightforwardly
+            # Full output depends on all output names. Use only one name for goal
+            my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
+            # Recipe: run subsample catenation
+        else: # if no subsamples found in per-file subdirectories, try to detect in the root of directory
+            n_subsamples = 0
+            while True:
+                ith_output_names = [os.path.join(outdir, "CovMatricesAll/c2_n%d_l%d_11_%d.txt" % (nbin, max_l, n_subsamples)), os.path.join(outdir, "CovMatricesAll/c3_n%d_l%d_1,11_%d.txt" % (nbin, max_l, n_subsamples)), os.path.join(outdir, "CovMatricesAll/c4_n%d_l%d_11,11_%d.txt" % (nbin, max_l, n_subsamples))]
+                if all(os.path.isfile(fname) for fname in ith_output_names):
+                    all_output_names += ith_output_names
+                    n_subsamples += 1
+                else: break
+            # no_subsamples_per_file should be now accurate for this tracer, redshift range and region
+            if n_subsamples > 0:
+                # Full output depends on all output names. Use only one name for goal
+                my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} {outdir} {n_subsamples} {outdir}")
+                # Recipe: run subsample catenation, somewhat redundant in this case, but assures that the full outputs exist and are averages of existing samples
+            else: continue # no samples detected => skip the tracer, can not do anything
+
+        # Gaussian covariances
+
         results_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
         cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
-        cov_names.append(cov_name)
-        reg_pycorr_names.append(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/recon_sm{sm}/xi/smu/allcounts_{tracer}_{rectype}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{0}_nran{nrandoms}_split{split_above}.npy")
-
-        # Full output depends on all output names. Use only one name for goal
-        my_make(full_output_names[-1], all_output_names, f"python python/cat_subsets_of_integrals.py {nbin} l{max_l} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
-        # Recipe: run subsample catenation
+        reg_pycorr_names.append(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/recon_sm{sm}/xi/smu/allcounts_{tracer}_{rectype}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")
 
         # RascalC results depend on full output (most straightforwardly)
-        my_make(results_name, full_output_names, f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}", f"python python/convergence_check_extra.py {results_name}")
+        my_make(results_name, full_output_names, f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {1} {skip_bins} {skip_l}", f"python python/convergence_check_extra.py {results_name}")
         # Recipe: run post-processing
         # Also perform convergence check (optional but nice)
 
         # Individual cov file depends on RascalC results
         my_make(cov_name, [results_name], f"python python/convert_cov_legendre.py {results_name} {nbin_final} {cov_name}")
         # Recipe: run convert cov
-    
-    cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
 
-    # Comb cov depends on the region RascalC results
-    my_make(cov_name, reg_results, "python python/combine_covs_legendre.py " + " ".join(reg_results) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name}")
-    # Recipe: run combine covs
+        # Jackknife post-processing
+        if jackknife:
+            results_name_jack = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_Jackknife_n%d_l%d_j%d.npz' % (nbin, max_l, njack))
+            reg_results_jack.append(results_name_jack)
+            xi_jack_name = os.path.join(outdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat")
+
+            # RascalC results depend on full output (most straightforwardly)
+            my_make(results_name_jack, full_output_names, f"python python/post_process_legendre_mix_jackknife.py {xi_jack_name} {os.path.join(outdir, 'weights')} {outdir} {mbin} {max_l} {n_subsamples} {outdir} {skip_bins} {skip_l}", f"python python/convergence_check_extra.py {results_name_jack}")
+            # Recipe: run post-processing
+            # Also perform convergence check (optional but nice)
+
+            # Load shot-noise rescaling and make name, if the jack results file exists, otherwise can't do it anyway
+            if os.path.isfile(results_name_jack):
+                with np.load(results_name_jack) as f: shot_noise_rescaling = f['shot_noise_rescaling'][0]
+                cov_name_jack = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled{shot_noise_rescaling:.2f}.txt"
+                # Individual cov file depends on RascalC results
+                my_make(cov_name_jack, [results_name_jack], f"python python/convert_cov_legendre.py {results_name_jack} {nbin_final} {cov_name_jack}")
+                # Recipe: run convert cov
+
+                # Here is a special case where the goal name can change (with shot-noise rescaling), so let us delete alternative versions from the directory and the hash dictionary if any
+                # Change of filename does not break the general make logic – the same jack results file must yield the same shot-noise rescaling anyway
+                cov_name_jack_pattern = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled*.txt"
+                # Filenames
+                for fname in glob(cov_name_jack_pattern): # all existing files matching the pattern
+                    if not os.path.samefile(fname, cov_name_jack): os.remove(fname) # if not our result file, delete it
+                # Hash dictionary keys (goal names) - could be independent
+                for key in fnmatch.filter(hash_dict.keys(), cov_name_jack_pattern): # all hash dictionary keys matching the pattern
+                    if key != cov_name_jack: hash_dict.pop(key) # if not our goal name, remove the key (and its value)
+
+    if len(reg_pycorr_names) == len(regs): # if we have pycorr files for all regions
+        if len(reg_results) == len(regs): # if we have RascalC results for all regions
+            # Combined Gaussian cov
+
+            cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
+
+            # Comb cov depends on the region RascalC results
+            my_make(cov_name, reg_results, "python python/combine_covs_legendre.py " + " ".join(reg_results) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name}")
+            # Recipe: run combine covs
+
+        if jackknife and len(reg_results_jack) == len(regs): # if jackknife and we have RascalC jack results for all regions
+            # Combined rescaled cov
+            cov_name_jack = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
+
+            # Comb cov depends on the region RascalC results
+            my_make(cov_name_jack, reg_results_jack, "python python/combine_covs_legendre.py " + " ".join(reg_results_jack) + " " + " ".join(reg_pycorr_names) + f" {nbin} {max_l} {skip_bins} {cov_name_jack}")
+            # Recipe: run combine covs
 
 # Save the updated hash dictionary
 with open(hash_dict_file, "wb") as f:
