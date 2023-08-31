@@ -56,7 +56,7 @@ xicutoff = 250 # beyond this assume xi/2PCF=0
 
 nthread = 256 # number of OMP threads to use
 maxloops = 1024 # number of integration loops per filename
-loopspersample = 256 # number of loops to collapse into one subsample
+loopspersample = 64 # number of loops to collapse into one subsample
 N2 = 5 # number of secondary cells/particles per primary cell
 N3 = 10 # number of third cells/particles per secondary cell/particle
 N4 = 20 # number of fourth cells/particles per third cell/particle
