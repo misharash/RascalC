@@ -1,6 +1,7 @@
 # This script generates all covs
 
-import os
+import os, sys
+from datetime import datetime
 import pickle
 import hashlib
 import numpy as np
@@ -46,40 +47,63 @@ else:
     hash_dict = {}
 # Hash dict keys are goal filenames, the elements are also dictionaries with dependencies/sources filenames as keys
 
-def my_make(goal: str, deps: list[str], *cmds, force=False, verbose=False) -> None:
+# Set up logging
+logfile = "make_covs.log.txt"
+
+def print_and_log(s: str) -> None:
+    print(s)
+    print_log(s)
+print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
+
+print_and_log(datetime.now())
+print_and_log(f"Executing {__file__}")
+
+def exec_print_and_log(commandline: str, terminate_on_error: bool = False) -> None:
+    print_and_log(f"Running command: {commandline}")
+    if commandline.startswith("python"): # additional anti-buffering for python
+        commandline = commandline.replace("python", "python -u", 1)
+    status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}'")
+    # tee prints what it gets to stdout AND saves to file
+    # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
+    # without pipefail, the exit_code would be of tee, not reflecting main command failures
+    # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
+    exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
+    if exit_code:
+        print(f"{commandline} exited with error (code {exit_code}).")
+        if terminate_on_error:
+            print("Terminating the script execution due to this error.")
+            sys.exit(1)
+
+def my_make(goal: str, deps: list[str], *cmds: tuple[str], force: bool = False, verbose: bool = False) -> None:
     need_make, current_dep_hashes = hash_check(goal, deps, verbose=verbose)
     if need_make or force: # execute need_make anyway
-        print(f"Making {goal} from {deps}")
+        print_and_log(f"Making {goal} from {deps}")
         for cmd in cmds:
-            ret = exec_function(cmd)
+            ret = exec_print_and_log(cmd)
             if ret:
-                print(f"{cmd} exited with error (code {ret}). Aborting\n")
+                print_and_log(f"{cmd} exited with error (code {ret}). Aborting\n")
                 return
         hash_dict[goal] = current_dep_hashes # update the dependency hashes only if the make was successfully performed
-        print()
+        print_and_log()
 
-def hash_check(goal: str, srcs: list[str], verbose=False) -> (bool, dict):
-    # First output indicates whether we need/should to execute the recipe to make goal from srcs
+def hash_check(goal: str, srcs: list[str], verbose: bool = False) -> tuple[bool, dict]:
+    # First output indicates whether we need to/should execute the recipe to make goal from srcs
     # Also returns the src hashes in the dictionary current_src_hashes
     current_src_hashes = {}
     for src in srcs:
         if not os.path.exists(src):
-            if verbose: print(f"Can not make {goal} from {srcs}: {src} missing\n") # and next operations can be omitted
+            if verbose: print_and_log(f"Can not make {goal} from {srcs}: {src} missing\n") # and next operations can be omitted
             return False, current_src_hashes
         current_src_hashes[src] = sha256sum(src)
     if not os.path.exists(goal): return True, current_src_hashes # need to make if goal is missing, but hashes needed to be collected beforehand
     try:
         if set(current_src_hashes.values()) == set(hash_dict[goal].values()): # comparing to hashes of sources used to build the goal last, regardless of order and names. Collisions seem unlikely
-            if verbose: print(f"{goal} uses the same {srcs} as previously, no need to make\n")
+            if verbose: print_and_log(f"{goal} uses the same {srcs} as previously, no need to make\n")
             return False, current_src_hashes
     except KeyError: pass # if hash dict is empty need to make, just proceed
     return True, current_src_hashes
 
-def exec_function(cmdline: str) -> int: # common function to invoke other processes
-    print(f"Running command: {cmdline}")
-    return os.system(cmdline) # simple now but could be changed quickly later
-
-def sha256sum(filename: str, buffer_size=128*1024) -> str: # from https://stackoverflow.com/a/44873382
+def sha256sum(filename: str, buffer_size: int = 128*1024) -> str: # from https://stackoverflow.com/a/44873382
     h = hashlib.sha256()
     b = bytearray(buffer_size)
     mv = memoryview(b)
@@ -203,3 +227,6 @@ for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
 # Save the updated hash dictionary
 with open(hash_dict_file, "wb") as f:
     pickle.dump(hash_dict, f)
+
+print_and_log(datetime.now())
+print_and_log("Finished execution.")
