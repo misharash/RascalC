@@ -51,8 +51,7 @@ def jack_realization_rascalc(jack_estimator, i):
     kw = {}
     for name in jack_estimator.count_names:
         counts = getattr(jack_estimator, name)
-        kw[name] = counts.auto[i] + counts.auto[i] + counts.cross12[i] + counts.cross21[i] # j1 x all2 + all1 x j2 = 2 x j1 x j2 + j1 x (all2 - j2) + j2 x (all1 - j1)
-        kw[name] = kw[name].normalize(kw[name].wnorm / 2.) # now divide by 2 to match conventions from jackknife_weights{,_cross}.py
+        kw[name] = counts.auto[i] + 0.5 * (counts.cross12[i] + counts.cross21[i]) # j1 x all2 + all1 x j2 = 2 x j1 x j2 + j1 x (all2 - j2) + j2 x (all1 - j1); by conventions from jackknife_weights{,_cross}.py needs to be divided by 2
     return cls(**kw)
 
 results = [jack_realization_rascalc(result, i) for i in result.realizations]

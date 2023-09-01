@@ -44,7 +44,7 @@ n_r_bins = result.corr.shape[0]
 n_bins = n_r_bins * n_l
 
 # start xi array, ditch the weights
-xi = np.zeros((len(infile_names), n_corr, n_bins))
+xi = np.zeros((len(infile_names), n_corr, n_l, n_r_bins))
 xi[0, 0] = result.get_corr(mode='poles', ells=ells)
 
 # load remaining input files
