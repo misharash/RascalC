@@ -5,13 +5,13 @@ import os, sys
 from datetime import datetime
 import numpy as np
 
-def check_path(filename, fallback_dir=""):
+def check_path(filename: str, fallback_dir: str = "") -> str:
     if os.path.isfile(filename): return filename
     filename = os.path.join(fallback_dir, os.path.basename(filename))
     assert os.path.isfile(filename), f"{filename} missing"
     return filename
 
-def prevent_override(filename, max_num=10): # append _{number} to filename to prevent override
+def prevent_override(filename: str, max_num: int = 10) -> str: # append _{number} to filename to prevent override
     for i in range(max_num+1):
         trial_name = filename + ("_" + str(i)) * bool(i) # will be filename for i=0
         if not os.path.exists(trial_name): return trial_name
@@ -162,7 +162,7 @@ logfile = os.path.join(outdir, logfilename)
 # Copy this script in for posterity
 os.system(f"cp {__file__} {os.path.normpath(outdir)}")
 
-def print_and_log(s):
+def print_and_log(s: str) -> None:
     print(s)
     print_log(s)
 print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
@@ -170,7 +170,7 @@ print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
 print_and_log(datetime.now())
 print_and_log(f"Executing {__file__}")
 
-def exec_print_and_log(commandline):
+def exec_print_and_log(commandline: str) -> None:
     print_and_log(f"Running command: {commandline}")
     if commandline.startswith("python"): # additional anti-buffering for python
         commandline = commandline.replace("python", "python -u", 1)
@@ -222,10 +222,10 @@ if periodic and make_randoms:
     # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to unity. List of array; list index is tracer number, first array index is file number and the second is number of point. Keep number of points roughly equal to number of data for each tracer
     print_and_log(f"Generated random points")
 
-def change_extension(name, ext):
+def change_extension(name: str, ext: str) -> str:
     return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
-def append_to_filename(name, appendage):
+def append_to_filename(name: str, appendage: str) -> str:
     return os.path.join(tmpdir, os.path.basename(name + appendage)) # append part and switch to tmpdir
 
 if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
