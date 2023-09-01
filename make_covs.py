@@ -56,7 +56,7 @@ print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
 print_and_log(datetime.now())
 print_and_log(f"Executing {__file__}")
 
-def exec_print_and_log(commandline: str, terminate_on_error=False) -> None:
+def exec_print_and_log(commandline: str, terminate_on_error: bool = False) -> None:
     print_and_log(f"Running command: {commandline}")
     if commandline.startswith("python"): # additional anti-buffering for python
         commandline = commandline.replace("python", "python -u", 1)
@@ -72,7 +72,7 @@ def exec_print_and_log(commandline: str, terminate_on_error=False) -> None:
             print("Terminating the script execution due to this error.")
             sys.exit(1)
 
-def my_make(goal: str, deps: list[str], *cmds, force=False, verbose=False) -> None:
+def my_make(goal: str, deps: list[str], *cmds: tuple[str], force: bool = False, verbose: bool = False) -> None:
     need_make, current_dep_hashes = hash_check(goal, deps, verbose=verbose)
     if need_make or force: # execute need_make anyway
         print_and_log(f"Making {goal} from {deps}")
@@ -84,7 +84,7 @@ def my_make(goal: str, deps: list[str], *cmds, force=False, verbose=False) -> No
         hash_dict[goal] = current_dep_hashes # update the dependency hashes only if the make was successfully performed
         print_and_log()
 
-def hash_check(goal: str, srcs: list[str], verbose=False) -> (bool, dict):
+def hash_check(goal: str, srcs: list[str], verbose: bool = False) -> tuple[bool, dict]:
     # First output indicates whether we need to/should execute the recipe to make goal from srcs
     # Also returns the src hashes in the dictionary current_src_hashes
     current_src_hashes = {}
@@ -101,7 +101,7 @@ def hash_check(goal: str, srcs: list[str], verbose=False) -> (bool, dict):
     except KeyError: pass # if hash dict is empty need to make, just proceed
     return True, current_src_hashes
 
-def sha256sum(filename: str, buffer_size=128*1024) -> str: # from https://stackoverflow.com/a/44873382
+def sha256sum(filename: str, buffer_size: int = 128*1024) -> str: # from https://stackoverflow.com/a/44873382
     h = hashlib.sha256()
     b = bytearray(buffer_size)
     mv = memoryview(b)
