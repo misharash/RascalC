@@ -4,6 +4,10 @@
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
+#ifdef LEGENDRE_MIX
+#include "legendre_mix_utilities.h"
+#endif
+
 class Parameters{
 
 public:
@@ -64,10 +68,21 @@ public:
 
     //-------- LEGENDRE PARAMETERS -------------------------------------------
 
-    int max_l = 4; // max Legendre moment (must be even unless computing 3PCF)
+#if (defined LEGENDRE || defined LEGENDRE_MIX)
+    int max_l = 2; // max Legendre moment (must be even unless computing 3PCF)
+#endif
 
+#ifdef LEGENDRE_MIX
+    char *mu_bin_legendre_file = NULL; // Mu bin Legendre factors file
+    const char default_mu_bin_legendre_file[500] = "mu_bin_legendre_factors_m20_l2.txt";
+
+    MuBinLegendreFactors mu_bin_legendre_factors;
+#endif
+
+#ifdef LEGENDRE
     char *phi_file = NULL; // Survey correction function coefficient file
     const char default_phi_file[500] = "BinCorrectionFactor_n50_periodic_11.txt";
+#endif
 
     //-------- POWER PARAMETERS (not yet publicly released) ------------------
 
@@ -81,10 +96,10 @@ public:
 
     // Maximum number of iterations to compute the C_ab integrals over
     int max_loops = 120;
-
-    // Exit after relative Frobenius difference is less than (convergence_threshold_percent %) for (convergence_ntimes) times
-    Float convergence_threshold_percent = 0.01;
-    int convergence_ntimes = 10;
+    // Number of loops to output into each subsample/file
+    int loops_per_sample = 1;
+    // Number of output subsamples/files
+    int no_subsamples = 120;
 
     // Number of random cells to draw at each stage
     int N2 = 10; // number of j cells per i cell
@@ -114,31 +129,39 @@ public:
 
     //---------- (r,mu) MULTI-FIELD PARAMETERS ------------------------------
 
+#if (!defined LEGENDRE && !defined POWER && !defined THREE_PCF)
     // Summed pair count files
     char *RR_bin_file12 = NULL; // RR_{aA}^{12} file
     const char default_RR_bin_file12[500] = "";
 
     char *RR_bin_file2 = NULL; // RR_{aA}^{22} file
     const char default_RR_bin_file2[500] = "";
+#endif
 
     //-------- JACKKNIFE MULTI-FIELD PARAMETERS ------------------------------
 
+#ifdef JACKKNIFE
     // Jackknife weight files
     char *jk_weight_file12 = NULL; // w_{aA}^{12} weights
     const char default_jk_weight_file12[500] = "";
 
     char *jk_weight_file2 = NULL; // w_{aA}^{22} weights
     const char default_jk_weight_file2[500] = "";
+#endif
 
     //-------- LEGENDRE MULTI-FIELD PARAMETERS -------------------------------
 
+#ifdef LEGENDRE
     const char default_phi_file12[500] = "";
     char *phi_file12 = NULL; // (Normalized) survey correction function survey_12
 
     char *phi_file2 = NULL; // (Normalized) survey correction function survey_22
     const char default_phi_file2[500] = "";
+#endif
 
     // ------- POWER MULTI-FIELD PARAMETERS ----------------------------------
+
+#ifdef POWER
 
     char *inv_phi_file2 = NULL; // (Normalized) inverse survey correction function multipoles survey_22
     const char default_inv_phi_file2[500] = "";
@@ -149,6 +172,8 @@ public:
     Float power_norm12 = 0; // power spectrum normalization for field 1 x 2
 
     Float power_norm2 = 0; // power spectrum normalization for field 2 x 2
+
+#endif
 
     //-------- OTHER PARAMETERS ----------------------------------------------
 
@@ -222,7 +247,8 @@ public:
                 Float tmp_box=atof(argv[++i]);
                 rect_boxsize = {tmp_box,tmp_box,tmp_box};
                 }
-        else if (!strcmp(argv[i],"-maxloops")) max_loops = atof(argv[++i]);
+        else if (!strcmp(argv[i],"-maxloops")) max_loops = atoi(argv[++i]);
+        else if (!strcmp(argv[i],"-loopspersample")) loops_per_sample = atoi(argv[++i]);
         else if (!strcmp(argv[i],"-rescale")) rescale = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-mumax")) mumax = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-mumin")) mumin = atof(argv[++i]);
@@ -250,8 +276,17 @@ public:
         else if (!strcmp(argv[i],"-N2")) N2=atof(argv[++i]);
         else if (!strcmp(argv[i],"-N3")) N3=atof(argv[++i]);
         else if (!strcmp(argv[i],"-N4")) N4=atof(argv[++i]);
-#ifdef LEGENDRE
+#if (defined LEGENDRE || defined LEGENDRE_MIX)
         else if (!strcmp(argv[i],"-max_l")) max_l=atoi(argv[++i]);
+#endif
+#ifdef JACKKNIFE
+        else if (!strcmp(argv[i],"-jackknife")) jk_weight_file=argv[++i];
+        else if (!strcmp(argv[i],"-jackknife12")) jk_weight_file12=argv[++i];
+        else if (!strcmp(argv[i],"-jackknife2")) jk_weight_file2=argv[++i];
+#endif
+#ifdef LEGENDRE_MIX
+        else if (!strcmp(argv[i],"-mu_bin_legendre_file")) mu_bin_legendre_file=argv[++i];
+#elif defined LEGENDRE
         else if (!strcmp(argv[i],"-phi_file")) phi_file=argv[++i];
         else if (!strcmp(argv[i],"-phi_file12")) phi_file12=argv[++i];
         else if (!strcmp(argv[i],"-phi_file2")) phi_file2=argv[++i];
@@ -264,10 +299,6 @@ public:
         else if (!strcmp(argv[i],"-power_norm")) power_norm = atof(argv[++i]);
         else if (!strcmp(argv[i],"-power_norm12")) power_norm12 = atof(argv[++i]);
         else if (!strcmp(argv[i],"-power_norm")) power_norm2 = atof(argv[++i]);
-#elif defined JACKKNIFE
-        else if (!strcmp(argv[i],"-jackknife")) jk_weight_file=argv[++i];
-        else if (!strcmp(argv[i],"-jackknife12")) jk_weight_file12=argv[++i];
-        else if (!strcmp(argv[i],"-jackknife2")) jk_weight_file2=argv[++i];
 #elif defined THREE_PCF
         else if (!strcmp(argv[i],"-max_l")) max_l=atoi(argv[++i]);
         else if (!strcmp(argv[i],"-phi_file")) phi_file=argv[++i];
@@ -320,13 +351,20 @@ public:
 	    assert(nside%2!=0); // The probability integrator needs an odd grid size
 
 	    assert(nofznorm>0); // need some galaxies!
+        assert(max_loops % loops_per_sample == 0); // group size need to divide the number of loops
+        no_subsamples = max_loops / loops_per_sample;
 #ifndef THREE_PCF
 	    //assert(mumin>=0); // We take the absolte value of mu
 #endif
 	    assert(mumax<=1); // mu > 1 makes no sense
 
-#ifdef LEGENDRE
+#if (defined LEGENDRE || defined LEGENDRE_MIX)
         assert(max_l%2==0); // check maximum ell is even
+#endif
+#ifdef LEGENDRE_MIX
+        if (mu_bin_legendre_file == NULL) mu_bin_legendre_file = (char *) default_mu_bin_legendre_file; // no mu bin Legendre file specified
+        new (&mu_bin_legendre_factors) MuBinLegendreFactors(mu_bin_legendre_file, mbin, max_l); // construct in place
+#elif defined LEGENDRE
         assert(max_l<=10); // ell>10 not yet implemented!
         mbin = max_l/2+1; // number of angular bins is set to number of Legendre bins
         if (phi_file==NULL) {phi_file = (char *) default_phi_file;} // no phi file specified
@@ -504,6 +542,7 @@ public:
 #endif
 		printf("Number of galaxies = %6.5e\n",nofznorm);
         printf("Maximum number of integration loops = %d\n",max_loops);
+        printf("Number of output subsamples = %d\n", no_subsamples);
         printf("Output directory: '%s'\n",out_file);
 
 	}
@@ -537,8 +576,12 @@ private:
 	    fprintf(stderr, "   -cor2 <file>: (Optional) File location of input xi_2 correlation function file.\n");
 	    fprintf(stderr, "   -norm2 <nofznorm2>: (Optional) Number of galaxies in the survey for the second tracer set.\n");
 
-#ifdef LEGENDRE
+#if (defined LEGENDRE || defined LEGENDRE_MIX)
         fprintf(stderr, "   -max_l <max_l>: Maximum legendre multipole (must be even)\n");
+#endif
+#ifdef LEGENDRE_MIX
+        fprintf(stderr, "   -mu_bin_legendre_file <filename>: Mu bin Legendre factors file\n");
+#elif defined LEGENDRE
         fprintf(stderr, "   -phi_file <filename>: Survey correction function coefficient file\n");
         fprintf(stderr, "\n");
         fprintf(stderr, "   -phi_file12 <filename>: (Optional) Survey correction function coefficient file for fields 1 x 2\n");
@@ -565,6 +608,7 @@ private:
         fprintf(stderr, "   -jackknife2 <filename>: (Optional) File containing the {2,2} jackknife weights (normally computed from Corrfunc)\n");
 #endif
         fprintf(stderr, "   -maxloops <max_loops>: Maximum number of integral loops\n");
+        fprintf(stderr, "   -loopspersample <loops_per_sample>: Number of loops to collapse into each subsample. Default 1.\n");
         fprintf(stderr, "   -N2 <N2>: Number of secondary particles to choose per primary particle\n");
         fprintf(stderr, "   -N3 <N3>: Number of tertiary particles to choose per secondary particle\n");
         fprintf(stderr, "   -N4 <N4>: Number of quaternary particles to choose per tertiary particle\n");
