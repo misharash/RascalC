@@ -83,19 +83,20 @@ id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # known cases where more loops are needed consistently
 if id in (0, 1, 3, 4): maxloops *= 2
-elif id in (2, 15): maxloops *= 3
-elif id in (14,): maxloops *= 4
+elif id in (2,): maxloops *= 3
+elif id in (16, 17): maxloops //= 2 # QSO converge very well and take rather long time
+# reset BGS (14, 15) because 4x more randoms now
 
 id //= 2 # extracted all needed info from parity, move on
 tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
-sms = [10] * 7 + [15] * 2
+sms = [10] * 7 + [15, 20]
 # need 2 * 9 = 18 jobs in this array
 
 tlabels = [tracers[id]] # tracer labels for filenames
 sm = sms[id] # smoothing scale in Mpc/h
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 1 if tlabels[0].startswith("BGS") else 4 # 1 random for BGS only
+nrandoms = 4 # for all tracers
 
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
 no_subsamples_per_file = maxloops // loopspersample

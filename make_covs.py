@@ -24,7 +24,8 @@ reg_comb = "GCcomb"
 
 tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
-sms = [10] * 7 + [15] * 2
+sms = [10] * 7 + [15, 20]
+nrandoms = 4 # for all tracers
 
 skip_bins = 5
 skip_l = 0
@@ -114,7 +115,6 @@ def sha256sum(filename: str, buffer_size: int = 128*1024) -> str: # from https:/
 
 # Make steps for making covs
 for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
-    nrandoms = 1 if tracer.startswith("BGS") else 4 # 1 random for BGS only
     tlabels = [tracer]
     reg_results, reg_pycorr_names = [], []
     if jackknife: reg_results_jack = []
