@@ -51,7 +51,7 @@ else:
 # Set up logging
 logfile = "make_covs.log.txt"
 
-def print_and_log(s: str) -> None:
+def print_and_log(s: object = "") -> None:
     print(s)
     print_log(s)
 print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
