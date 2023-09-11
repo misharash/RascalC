@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --job-name=RascalC-Y1-v0.6-blinded-recon
-#SBATCH --array=0-5,8-11,14-17 # all tracers except LRG and ELG full ranges
+#SBATCH --array=0-3,14-16 # underconverged parts
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
