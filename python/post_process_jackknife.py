@@ -129,6 +129,9 @@ jack_prec = Psi(alpha_best)
 c2f,c3f,c4f=load_matrices('full',jack=False)
 full_cov = c4f+c3f*alpha_best+c2f*alpha_best**2.
 
+# Check positive definiteness
+assert np.all(np.linalg.eigvalsh(full_cov) > 0), "The full covariance is not positive definite - insufficient convergence"
+
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")
 # Load in partial jackknife theoretical matrices

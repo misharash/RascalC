@@ -82,6 +82,9 @@ alpha = alpha_best # to save editing later
 # Compute full covariance matrices and precision
 full_cov = c4f + c3f*alpha + c2f*alpha**2
 
+# Check positive definiteness
+assert np.all(np.linalg.eigvalsh(full_cov) > 0), "The full covariance is not positive definite - insufficient convergence"
+
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")
 partial_cov = alpha**2 * c2s + alpha * c3s + c4s

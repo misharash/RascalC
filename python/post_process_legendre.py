@@ -48,6 +48,9 @@ c2,c3,c4=load_matrices('full')
 full_cov = c4+c3*alpha+c2*alpha**2.
 n_bins = len(c4)
 
+# Check positive definiteness
+assert np.all(np.linalg.eigvalsh(full_cov) > 0), "The full covariance is not positive definite - insufficient convergence"
+
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")
 # Load in partial theoretical matrices
