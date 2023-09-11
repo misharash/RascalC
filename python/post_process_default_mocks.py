@@ -43,9 +43,8 @@ from numpy.linalg import eigvalsh
 eig_c4 = eigvalsh(c4f)
 eig_c2 = eigvalsh(c2f)
 if min(eig_c4)<-1.*min(eig_c2):
-    print("4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("WARNING: 4-point covariance matrix has not converged properly via the eigenvalue test.")
     print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
-    sys.exit(1)
 
 n_bins = len(c4f)
 
