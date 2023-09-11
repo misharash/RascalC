@@ -147,6 +147,9 @@ if min(eig_c4f)<min(eig_c2f)*-1.:
     print("WARNING: Full 4-point covariance matrix has not converged properly via the eigenvalue test.")
     print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4f), min(eig_c2f)))
 
+# Check positive definiteness of the final covariance matrix
+assert np.all(np.linalg.eigvalsh(full_cov) > 0), "The full covariance is not positive definite - insufficient convergence"
+
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")
 # Load in partial jackknife theoretical matrices
