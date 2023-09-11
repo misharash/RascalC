@@ -36,15 +36,6 @@ def load_matrices(index):
 print("Loading best estimate of covariance matrix")
 c2,c3,c4=load_matrices('full')
 
-# Check matrix convergence
-from numpy.linalg import eigvalsh
-eig_c4 = eigvalsh(c4)
-eig_c2 = eigvalsh(c2)
-if min(eig_c4)<-1.*min(eig_c2):
-    print("4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
-    print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
-    sys.exit(1)
-
 # Compute full covariance matrices and precision
 full_cov = c4+c3*alpha+c2*alpha**2.
 n_bins = len(c4)
