@@ -100,6 +100,7 @@ if do_counts or cat_randoms:
     cat_randoms_files = [f"cutsky_{tlabel}_S1000-{nrandoms+9}00_{nrandoms}X.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
 z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
+feff = "0.830"
 
 # CF options
 convert_cf = 1
@@ -107,7 +108,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/EZmock/CutSky_6Gpc/LRG/Xi/Pre/forero/z0.800/cutsky_LRG_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed{i+1}/{reg}/{z_min}z{z_max}f0.830/pre_tpcf.pkl.npy") for i in range(1000)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/EZmock/CutSky_6Gpc/LRG/Xi/Pre/forero/z0.800/cutsky_LRG_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed{i+1}/{reg}/{z_min}z{z_max}f{feff}/pre_tpcf.pkl.npy") for i in range(1000)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
