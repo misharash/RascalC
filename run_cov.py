@@ -101,6 +101,7 @@ if do_counts or cat_randoms:
     cat_randoms_files = [f"cutsky_{tlabel}_S1000-{nrandoms+9}00_{nrandoms}X.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
 z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
+feff = "0.830"
 
 # CF options
 convert_cf = 1
@@ -108,7 +109,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/EZmock/CutSky_6Gpc/LRG/Xi/Post/forero/fiducial_settings/z0.800/cutsky_LRG_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed{i+1}/{reg}/{z_min}z{z_max}f0.830/{recon}_tpcf.pkl.npy") for i in range(1000)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/KP45/MC/Clustering/EZmock/CutSky_6Gpc/LRG/Xi/Post/forero/fiducial_settings/z0.800/cutsky_LRG_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed{i+1}/{reg}/{z_min}z{z_max}f{feff}/{recon}_tpcf.pkl.npy") for i in range(1000)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -124,9 +125,9 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife or count_ndata:
-    data_ref_filenames = [check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/z0.800/cutsky_{tlabel}_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed1_{reg}.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
+    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/cosmosim/FirstGenMocks/EZmock_post/CutSky_6Gpc/{tlabel}/z0.800/cutsky_{tlabel}_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed1/{reg}/{z_min}z{z_max}f{feff}/recon_dat.npy") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/FirstGenMocks/EZmock/CutSky_6Gpc/{tlabel}/Random/cutsky_{tlabel}_S{i+10}00_{reg}.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/FirstGenMocks/EZmock_post/CutSky_6Gpc/{tlabel}/z0.800/cutsky_{tlabel}_z0.800_EZmock_B6000G1536Z0.8N216424548_b0.385d4r169c0.3_seed{i+1}/{reg}/{z_min}z{z_max}f{feff}/recon_{recon}.npy") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
