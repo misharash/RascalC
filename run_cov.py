@@ -54,12 +54,12 @@ nbin_cf = 200 # radial bins for input 2PCF
 mbin_cf = 25 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
-nthread = 30 # number of OMP threads to use
-maxloops = 30 # number of integration loops per filename
-loopspersample = 1 # number of loops to collapse into one subsample
-N2 = 20 # number of secondary cells/particles per primary cell
-N3 = 40 # number of third cells/particles per secondary cell/particle
-N4 = 80 # number of fourth cells/particles per third cell/particle
+nthread = 256 # number of OMP threads to use
+maxloops = 1024 # number of integration loops per filename
+loopspersample = 64 # number of loops to collapse into one subsample
+N2 = 5 # number of secondary cells/particles per primary cell
+N3 = 10 # number of third cells/particles per secondary cell/particle
+N4 = 20 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
 nside = 401 # grid size for accelerating pair count
@@ -79,7 +79,7 @@ tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 reg = "NGC" # region
 tlabels = ["LRG"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 20
+nrandoms = 5
 
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
 no_subsamples_per_file = maxloops // loopspersample
