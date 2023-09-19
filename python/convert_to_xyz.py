@@ -68,6 +68,12 @@ if input_file.endswith(".fits"):
             all_w *= 1/(1+P0*data[NZ_name]) if manual_FKP else data["WEIGHT_FKP"]
         if "WEIGHT" not in colnames and not use_FKP_weights: print("WARNING: no weights found, assigned unit weight to each particle.")
         if mask: filt = (data["STATUS"] & mask == mask) # all 1-bits from mask have to be set in STATUS; skip if mask=0
+elif any(input_file.endswith(f".np{l}") for l in ("y", "z")):
+    # load npy file, correct for pyrecon
+    assert not use_FKP_weights or manual_FKP, "FKP weights not done manually are not supported with a numpy file"
+    with np.load(input_file) as f:
+        all_ra, all_dec, all_z, all_nz = f.T
+        all_w = 1/(1+P0*all_nz) if manual_FKP else np.ones_like(all_z)
 else:
     # read text file
     all_ra, all_dec, all_z, all_w = np.loadtxt(input_file, usecols=range(4)).T
