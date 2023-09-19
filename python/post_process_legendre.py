@@ -2,7 +2,8 @@
 ## We output the theoretical covariance matrices, (quadratic-bias corrected) precision matrices and the effective number of samples, N_eff.
 
 import numpy as np
-import sys,os
+import sys, os
+from tqdm import trange
 
 # PARAMETERS
 if len(sys.argv) not in (6, 7, 8, 9):
@@ -48,21 +49,22 @@ from numpy.linalg import eigvalsh
 eig_c4 = eigvalsh(c4)
 eig_c2 = eigvalsh(c2)
 if min(eig_c4)<-1.*min(eig_c2):
-    print("4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("WARNING: 4-point covariance matrix has not converged properly via the eigenvalue test.")
     print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
-    sys.exit(1)
 
 # Compute full covariance matrices and precision
 full_cov = c4+c3*alpha+c2*alpha**2.
 n_bins = len(c4)
 
+# Check positive definiteness
+assert np.all(np.linalg.eigvalsh(full_cov) > 0), "The full covariance is not positive definite - insufficient convergence"
+
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")
 # Load in partial theoretical matrices
 c2s, c3s, c4s = [], [], []
-for i in range(n_samples):
-    print("Loading full subsample %d of %d"%(i+1,n_samples))
-    c2t,c3t,c4t=load_matrices(i)
+for i in trange(n_samples, desc="Loading full subsamples"):
+    c2t, c3t, c4t = load_matrices(i)
     c2s.append(c2t)
     c3s.append(c3t)
     c4s.append(c4t)

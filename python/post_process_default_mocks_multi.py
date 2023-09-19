@@ -3,6 +3,7 @@
 
 import numpy as np
 import sys,os
+from tqdm import trange
 
 # PARAMETERS
 if len(sys.argv) not in (7, 8):
@@ -69,8 +70,7 @@ for i, index in enumerate(indices):
 
     # Load in partial jackknife theoretical matrices
     c2s, c3s, c4s = [], [], []
-    for j in range(n_samples):
-        print("Loading field %d subsample %d of %d" % (i+1, j+1, n_samples))
+    for j in trange(n_samples, desc=f"Loading field {i+1} subsamples"):
         c2, c3, c4 = load_matrices(j, i+1)
         c2s.append(c2)
         c3s.append(c3)
@@ -219,9 +219,12 @@ def matrix_readin(suffix='full'):
 c_tot, c_comb = matrix_readin()
 n_bins = len(c_tot[0,0])
 
+# Check positive definiteness
+assert np.all(np.linalg.eigvalsh(c_comb) > 0), "The full covariance is not positive definite - insufficient convergence"
+
 # Load subsampled matrices (all submatrices combined)
 c_subsamples=[]
-for i in range(n_samples):
+for i in trange(n_samples, desc="Loading full subsamples"):
     _, tmp = matrix_readin(i)
     c_subsamples.append(tmp)
 c_subsamples = np.array(c_subsamples)

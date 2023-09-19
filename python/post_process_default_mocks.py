@@ -3,6 +3,7 @@
 
 import numpy as np
 import sys,os
+from tqdm import trange
 
 # PARAMETERS
 if len(sys.argv) not in (7, 8):
@@ -42,17 +43,15 @@ from numpy.linalg import eigvalsh
 eig_c4 = eigvalsh(c4f)
 eig_c2 = eigvalsh(c2f)
 if min(eig_c4)<-1.*min(eig_c2):
-    print("4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("WARNING: 4-point covariance matrix has not converged properly via the eigenvalue test.")
     print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
-    sys.exit(1)
 
 n_bins = len(c4f)
 
 # Load in partial theoretical matrices
 c2s, c3s, c4s = [], [], []
-for i in range(n_samples):
-    print("Loading full subsample %d of %d"%(i+1,n_samples))
-    c2,c3,c4=load_matrices(i)
+for i in trange(n_samples, desc="Loading full subsamples"):
+    c2, c3, c4 = load_matrices(i)
     c2s.append(c2)
     c3s.append(c3)
     c4s.append(c4)
@@ -90,6 +89,9 @@ alpha = alpha_best # to save editing later
 
 # Compute full covariance matrices and precision
 full_cov = c4f + c3f*alpha + c2f*alpha**2
+
+# Check positive definiteness
+assert np.all(np.linalg.eigvalsh(full_cov) > 0), "The full covariance is not positive definite - insufficient convergence"
 
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")

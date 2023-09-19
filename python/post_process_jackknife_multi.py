@@ -4,6 +4,7 @@
 
 import numpy as np
 import sys,os
+from tqdm import tqdm
 
 # PARAMETERS
 if len(sys.argv) not in (9, 10):
@@ -150,8 +151,7 @@ for i,index in enumerate(indices):
 
     # Load in partial jackknife theoretical matrices
     c2s, c3s, c4s = [], [], []
-    for j in range(n_samples):
-        print("Loading field %d jackknife subsample %d of %d"%(i+1,j+1,n_samples))
+    for j in tqdm(range(n_samples), f"Loading field {i+1} jackknife subsamples"):
         c2,c3,c4=load_matrices(j,i+1)
         c2s.append(c2)
         c3s.append(c3)
@@ -364,10 +364,13 @@ def matrix_readin(suffix='full'):
 c_tot,c_comb, cj_tot, cj_comb = matrix_readin()
 n_bins = len(c_tot[0,0])
 
+# Check positive definiteness
+assert np.all(np.linalg.eigvalsh(c_comb) > 0), "The full covariance is not positive definite - insufficient convergence"
+
 # Load subsampled matrices
 c_subsamples,cj_subsamples=[],[]
-for i in range(n_samples):
-    _,tmp,_,tmpj=matrix_readin(i)
+for i in tqdm(range(n_samples), "Loading full and jackknife subsamples"):
+    _, tmp, _, tmpj = matrix_readin(i)
     c_subsamples.append(tmp)
     cj_subsamples.append(tmpj)
 
