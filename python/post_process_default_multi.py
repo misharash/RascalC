@@ -138,6 +138,9 @@ def matrix_readin(suffix='full'):
 c_tot, c_comb = matrix_readin()
 n_bins = len(c_tot[0,0])
 
+# Check positive definiteness
+assert np.all(np.linalg.eigvalsh(c_comb) > 0), "The full covariance is not positive definite - insufficient convergence"
+
 # Load subsampled matrices (all submatrices combined)
 c_subsamples=[]
 for i in trange(n_samples, desc="Loading full subsamples"):

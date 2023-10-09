@@ -92,9 +92,8 @@ from numpy.linalg import eigvalsh
 eig_c4 = eigvalsh(c4j)
 eig_c2 = eigvalsh(c2j)
 if min(eig_c4) < -1. * min(eig_c2):
-    print("Jackknife 4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("WARNING: Jackknife 4-point covariance matrix has not converged properly via the eigenvalue test.")
     print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4), min(eig_c2)))
-    sys.exit(1)
 
 # Load in partial jackknife theoretical matrices
 c2s, c3s, c4s = [], [], []
@@ -145,9 +144,11 @@ full_cov = c4f + c3f*alpha_best + c2f*alpha_best**2.
 eig_c4f = eigvalsh(c4f)
 eig_c2f = eigvalsh(c2f)
 if min(eig_c4f)<min(eig_c2f)*-1.:
-    print("Full 4-point covariance matrix has not converged properly via the eigenvalue test. Exiting")
+    print("WARNING: Full 4-point covariance matrix has not converged properly via the eigenvalue test.")
     print("Min eigenvalue of C4 = %.2e, min eigenvalue of C2 = %.2e" % (min(eig_c4f), min(eig_c2f)))
-    sys.exit(1)
+
+# Check positive definiteness of the final covariance matrix
+assert np.all(np.linalg.eigvalsh(full_cov) > 0), "The full covariance is not positive definite - insufficient convergence"
 
 # Compute full precision matrix
 print("Computing the full precision matrix estimate:")
