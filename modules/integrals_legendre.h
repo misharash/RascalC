@@ -15,6 +15,9 @@ public:
 private:
     int nbin, mbin, max_l;
     Float rmin,rmax,mumin,mumax; //Ranges in r and mu
+#ifdef RP_CUT
+    Float rp_cut;
+#endif
     Float *r_high, *r_low; // Max and min of each radial bin
     Float *c2, *c3, *c4; // Arrays to accumulate integrals
     char* out_file;
@@ -68,6 +71,10 @@ public:
         mumax=par->mumax;
         mumin=par->mumin;
 
+#ifdef RP_CUT
+        rp_cut = par->rp_cut;
+#endif
+
         r_high = par->radial_bins_high;
         r_low = par->radial_bins_low;
     }
@@ -92,9 +99,12 @@ public:
         }
     }
 
-    inline int get_radial_bin(Float r){
-        // Computes radial bin
-
+    inline int get_radial_bin(Float r, Float mu) {
+        // First of all, check r_p cut if applicable
+#ifdef RP_CUT
+        if (r * sqrt(1. - mu*mu) < rp_cut) return -1; // r_p=r*sin(theta), while mu=cos(theta). If r_p is smaller than the cut value, the pair does not fit into any bins; -1 is one of the values indicating this handled further in the code.
+#endif
+        // Now define which r bin we are in;
         Float* r_higher = std::upper_bound(r_high, r_high + nbin, r); // binary search for r_high element higher than r
         int which_bin = r_higher - r_high; // bin index is pointer difference; will be nbin if value not found, i.e. if we are above top bin
         if (which_bin < nbin) // safety check unless we are above top bin already
@@ -122,7 +132,7 @@ public:
                 }
                 pi = pi_list[i]; // first particle
                 cleanup_l(pi.pos,pj.pos,rij_mag,rij_mu); // define |r_ij| and ang(r_ij)
-                tmp_bin = get_radial_bin(rij_mag); // radial bin
+                tmp_bin = get_radial_bin(rij_mag, rij_mu); // radial bin
                 if ((tmp_bin<0)||(tmp_bin>=max_bin)){
                     wij[i]=-1;
                     continue;
@@ -168,7 +178,7 @@ public:
         int tmp_bin, tmp_full_bin;
 
         cleanup_l(pj.pos,pk.pos,rjk_mag,rjk_mu);
-        tmp_bin = get_radial_bin(rjk_mag); // radial bin
+        tmp_bin = get_radial_bin(rjk_mag, rjk_mu); // radial bin
         int max_bin = nbin,out_bin;
         Float correction_factors,polynomials_jk[mbin];
 
@@ -230,7 +240,7 @@ public:
 
         int max_bin = nbin, out_bin;
         Float correction_factors, polynomials_kl[mbin];
-        tmp_bin = get_radial_bin(rkl_mag); // radial kl bin
+        tmp_bin = get_radial_bin(rkl_mag, rkl_mu); // radial kl bin
 
         if ((tmp_bin<0)||(tmp_bin>=max_bin)) return; // if not in correct bin
         cleanup_l(pl.pos,pj.pos,rjl_mag,rjl_mu);

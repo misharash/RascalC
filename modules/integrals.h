@@ -18,6 +18,9 @@ private:
     CorrelationFunction *cf12, *cf13, *cf24;
     int nbin, mbin, no_bins, size2;
     Float rmin,rmax,mumin,mumax,dmu; //Ranges in r and mu
+#ifdef RP_CUT
+    Float rp_cut;
+#endif
     Float *r_high, *r_low; // Max and min of each radial bin
 #ifndef LEGENDRE_MIX
     Float *Ra; // Array to accumulate RR counts, does not seem to make sense if the output is not s,mu binned
@@ -116,6 +119,10 @@ public:
         mumax=par->mumax;
         mumin=par->mumin;
 
+#ifdef RP_CUT
+        rp_cut = par->rp_cut;
+#endif
+
         r_high = par->radial_bins_high;
         r_low = par->radial_bins_low;
 
@@ -180,7 +187,11 @@ public:
 
     inline int getbin(Float r, Float mu){
         // Linearizes 2D indices
-        // First define which r bin we are in;
+        // First of all, check r_p cut if applicable
+#ifdef RP_CUT
+        if (r * sqrt(1. - mu*mu) < rp_cut) return -1; // r_p=r*sin(theta), while mu=cos(theta). If r_p is smaller than the cut value, the pair does not fit into any bins; -1 is one of the values indicating this handled further in the code.
+#endif
+        // Now define which r bin we are in;
         Float* r_higher = std::upper_bound(r_high, r_high + nbin, r); // binary search for r_high element higher than r
         int which_bin = r_higher - r_high; // bin index is pointer difference; will be nbin if value not found, i.e. if we are above top bin
         if (which_bin < nbin) // safety check unless we are above top bin already

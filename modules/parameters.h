@@ -187,6 +187,11 @@ public:
 	// The maximum mu of the largest bin.
 	Float mumax = 1.0;
 
+#ifdef RP_CUT
+	// r_p value, pairs with a smaller separation perpendicular to the line of sight are not considered in the correlation function
+	Float rp_cut = 2.5;
+#endif
+
     // Number of loops over which to refine the correlation function
     int cf_loops = 10;
 
@@ -252,6 +257,9 @@ public:
         else if (!strcmp(argv[i],"-rescale")) rescale = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-mumax")) mumax = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-mumin")) mumin = atof(argv[++i]);
+#ifdef RP_CUT
+		else if (!strcmp(argv[i],"-rp_cut")) rp_cut = atof(argv[++i]);
+#endif
         else if (!strcmp(argv[i],"-cf_loops")) cf_loops = atoi(argv[++i]);
 		else if (!strcmp(argv[i],"-xicut")) xicutoff = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-norm")) nofznorm = atof(argv[++i]);
@@ -354,7 +362,7 @@ public:
         assert(max_loops % loops_per_sample == 0); // group size need to divide the number of loops
         no_subsamples = max_loops / loops_per_sample;
 #ifndef THREE_PCF
-	    //assert(mumin>=0); // We take the absolte value of mu
+	    //assert(mumin>=0); // We take the absolute value of mu
 #endif
 	    assert(mumax<=1); // mu > 1 makes no sense
 
@@ -540,6 +548,9 @@ public:
 		printf("Mu Bins = %d\n", mbin);
 		printf("Mu Binning = {%6.5f, %6.5f, %6.5f}\n",mumin,mumax,(mumax-mumin)/mbin);
 #endif
+#ifdef RP_CUT
+		printf("r_p cut = %6.5f\n", rp_cut);
+#endif
 		printf("Number of galaxies = %6.5e\n",nofznorm);
         printf("Maximum number of integration loops = %d\n",max_loops);
         printf("Number of output subsamples = %d\n", no_subsamples);
@@ -620,6 +631,9 @@ private:
 #endif
         fprintf(stderr, "   -mumin <mumin> : Minimum mu binning to use.\n");
         fprintf(stderr, "   -mumax <mumax> : Maximum mu binning to use.\n");
+#ifdef RP_CUT
+        fprintf(stderr, "   -rp_cut <rp_cut> : Minimum separation perpendicular to the line of sight to use.\n");
+#endif
         fprintf(stderr, "   -cf_loops <cf_loops>: Number of iterations over which to refine the correlation functions.\n");
         fprintf(stderr, "   -boxsize <boxsize> : If creating particles randomly, this is the periodic size of the cubic computational domain.\n");
         fprintf(stderr, "           Default 400. If reading from file, this is reset dynamically creating a cuboidal box.\n");

@@ -2,7 +2,7 @@
 
 CC = gcc
 CFLAGS = -g -O3 -Wall -MMD
-CXXFLAGS = -O3 -Wall -MMD -DOPENMP -DLEGENDRE_MIX -DJACKKNIFE -DPRINTPERCENTS
+CXXFLAGS = -O3 -Wall -MMD -DOPENMP -DLEGENDRE_MIX -DJACKKNIFE -DRP_CUT -DPRINTPERCENTS
 #-DOPENMP  # use this to run multi-threaded with OPENMP
 #-DPERIODIC # use this to enable periodic behavior
 #-DLEGENDRE # use this to compute 2PCF covariances in Legendre bins (original mode, corresponding to direct accumulation into multipoles from pair counts)
@@ -10,6 +10,7 @@ CXXFLAGS = -O3 -Wall -MMD -DOPENMP -DLEGENDRE_MIX -DJACKKNIFE -DPRINTPERCENTS
 # without either of the two Legendre flags above, the covariance is computed in s,µ bins
 #-DJACKKNIFE # use this to compute (r,mu)-space 2PCF covariances and jackknife covariances. Incompatible with -DLEGENDRE but works with -DLEGENDRE_MIX
 #-DTHREE_PCF # use this to compute 3PCF autocovariances
+#-DRP_CUT # use this to produce covariances corresponding to 2PCF measurements with r_p cut
 #-DPRINTPERCENTS # use this to print percentage of progress in each loop. This can be a lot of output
 
 # Known OS-specific choices
