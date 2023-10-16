@@ -76,8 +76,8 @@ def exec_print_and_log(commandline: str, terminate_on_error: bool = False) -> No
             sys.exit(1)
 
 def my_make(goal: str, deps: list[str], *cmds: tuple[str], force: bool = False, verbose: bool = False) -> None:
-    need_make, current_dep_hashes = hash_check(goal, deps, verbose=verbose)
-    if need_make or force: # execute need_make anyway
+    need_make, current_dep_hashes = hash_check(goal, deps, force=force, verbose=verbose)
+    if need_make:
         print_and_log(f"Making {goal} from {deps}")
         for cmd in cmds:
             ret = exec_print_and_log(cmd)
@@ -87,7 +87,7 @@ def my_make(goal: str, deps: list[str], *cmds: tuple[str], force: bool = False, 
         hash_dict[goal] = current_dep_hashes # update the dependency hashes only if the make was successfully performed
         print_and_log()
 
-def hash_check(goal: str, srcs: list[str], verbose: bool = False) -> tuple[bool, dict]:
+def hash_check(goal: str, srcs: list[str], force: bool = False, verbose: bool = False) -> tuple[bool, dict]:
     # First output indicates whether we need to/should execute the recipe to make goal from srcs
     # Also returns the src hashes in the dictionary current_src_hashes
     current_src_hashes = {}
@@ -96,7 +96,7 @@ def hash_check(goal: str, srcs: list[str], verbose: bool = False) -> tuple[bool,
             if verbose: print_and_log(f"Can not make {goal} from {srcs}: {src} missing\n") # and next operations can be omitted
             return False, current_src_hashes
         current_src_hashes[src] = sha256sum(src)
-    if not os.path.exists(goal): return True, current_src_hashes # need to make if goal is missing, but hashes needed to be collected beforehand
+    if not os.path.exists(goal) or force: return True, current_src_hashes # need to make if goal is missing or we are forcing, but hashes needed to be collected beforehand, also ensuring the existence of sources
     try:
         if set(current_src_hashes.values()) == set(hash_dict[goal].values()): # comparing to hashes of sources used to build the goal last, regardless of order and names. Collisions seem unlikely
             if verbose: print_and_log(f"{goal} uses the same {srcs} as previously, no need to make\n")
