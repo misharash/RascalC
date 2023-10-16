@@ -11,6 +11,7 @@ rascalc_results = str(sys.argv[1])
 output_cov_file = str(sys.argv[2])
 
 with np.load(rascalc_results) as f:
-    np.savetxt(output_cov_file, f['full_theory_covariance'])
+    np.savetxt(output_cov_file, f['full_theory_covariance'], header = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]))
+    # include shot-noise rescaling value in the header
     print(f"Max abs eigenvalue of bias correction matrix is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
     # if the printed value is small the cov matrix should be safe to invert as is

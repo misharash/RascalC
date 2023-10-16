@@ -12,6 +12,7 @@ n = int(sys.argv[2])
 output_cov_file = str(sys.argv[3])
 
 with np.load(rascalc_results) as f:
+    header = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]) # form the header with shot-noise rescaling value
     cov = f['full_theory_covariance']
     print(f"Max abs eigenvalue of bias correction matrix is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
     # if the printed value is small the cov matrix should be safe to invert as is
@@ -22,4 +23,4 @@ n_l = n_bins // n
 cov = cov.reshape(n, n_l, n, n_l) # convert to 4D from 2D with [r, l] ordering for both rows and columns
 cov = cov.transpose(1, 0, 3, 2) # change orderng to [l, r] for both rows and columns
 cov = cov.reshape(n_bins, n_bins) # convert back from 4D to 2D
-np.savetxt(output_cov_file, cov)
+np.savetxt(output_cov_file, cov, header=header) # includes shot-noise rescaling value in the header

@@ -25,6 +25,7 @@ if len(sys.argv) >= 11:
 
 # Read RascalC results
 with np.load(rascalc_results1) as f:
+    header1 = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]) # form the header with shot-noise rescaling value
     cov1 = f['full_theory_covariance']
     n_bins = len(cov1)
     assert n_bins % n_l == 0, "Number of bins mismatch"
@@ -34,6 +35,7 @@ with np.load(rascalc_results1) as f:
     cov1 = cov1.reshape(n_bins, n_bins) # convert back from 4D to 2D
     print(f"Max abs eigenvalue of bias correction matrix in 1st results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 with np.load(rascalc_results2) as f:
+    header2 = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]) # form the header with shot-noise rescaling value
     cov2 = f['full_theory_covariance']
     assert n_bins == len(cov2), "Number of bins mismatch"
     cov2 = cov2.reshape(n, n_l, n, n_l) # convert to 4D from 2D with [r, l] ordering for both rows and columns
@@ -42,8 +44,9 @@ with np.load(rascalc_results2) as f:
     print(f"Max abs eigenvalue of bias correction matrix in 2nd results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 # Save to their files if any
 if len(sys.argv) >= 11:
-    np.savetxt(output_cov_file1, cov1)
-    np.savetxt(output_cov_file2, cov2)
+    np.savetxt(output_cov_file1, cov1, header=header1) # includes shot-noise rescaling value in the header
+    np.savetxt(output_cov_file2, cov2, header=header2) # includes shot-noise rescaling value in the header
+header = f"combined from {rascalc_results1} with {header1} and {rascalc_results2} with {header2}" # form the final header to include both
 
 # Read pycorr files to figure out weights of s, mu binned 2PCF
 result = TwoPointCorrelationFunction.load(pycorr_file1)
@@ -85,4 +88,4 @@ pd2 = np.einsum('il,kl,jl,km->ikjm', leg_mu_avg, weight2, (2*ells[:, None]+1) * 
 
 # Produce and save combined cov
 cov = pd1.T.dot(cov1).dot(pd1) + pd2.T.dot(cov2).dot(pd2)
-np.savetxt(output_cov_file, cov)
+np.savetxt(output_cov_file, cov, header=header) # includes source parts and their shot-noise rescaling values in the header
