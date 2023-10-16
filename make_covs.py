@@ -186,23 +186,21 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
             # Recipe: run post-processing
             # Also perform convergence check (optional but nice)
 
-            # Load shot-noise rescaling and make name, if the jack results file exists, otherwise can't do it anyway
-            if os.path.isfile(results_name_jack):
-                with np.load(results_name_jack) as f: shot_noise_rescaling = f['shot_noise_rescaling'][0]
-                cov_name_jack = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled{shot_noise_rescaling:.2f}.txt"
-                # Individual cov file depends on RascalC results
-                my_make(cov_name_jack, [results_name_jack], f"python python/convert_cov_legendre.py {results_name_jack} {nbin_final} {cov_name_jack}")
-                # Recipe: run convert cov
+            # Load shot-noise rescaling and make name
+            cov_name_jack = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt"
+            # Individual cov file depends on RascalC results
+            my_make(cov_name_jack, [results_name_jack], f"python python/convert_cov_legendre.py {results_name_jack} {nbin_final} {cov_name_jack}")
+            # Recipe: run convert cov
 
-                # Here is a special case where the goal name can change (with shot-noise rescaling), so let us delete alternative versions from the directory and the hash dictionary if any
-                # Change of filename does not break the general make logic – the same jack results file must yield the same shot-noise rescaling anyway
-                cov_name_jack_pattern = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled*.txt"
-                # Filenames
-                for fname in glob(cov_name_jack_pattern): # all existing files matching the pattern
-                    if not os.path.samefile(fname, cov_name_jack): os.remove(fname) # if not our result file, delete it
-                # Hash dictionary keys (goal names) - could be independent
-                for key in fnmatch.filter(hash_dict.keys(), cov_name_jack_pattern): # all hash dictionary keys matching the pattern
-                    if key != cov_name_jack: hash_dict.pop(key) # if not our goal name, remove the key (and its value)
+            # Here is a special case where the goal name could change (with shot-noise rescaling), so let us delete alternative versions from the directory and the hash dictionary if any
+            # Change of filename does not break the general make logic – the same jack results file must yield the same shot-noise rescaling anyway
+            cov_name_jack_pattern = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled*.txt"
+            # Filenames
+            for fname in glob(cov_name_jack_pattern): # all existing files matching the pattern
+                if not os.path.samefile(fname, cov_name_jack): os.remove(fname) # if not our result file, delete it
+            # Hash dictionary keys (goal names) - could be independent
+            for key in fnmatch.filter(hash_dict.keys(), cov_name_jack_pattern): # all hash dictionary keys matching the pattern
+                if key != cov_name_jack: hash_dict.pop(key) # if not our goal name, remove the key (and its value)
 
     if len(reg_pycorr_names) == len(regs): # if we have pycorr files for all regions
         if len(reg_results) == len(regs): # if we have RascalC results for all regions
