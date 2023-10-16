@@ -22,15 +22,18 @@ if len(sys.argv) >= 15:
 
 # Read RascalC results
 with np.load(rascalc_results1) as f:
+    header1 = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]) # form the header with shot-noise rescaling value
     cov1 = f['full_theory_covariance']
     print(f"Max abs eigenvalue of bias correction matrix in 1st results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 with np.load(rascalc_results2) as f:
+    header2 = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]) # form the header with shot-noise rescaling value
     cov2 = f['full_theory_covariance']
     print(f"Max abs eigenvalue of bias correction matrix in 2nd results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
 # Save to their files if any
 if len(sys.argv) >= 15:
-    np.savetxt(output_cov_file1, cov1)
-    np.savetxt(output_cov_file2, cov2)
+    np.savetxt(output_cov_file1, cov1, header=header1) # includes shot-noise rescaling value in the header
+    np.savetxt(output_cov_file2, cov2, header=header2) # includes shot-noise rescaling value in the header
+header = f"combined from {rascalc_results1} with {header1} and {rascalc_results2} with {header2}" # form the final header to include both
 
 # Read pycorr files to figure out weights
 weight1 = np.zeros(0)
@@ -49,4 +52,4 @@ for pycorr_file2 in pycorr_files2:
 # Produce and save combined cov
 # following xi = (xi1 * weight1 + xi2 * weight2) / (weight1 + weight2)
 cov = (cov1 * weight1[None, :] * weight1[:, None] + cov2 * weight2[None, :] * weight2[:, None]) / (weight1 + weight2)[None, :] / (weight1 + weight2)[:, None]
-np.savetxt(output_cov_file, cov)
+np.savetxt(output_cov_file, cov, header=header) # includes source parts and their shot-noise rescaling values in the header

@@ -24,6 +24,7 @@ bias2 = float(sys.argv[10]) if len(sys.argv) >= 11 else 1
 if any(rascalc_results.endswith(ext) for ext in (".npy", ".npz")):
     # read numpy file
     with np.load(rascalc_results) as f:
+        header = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]) # form the header with shot-noise rescaling value
         cov_in = f['full_theory_covariance']
         n_bins = len(cov_in)
         assert n_bins % (3*n_l) == 0, "Number of bins mismatch"
@@ -39,6 +40,12 @@ else:
     assert n_bins % (3*n_l) == 0, "Number of bins mismatch"
     n = n_bins // (3*n_l)
     # assume it has been transposed
+    # read header line if present
+    header = '' # blank header by default
+    with open(rascalc_results) as f:
+        l = f.readline() # read the first line
+        if l[0] == '#': # if it starts as a comment
+            header = l[1:].strip() # take the rest of it as header, removing the leading/trailing spaces and the newline
 
 # Read pycorr files to figure out weights
 weights = []
@@ -81,4 +88,4 @@ pd = np.einsum('il,tkl,jl,km->tikjm', leg_mu_avg, weights, (2*ells[:, None]+1) *
 
 # Produce and save combined cov
 cov_out = pd.T.dot(cov_in).dot(pd)
-np.savetxt(output_cov_file, cov_out)
+np.savetxt(output_cov_file, cov_out, header=header)
