@@ -33,11 +33,12 @@ z_max = float(sys.argv[4])
 # Determine whether to use FKP weights, only applies to (DESI) FITS files
 use_FKP_weights = (sys.argv[5].lower() not in ("0", "false")) if len(sys.argv) >= 6 else False # bool(string) is True for non-empty string, so need to be more specific to allow explicit False from a command-line argument
 # determine if it actually has P0,NZ_name format. Such strings should give True above.
-arg_FKP_split = sys.argv[5].split(",")
-manual_FKP = (len(arg_FKP_split) == 2) # whether to compute FKP weights manually
-if manual_FKP:
-    P0 = float(arg_FKP_split[0])
-    NZ_name = arg_FKP_split[1]
+if use_FKP_weights:
+    arg_FKP_split = sys.argv[5].split(",")
+    manual_FKP = (len(arg_FKP_split) == 2) # whether to compute FKP weights manually
+    if manual_FKP:
+        P0 = float(arg_FKP_split[0])
+        NZ_name = arg_FKP_split[1]
 # Load mask to select STATUS that has all 1-bits set in mask. Also only applies to (DESI) FITS files
 mask = int(sys.argv[6]) if len(sys.argv) >= 7 else 0 # default is 0 - no filtering
 use_weights = (sys.argv[7].lower() not in ("0", "false")) if len(sys.argv) >= 8 else True # use weights by default
