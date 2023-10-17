@@ -86,11 +86,11 @@ elif id in (0, 1, 3, 15): maxloops *= 3
 elif id in (2, 14): maxloops *= 4
 
 id //= 2 # extracted all needed info from parity, move on
-tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
+tracers = ['LRG'] * 4 + ['ELG_LOP'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
 # need 2 * 9 = 18 jobs in this array
 
-tlabels = [tracers[id]] # tracer labels for filenames
+tlabels = [tracers[id] + "_ffa"] # tracer labels for filenames; add ffa for fast fiber assignment
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 1 if tlabels[0].startswith("BGS") else 4 # 1 random for BGS only
 
@@ -120,8 +120,12 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/AbacusSummit/mock{i}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{0}_nran{nrandoms}_split{split_above}.npy") for i in range(25)] for corlabel in tlabels] # average the non-jackknife counts over all the mocks
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
+    if jackknife:
+        # the counts above do not need to have jackknives, the counts below do (can be different file(s))
+        pycorr_jack_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/AbacusSummit/mock{0}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy") for corlabel in tlabels]
+        assert len(pycorr_jack_filenames) == ncorr, "Expected pycorr jack file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
     max_l = 4
@@ -387,7 +391,7 @@ if convert_cf: # this is really for pair counts and jackknives
             if jackknife: # convert jackknife xi and all counts
                 for filename in (xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c]):
                     os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-                exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filenames[c][0]} {xi_jack_names[c]} {jackknife_weights_names[c]} {jackknife_pairs_names[c]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
+                exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_jack_filenames[c]} {xi_jack_names[c]} {jackknife_weights_names[c]} {jackknife_pairs_names[c]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
             else: # convert full, binned pair counts
                 exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
 
