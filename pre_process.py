@@ -17,6 +17,8 @@ data_filename = "/global/cfs/projectdirs/desi/mocks/Uchuu/SKIES_AND_UNIVERSE/Obs
 random_filename = "/global/cfs/projectdirs/desi/mocks/Uchuu/SKIES_AND_UNIVERSE/Obs_data/CMASS_N_data.ran.h5"
 tmpdir = f"CMASS_N_data_{z_min}_{z_max}"
 
+os.makedirs(tmpdir, exist_ok=1)
+
 def change_extension(name: str, ext: str) -> str:
     return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
