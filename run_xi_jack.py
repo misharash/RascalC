@@ -65,5 +65,5 @@ corr = results[0].concatenate_x(*results)
 corr.D1D2.attrs['nsplits'] = n_splits
 
 print("Saving the result")
-corr.save(f"allcounts_BOSS_CMASS_N_{0.43}_{0.7}_lin_njack{60}_nran{n_splits}_split{20}.npy")
+corr.save(f"allcounts_BOSS_CMASS_N_{z_min}_{z_max}_lin_njack{60}_nran{n_splits}_split{20}.npy")
 print("Finished")
