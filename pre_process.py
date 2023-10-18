@@ -67,13 +67,3 @@ data_filename = xyzwj_filename
 xyzwj_filename = change_extension(random_filename, "xyzwj")
 exec_print(f"python python/create_jackknives_pycorr.py {data_filename_rdzw} {random_filename} {xyzwj_filename} {njack}")
 random_filename = xyzwj_filename
-
-# normalizing weights for data
-n_filename = append_to_filename(data_filename, "n") # append letter n to the original filename
-exec_print(f"python python/normalize_weights.py {data_filename} {n_filename}")
-data_filename = n_filename
-
-# normalizing weights for randoms
-n_filename = append_to_filename(random_filename, "n") # append letter n to the original filename
-exec_print(f"python python/normalize_weights.py {random_filename} {n_filename}")
-random_filename = n_filename
