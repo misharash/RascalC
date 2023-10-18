@@ -165,7 +165,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
         results_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
         cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
-        reg_pycorr_names.append(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/xi/smu/allcounts_{tracer}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")
+        reg_pycorr_names.append(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/AbacusSummit/mock{0}/xi/smu/allcounts_{tracer}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")
 
         # RascalC results depend on full output (most straightforwardly)
         my_make(results_name, full_output_names, f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {1} {skip_bins} {skip_l}", f"python python/convergence_check_extra.py {results_name}")
