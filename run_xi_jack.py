@@ -3,6 +3,7 @@
 import os
 import numpy as np
 from pycorr import TwoPointCorrelationFunction
+from tqdm import trange
 
 z_min, z_max = 0.43, 0.7
 
@@ -11,13 +12,13 @@ work_dir = f"CMASS_N_data_{z_min}_{z_max}"
 data_filename = os.path.join(work_dir, "CMASS_N_data.dat.xyzwj")
 random_filename = os.path.join(work_dir, "CMASS_N_data.ran.xyzwj")
 
-# read data
+print("Reading data")
 all_data = np.loadtxt(data_filename)
 n_data, no_columns = all_data.shape
 assert(no_columns == 5, "Unexpected nuber of columns in data")
 # first index is number of points, second is column: 0-2 for positions, 3 for weights, 4 for jackknife region
 
-# read randoms
+print("Reading randoms")
 all_randoms_raw = np.loadtxt(random_filename)
 n_randoms, no_columns = all_randoms_raw.shape
 assert(no_columns == 5, "Unexpected nuber of columns in randoms")
@@ -30,13 +31,14 @@ sum_w_data = sum(all_data[:, 3])
 sum_w_randoms = sum(all_randoms_raw[:, 3])
 goal_w_ratio = sum_w_randoms / sum_w_data / n_splits
 
-# shuffle and split randoms
+print("Shuffling randoms")
 np.random.shuffle(all_randoms_raw) # in place, by first axis
+print("Splitting randoms")
 all_randoms = (all_randoms_raw[i::n_splits] for i in n_splits)
 
 # reweigh each part so that the ratio of randoms to data is the same, just in case
-for i_random, random_part in enumerate(all_randoms):
-    sum_w_random_part = sum(random_part[:, 3])
+for i_random in trange(n_splits, desc="Reweighting random part"):
+    sum_w_random_part = sum(all_randoms[i_random, :, 3])
     w_ratio = sum_w_data / sum_w_random_part
     all_randoms[i_random][:, 3] *= w_ratio / goal_w_ratio
 
@@ -48,7 +50,7 @@ results = []
 for i_split_randoms, edges in enumerate(all_edges):
     result = 0
     D1D2 = None
-    for i_random in range(n_splits if i_split_randoms else 1):
+    for i_random in trange(n_splits if i_split_randoms else 1, desc="Computing xi with random part"):
         these_randoms = all_randoms[i_random] if i_split_randoms else np.concatenate(all_randoms, axis=0)
         tmp = TwoPointCorrelationFunction(mode='smu', edges=edges,
                                           data_positions1=all_data[:, :3], data_weights1=all_data[:, 3], data_samples1=all_data[:, 4],
@@ -58,7 +60,10 @@ for i_split_randoms, edges in enumerate(all_edges):
         D1D2 = tmp.D1D2
         result += tmp
     results.append(result)
+print("Finished xi computations")
 corr = results[0].concatenate_x(*results)
 corr.D1D2.attrs['nsplits'] = n_splits
 
+print("Saving the result")
 corr.save(f"allcounts_BOSS_CMASS_N_{0.43}_{0.7}_lin_njack{60}_nran{n_splits}_split{20}.npy")
+print("Finished")

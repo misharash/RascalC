@@ -10,4 +10,4 @@
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
 
-srun python run_xi_jack.py
+srun python -u run_xi_jack.py
