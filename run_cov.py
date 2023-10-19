@@ -54,12 +54,12 @@ nbin_cf = 100 # radial bins for input 2PCF
 mbin_cf = 10 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
-nthread = 30 # number of OMP threads to use
-maxloops = 30 # number of integration loops per filename
-loopspersample = 1 # number of loops to collapse into one subsample
-N2 = 20 # number of secondary cells/particles per primary cell
-N3 = 40 # number of third cells/particles per secondary cell/particle
-N4 = 80 # number of fourth cells/particles per third cell/particle
+nthread = 256 # number of OMP threads to use
+maxloops = 1024 # number of integration loops per filename
+loopspersample = 64 # number of loops to collapse into one subsample
+N2 = 5 # number of secondary cells/particles per primary cell
+N3 = 10 # number of third cells/particles per secondary cell/particle
+N4 = 20 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
 nside = 251 # grid size for accelerating pair count
