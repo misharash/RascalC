@@ -27,9 +27,8 @@ assert(no_columns == 5, "Unexpected nuber of columns in randoms")
 n_splits = n_randoms // n_data
 
 # get the desired weight ratio
-sum_w_data = sum(all_data[:, 3])
 sum_w_randoms = sum(all_randoms_raw[:, 3])
-goal_w_ratio = sum_w_randoms / sum_w_data / n_splits
+sum_w_goal = sum_w_randoms / n_splits
 
 print("Shuffling randoms")
 np.random.shuffle(all_randoms_raw) # in place, by first axis
@@ -38,9 +37,9 @@ all_randoms = (all_randoms_raw[i::n_splits] for i in n_splits)
 
 # reweigh each part so that the ratio of randoms to data is the same, just in case
 for i_random in trange(n_splits, desc="Reweighting random part"):
-    sum_w_random_part = sum(all_randoms[i_random, :, 3])
-    w_ratio = sum_w_data / sum_w_random_part
-    all_randoms[i_random][:, 3] *= w_ratio / goal_w_ratio
+    sum_w_random_part = sum(all_randoms[i_random][:, 3])
+    w_ratio = sum_w_goal / sum_w_random_part
+    all_randoms[i_random][:, 3] *= w_ratio
 
 # tuple of edges, so that non-split randoms are below 20 and above they are split
 all_edges = ((s_edges, np.linspace(-1, 1, 201)) for s_edges in (np.arange(21), np.arange(20, 201)))
