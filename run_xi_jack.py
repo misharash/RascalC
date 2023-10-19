@@ -1,4 +1,4 @@
-# This is the script to compute the 2PCF with jackknives
+# This is the custom script to compute the 2PCF with jackknives
 
 import os
 import numpy as np
@@ -15,13 +15,13 @@ random_filename = os.path.join(work_dir, "CMASS_N_data.ran.xyzwj")
 print("Reading data")
 all_data = np.loadtxt(data_filename)
 n_data, no_columns = all_data.shape
-assert(no_columns == 5, "Unexpected nuber of columns in data")
+assert(no_columns == 5, "Unexpected number of columns in data")
 # first index is number of points, second is column: 0-2 for positions, 3 for weights, 4 for jackknife region
 
 print("Reading randoms")
 all_randoms_raw = np.loadtxt(random_filename)
 n_randoms, no_columns = all_randoms_raw.shape
-assert(no_columns == 5, "Unexpected nuber of columns in randoms")
+assert(no_columns == 5, "Unexpected number of columns in randoms")
 
 # decide number of splits so that random parts are about the data size
 n_splits = n_randoms // n_data
@@ -55,7 +55,7 @@ for i_split_randoms, edges in enumerate(all_edges):
                                           data_positions1=all_data[:, :3], data_weights1=all_data[:, 3], data_samples1=all_data[:, 4],
                                           randoms_positions1=these_randoms[:, :3], randoms_weights1=these_randoms[:, 3], randoms_samples1=these_randoms[:, 4],
                                           position_type='pos', engine='corrfunc', D1D2=D1D2, gpu=True, nthreads=4)
-        # position_type='pos' corresponds to (N, 3) positions shape like we have here
+        # position_type='pos' corresponds to (N, 3) x,y,z positions shape like we have here
         D1D2 = tmp.D1D2
         result += tmp
     results.append(result)
