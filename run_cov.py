@@ -82,11 +82,10 @@ rectype = "IFTrecsym" # reconstruction type
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # known cases where more loops are needed consistently
-if id in (4, 14, 15): maxloops *= 2
-elif id in (0, 1, 3): maxloops *= 4
-elif id in (2,): maxloops *= 5
+if id in (4,): maxloops *= 2
+elif id in (0, 1, 3, 15): maxloops *= 3
+elif id in (2, 14): maxloops *= 4
 elif id in (17,): maxloops //= 2 # QSO NGC converge well and take rather long time
-# reset BGS (14, 15) because 4x more randoms now
 
 id //= 2 # extracted all needed info from parity, move on
 tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
