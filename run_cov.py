@@ -77,29 +77,29 @@ suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
 reg = "N" # region for filenames
-tlabels = ["LRG"] # tracer labels for filenames
+tlabels = ["CMASS"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 10
+nrandoms = 40
 
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
 no_subsamples_per_file = maxloops // loopspersample
 
+z_min, z_max = 0.43, 0.7 # for redshift cut and filenames
+
 # data processing steps
-redshift_cut = 1
-convert_to_xyz = 1
+redshift_cut = 0
+convert_to_xyz = 0
 if redshift_cut or convert_to_xyz:
     # the following options are set for each tracer, possibly differently. Make sure that all the counts are compatible with the selected weighting and selection.
     use_weights = [1] * ntracers # For FITS files: 0 - do not use the WEIGHT column even if present. 1 - use WEIGHT column if present. Has no effect with plain text files
     FKP_weights = [1] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
     masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Does nothing with plain text files.
-create_jackknives = jackknife and 1
+create_jackknives = jackknife and 0
 normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
 do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
-    cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
-
-z_min, z_max = 0.4, 1.1 # for redshift cut and filenames
+    cat_randoms_files = [f"BOSS_{tlabel}_{reg}_{z_min}_{z_max}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
 # CF options
 convert_cf = 1
@@ -107,7 +107,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/xi/da02/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")] for corlabel in ["LRG"]]
+    pycorr_filenames = [[check_path(f"allcounts_BOSS_{tlabel}_{reg}_{z_min}_{z_max}_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")] for tlabel in tlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -122,16 +122,16 @@ if convert_to_xyz:
     w_dark_energy = -1
 
 # File names and directories
-if jackknife or count_ndata:
-    data_ref_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
+if create_jackknives or count_ndata:
+    data_ref_filenames = [check_path(f"{tlabel}_{reg}_data_{z_min}_{z_max}/{tlabel}_{reg}_data.dat.xyzwj") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/edav1/da02/LSScats/clustering/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(f"{tlabel}_{reg}_data_{z_min}_{z_max}/{tlabel}_{reg}_data.ran.subset.xyzwj")] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = prevent_override("_".join(tlabels) + "_" + reg + f"_z{z_min}-{z_max}") # output file directory
+outdir = prevent_override("_".join(tlabels) + "_" + reg + f"_data_{z_min}-{z_max}") # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
