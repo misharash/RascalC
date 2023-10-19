@@ -5,7 +5,7 @@
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --job-name=RascalC-2nd-gen-ffa-batch
+#SBATCH --job-name=RascalC-2nd-gen-ffa-recon-batch
 #SBATCH --array=0-5,8-11,16,17 # LRG and ELG without full ranges and QSO, no BGS
 
 # load cosmodesi environment
