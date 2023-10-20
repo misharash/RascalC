@@ -15,13 +15,13 @@ random_filename = os.path.join(work_dir, "CMASS_N_data.ran.xyzwj")
 print("Reading data")
 all_data = np.loadtxt(data_filename)
 n_data, no_columns = all_data.shape
-assert(no_columns == 5, "Unexpected number of columns in data")
+assert no_columns == 5, "Unexpected number of columns in data"
 # first index is number of points, second is column: 0-2 for positions, 3 for weights, 4 for jackknife region
 
 print("Reading randoms")
 all_randoms_raw = np.loadtxt(random_filename)
 n_randoms, no_columns = all_randoms_raw.shape
-assert(no_columns == 5, "Unexpected number of columns in randoms")
+assert no_columns == 5, "Unexpected number of columns in randoms"
 
 # decide number of splits so that random parts are about the data size
 n_splits = n_randoms // n_data
