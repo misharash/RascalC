@@ -33,7 +33,7 @@ sum_w_goal = sum_w_randoms / n_splits
 print("Shuffling randoms")
 np.random.shuffle(all_randoms_raw) # in place, by first axis
 print("Splitting randoms")
-all_randoms = (all_randoms_raw[i::n_splits] for i in range(n_splits))
+all_randoms = [all_randoms_raw[i::n_splits] for i in range(n_splits)]
 
 # reweigh each part so that the ratio of randoms to data is the same, just in case
 for i_random in trange(n_splits, desc="Reweighting random part"):
