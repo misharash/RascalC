@@ -88,7 +88,7 @@ tracers = ['LRG'] * 4 + ['ELG_LOP'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
 # need 2 * 9 = 18 jobs in this array
 
-tlabels = [tracers[id] + "_ffa"] # tracer labels for filenames; add ffa for fast fiber assignment
+tlabels = [tracers[id] + "_complete_gtlimaging"] # tracer labels for filenames; add ffa for fast fiber assignment
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 1 if tlabels[0].startswith("BGS") else 4 # 1 random for BGS only
 
@@ -101,7 +101,7 @@ convert_to_xyz = 1
 if redshift_cut or convert_to_xyz:
     # the following options are set for each tracer, possibly differently. Make sure that all the counts are compatible with the selected weighting and selection.
     use_weights = [1] * ntracers # For FITS files: 0 - do not use the WEIGHT column even if present. 1 - use WEIGHT column if present. Has no effect with plain text files
-    FKP_weights = [1] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
+    FKP_weights = [0] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
     masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Does nothing with plain text files.
 create_jackknives = jackknife and 1
 normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
@@ -118,11 +118,11 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/AbacusSummit/mock{i}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{0}_nran{nrandoms}_split{split_above}.npy") for i in range(25)] for corlabel in tlabels] # average the non-jackknife counts over all the mocks
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/AbacusSummit/mock{i}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_lin_njack{0}_nran{nrandoms}_split{split_above}.npy") for i in range(25)] for corlabel in tlabels] # average the non-jackknife counts over all the mocks
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
     if jackknife:
         # the counts above do not need to have jackknives, the counts below do (can be different file(s))
-        pycorr_jack_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/AbacusSummit/mock{0}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy") for corlabel in tlabels]
+        pycorr_jack_filenames = [check_path(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/AbacusSummit/mock{0}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy") for corlabel in tlabels]
         assert len(pycorr_jack_filenames) == ncorr, "Expected pycorr jack file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
