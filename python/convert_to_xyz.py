@@ -102,4 +102,4 @@ if __name__ == "__main__": # if invoked as a script
     mask = get_arg_safe(7, int, 0) # default is 0 - no mask filtering
     use_weights = (get_arg_safe(8, str, "True") not in ("0", "false")) # use weights by default
 
-    convert_to_xyz_files(input_file, output_file, Omega_m, Omega_k, w_dark_energy)
+    convert_to_xyz_files(input_file, output_file, Omega_m, Omega_k, w_dark_energy, FKP_weights, mask, use_weights)
