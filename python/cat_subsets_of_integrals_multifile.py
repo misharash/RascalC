@@ -3,36 +3,37 @@
 ## Determines single-field vs multi-field and jackknife automatically
 ## Do not use if subsamples have different numbers of pairs/triples/quadruplets
 
-import numpy as np
-import sys,os
+import sys, os
+from cat_subsets_of_integrals import cat_subsets_of_integrals
 
-# PARAMETERS
-if len(sys.argv)<7: # if too few
-    print("Usage: python cat_subsets_of_integrals_multifile.py {N_R_BINS} {mN_MU_BINS/lMAX_L} {N_FILES} {COVARIANCE_INPUT_DIR1} {N_SUBSAMPLES_TO_USE_PER_FILE1} [{COVARIANCE_INPUT_DIR2} {N_SUBSAMPLES_TO_USE_PER_FILE2} ...] [{COLLAPSE_FACTOR}] {COVARIANCE_OUTPUT_DIR}")
-    sys.exit(1)
 
-n = int(sys.argv[1])
-mstr = str(sys.argv[2])
-n_files = int(sys.argv[3])
-input_roots = [str(s) for s in sys.argv[4:-1:2]]
-ns_samples_per_file = [int(s) for s in sys.argv[5:-1:2]]
-output_root = str(sys.argv[-1])
-collapse_factor = int(input_roots.pop()) if len(input_roots) > len(ns_samples_per_file) else 1 # recover the collapse factor if present
-assert len(ns_samples_per_file) == len(input_roots), "Number of input dirs and subsamples to use from them must be the same"
+def cat_subsets_of_integrals_multifile(n: int, mstr: str, n_files: int, input_roots: list[str], ns_samples_per_file: list[int], output_root: str, collapse_factor: int = 1, print_function = print) -> None:
+    if len(ns_samples_per_file) != len(input_roots): raise ValueError("Number of input dirs and subsamples to use from them must be the same")
+    n_samples_per_file_tot = sum(ns_samples_per_file)
+    if n_samples_per_file_tot % collapse_factor != 0: raise ValueError("Collapse factor must divide the total number of samples per file")
+    n_samples_per_file_out = n_samples_per_file_tot // collapse_factor
 
-n_samples_per_file_tot = sum(ns_samples_per_file)
-assert n_samples_per_file_tot % collapse_factor == 0, "Collapse factor must divide the total number of samples per file"
-n_samples_per_file_out = n_samples_per_file_tot // collapse_factor
+    # combine samples for each file
+    for i_file in range(n_files):
+        print_function(f"Combining samples for file {i_file+1} of {n_files}")
+        cat_subsets_of_integrals(n, mstr, [os.path.join(input_root, str(i_file)) for input_root in input_roots], ns_samples_per_file, os.path.join(output_root, str(i_file)), collapse_factor, print_function)
 
-def exec_function(cmdline): # common function to invoke other processes
-    print(f"Running command: {cmdline}")
-    os.system(cmdline) # simple now but could be changed quickly later
+    # combine samples from all files in the final dir
+    print_function("Concatenating samples from all files")
+    cat_subsets_of_integrals(n, mstr, [os.path.join(output_root, str(i)) for i in range(n_files)], [n_samples_per_file_out] * n_files, output_root, print_function = print_function)
 
-# combine samples for each file
-for i_file in range(n_files):
-    print(f"Combining samples for file {i_file+1} of {n_files}")
-    exec_function(f"python {os.path.join(os.path.dirname(__file__), 'cat_subsets_of_integrals.py')} {n} {mstr} " + " ".join([f"{os.path.join(input_root, str(i_file))} {n_samples_per_file}" for (input_root, n_samples_per_file) in zip(input_roots, ns_samples_per_file)]) + f" {collapse_factor}" * (collapse_factor > 1) + f" {os.path.join(output_root, str(i_file))}")
+if __name__ == "__main__": # if invoked as a script
+    # PARAMETERS
+    if len(sys.argv) < 7: # if too few
+        print("Usage: python cat_subsets_of_integrals_multifile.py {N_R_BINS} {mN_MU_BINS/lMAX_L} {N_FILES} {COVARIANCE_INPUT_DIR1} {N_SUBSAMPLES_TO_USE_PER_FILE1} [{COVARIANCE_INPUT_DIR2} {N_SUBSAMPLES_TO_USE_PER_FILE2} ...] [{COLLAPSE_FACTOR}] {COVARIANCE_OUTPUT_DIR}")
+        sys.exit(1)
 
-# combine samples from all files in the final dir
-print("Concatenating samples from all files")
-exec_function(f"python {os.path.join(os.path.dirname(__file__), 'cat_subsets_of_integrals.py')} {n} {mstr} " + " ".join([f"{os.path.join(output_root, str(i))} {n_samples_per_file_out}" for i in range(n_files)]) + f" {output_root}")
+    n = int(sys.argv[1])
+    mstr = str(sys.argv[2])
+    n_files = int(sys.argv[3])
+    input_roots = [str(s) for s in sys.argv[4:-1:2]]
+    ns_samples_per_file = [int(s) for s in sys.argv[5:-1:2]]
+    output_root = str(sys.argv[-1])
+    collapse_factor = int(input_roots.pop()) if len(input_roots) > len(ns_samples_per_file) else 1 # recover the collapse factor if present
+
+    cat_subsets_of_integrals_multifile(n, mstr, n_files, input_roots, ns_samples_per_file, output_root, collapse_factor)
