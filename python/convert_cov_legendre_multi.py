@@ -2,8 +2,7 @@
 
 import numpy as np
 import sys
-from convert_cov import load_cov
-from print_shot_noise_rescaling import get_shot_noise_rescaling
+from convert_cov import load_cov, get_cov_header
 
 
 def convert_cov_legendre_multi(cov: np.ndarray[float], n_r_bins: int):
@@ -27,4 +26,4 @@ if __name__ == "__main__": # if invoked as a script
     n_r_bins = int(sys.argv[2])
     output_cov_file = str(sys.argv[3])
 
-    np.savetxt(output_cov_file, load_cov_legendre_multi(rascalc_results, n_r_bins), header = "shot_noise_rescaling = " + str(get_shot_noise_rescaling(rascalc_results)))
+    np.savetxt(output_cov_file, load_cov_legendre_multi(rascalc_results, n_r_bins), header = get_cov_header(rascalc_results))
