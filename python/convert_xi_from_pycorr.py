@@ -1,70 +1,49 @@
 "This reads cosmodesi/pycorr .npy file(s) and generates input xi text file for RascalC to use"
 
-from pycorr import TwoPointCorrelationFunction
+import pycorr
 import numpy as np
 import sys
+from warnings import warn
+from utils import reshape_pycorr, write_xi_file
 
-## PARAMETERS
-if len(sys.argv) < 5:
-    print("Usage: python convert_xi_from_pycorr.py {INPUT_NPY_FILE1} [{INPUT_NPY_FILE2} ...] {OUTPUT_XI_DAT_FILE} {R_STEP} {N_MU}.")
-    sys.exit(1)
-infile_names = sys.argv[1:-3]
-outfile_name = str(sys.argv[-3])
-r_step = int(sys.argv[-2])
-n_mu = int(sys.argv[-1])
 
-# load first input file
-result_orig = TwoPointCorrelationFunction.load(infile_names[0])
-print("Read 2PCF shaped", result_orig.shape)
-n_mu_orig = result_orig.shape[1]
-assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
-mu_factor = n_mu_orig // 2 // n_mu
+def get_input_xi_from_pycorr(xi_estimator: pycorr.TwoPointEstimator):
+    # assume already wrapped; for input xi need to divide by SS instead of RR in post-recon case, in pre-recon case RR=SS so should work too
+    return xi_estimator.corr * xi_estimator.R1R2.normalized_wcounts() / xi_estimator.S1S2.normalized_wcounts()
 
-# determine the radius step in pycorr
-r_steps_orig = np.diff(result_orig.edges[0])
-r_step_orig = int(np.around(np.mean(r_steps_orig)))
-assert np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3), "Binnings other than linear with integer step are not supported"
-assert r_step % r_step_orig == 0, "Radial rebinning not possible"
-r_step //= r_step_orig
+def convert_xi_from_pycorr_to_file(xi_estimators: list[pycorr.TwoPointEstimator], outfile_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, print_function = print) -> (float, float):
+    # Compute mean data sizes
+    mean_data_size1 = np.mean([xi_estimator.D1D2.size1 for xi_estimator in xi_estimators])
+    mean_data_size2 = np.mean([xi_estimator.D1D2.size2 for xi_estimator in xi_estimators])
 
-def fix_bad_bins(pycorr_result):
-    # fixes bins with negative wcounts by overwriting their content by reflection
-    # only known cause for now is self-counts (DD, RR) in bin 0, n_mu_orig/2-1 – subtraction is sometimes not precise enough, especially with float32
-    cls = pycorr_result.__class__
-    kw = {}
-    for name in pycorr_result.count_names:
-        counts = getattr(pycorr_result, name)
-        bad_bins_mask = counts.wcounts < 0
-        for s_bin, mu_bin in zip(*np.nonzero(bad_bins_mask)):
-            print(f"WARNING: negative {name}.wcounts ({counts.wcounts[s_bin, mu_bin]:.2e}) found in bin {s_bin}, {mu_bin}; replacing them with reflected bin ({counts.wcounts[s_bin, -1-mu_bin]:.2e})")
-            counts.wcounts[s_bin, mu_bin] = counts.wcounts[s_bin, -1-mu_bin]
-        kw[name] = counts
-    return cls(**kw)
+    print_function(f"Mean size of data 1 is {mean_data_size1:.6e}")
+    print_function(f"Mean size of data 2 is {mean_data_size2:.6e}")
+    np.savetxt(outfile_name + ".ndata", np.array((mean_data_size1, mean_data_size2))) # save them for later
 
-result = fix_bad_bins(result_orig)[::r_step, ::mu_factor].wrap() # fix bins with negative wcounts, rebin and wrap to positive mu
-# retrieve data sizes
-data_size1_sum = result_orig.D1D2.size1
-data_size2_sum = result_orig.D1D2.size2
+    # Reshape the estimators (includes fixing)
+    xi_estimators = [reshape_pycorr(xi_estimator, n_mu, r_step, r_max) for xi_estimator in xi_estimators]
 
-# load remaining input files if any
-for infile_name in infile_names[1:]:
-    result_tmp = TwoPointCorrelationFunction.load(infile_name)
-    assert result_tmp.shape == result_orig.shape, "Different shape in file %s" % infile_name
-    result += fix_bad_bins(result_tmp)[::r_step, ::mu_factor].wrap() # fix bins with negative wcounts, rebin, wrap to positive mu and accumulate
-    # accumulate data sizes
-    data_size1_sum += result_tmp.D1D2.size1
-    data_size2_sum += result_tmp.D1D2.size2
+    # Sum the estimators to get total
+    xi_estimator = sum(xi_estimators)
 
-print(f"Mean size of data 1 is {data_size1_sum/len(infile_names):.6e}")
-print(f"Mean size of data 2 is {data_size2_sum/len(infile_names):.6e}")
-np.savetxt(outfile_name + ".ndata", np.array((data_size1_sum, data_size2_sum)) / len(infile_names)) # save them for later
+    ## Write to file using numpy funs
+    write_xi_file(outfile_name, xi_estimator.sepavg(axis=0), xi_estimator.sepavg(axis=1), get_input_xi_from_pycorr(xi_estimator))
 
-xi = result.corr * result.R1R2.normalized_wcounts() / result.S1S2.normalized_wcounts() # already wrapped; for input xi need to divide by SS instead of RR in post-recon case, in pre-recon case RR=SS so should work too
+    return mean_data_size1, mean_data_size2
 
-## Custom array to string function
-def my_a2s(a, fmt='%.18e'):
-    return ' '.join([fmt % e for e in a])
+def convert_xi_from_pycorr_files(infile_names: list[str], outfile_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, print_function = print):
+    # load all pycorr files
+    xi_estimators = [pycorr.TwoPointCorrelationFunction.load(infile_name) for infile_name in infile_names]
+    return convert_xi_from_pycorr_to_file(xi_estimators, outfile_name, n_mu, r_step, r_max, print_function)
 
-## Write to file using numpy funs
-header = my_a2s(result.sepavg(axis=0))+'\n'+my_a2s(result.sepavg(axis=1))
-np.savetxt(outfile_name, xi, header=header, comments='')
+if __name__ == "__main__": # if invoked as a script
+    ## PARAMETERS
+    if len(sys.argv) < 5:
+        print("Usage: python convert_xi_from_pycorr.py {INPUT_NPY_FILE1} [{INPUT_NPY_FILE2} ...] {OUTPUT_XI_DAT_FILE} {R_STEP} {N_MU}.")
+        sys.exit(1)
+    infile_names = sys.argv[1:-3]
+    outfile_name = str(sys.argv[-3])
+    r_step = int(sys.argv[-2])
+    n_mu = int(sys.argv[-1])
+
+    convert_xi_from_pycorr_files(infile_names, outfile_name, n_mu, r_step)

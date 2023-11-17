@@ -1,65 +1,53 @@
 "This reads cosmodesi/pycorr .npy file(s) and generates sample covariance of xi(s,mu) in text format"
 
-from pycorr import TwoPointCorrelationFunction
+import pycorr
 import numpy as np
 import sys
+from utils import reshape_pycorr
 
-## PARAMETERS
-if len(sys.argv) < 8:
-    print("Usage: python sample_cov_from_pycorr.py {INPUT_NPY_FILE1} {INPUT_NPY_FILE2} [{INPUT_NPY_FILE3} ...] {OUTPUT_COV_FILE} {R_STEP} {N_MU} {R_MAX} {N_CORRELATIONS}.")
-    sys.exit(1)
-infile_names = sys.argv[1:-5]
-outfile_name = str(sys.argv[-5])
-r_step = int(sys.argv[-4])
-n_mu = int(sys.argv[-3])
-r_max = int(sys.argv[-2])
-n_corr = int(sys.argv[-1])
-assert r_max % r_step == 0, "Radial rebinning impossible after max radial bin cut"
 
-n_files = len(infile_names)
-assert len(infile_names) > 1, "Can not compute covariance with 1 sample or less"
-assert n_corr > 0, "Need at least one correlation"
-assert n_files % n_corr == 0, "Need the same number of files for each correlation"
-n_samples = n_files // n_corr
+def sample_cov_from_pycorr(xi_estimators: list[list[pycorr.TwoPointEstimator]], n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf):
+    if len(xi_estimators) <= 0: raise ValueError("Need at least one correlation function group in the outer list")
+    if len(xi_estimators[0]) < 2: raise ValueError("Need at least two samples to compute the covariance matrix")
+    if any(len(xi_estimators_c) != len(xi_estimators[0]) for xi_estimators_c in xi_estimators[1:]):
+        raise ValueError("Need the same number of files for different correlation functions")
+    # convert each xi estimator to binned xi array, and then turn list of lists into array too
+    xi = np.array([[reshape_pycorr(xi_estimator, n_mu, r_step, r_max).corr for xi_estimator in xi_estimators_c] for xi_estimators_c in xi_estimators])
+    # now indices are [c, s, r, m]: correlation number, sample number, radial bin and then mu bin
+    # need [s, c, r, m]
+    xi = xi.transpose(1, 0, 2, 3)
+    # now flatten all dimensions except the samples
+    xi = xi.reshape(xi.shape[0], -1)
+    return np.cov(xi.T) # xi has to be transposed, because variables (bins) are in columns (2nd index) of it and np.cov expects otherwise.
+    # Weights are assumed the same, hard to figure out alternatives, and they do not seem necessary
 
-# load first input file
-result_orig = TwoPointCorrelationFunction.load(infile_names[0])
-print("Read 2PCF shaped", result_orig.shape)
-n_mu_orig = result_orig.shape[1]
-assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
-mu_factor = n_mu_orig // 2 // n_mu
+def sample_cov_from_pycorr_to_file(xi_estimators: list[list[pycorr.TwoPointEstimator]], outfile_name, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf):
+    np.savetxt(outfile_name, sample_cov_from_pycorr(xi_estimators, n_mu, r_step, r_max))
 
-# determine the radius step in pycorr
-r_steps_orig = np.diff(result_orig.edges[0])
-r_step_orig = int(np.around(np.mean(r_steps_orig)))
-assert np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3), "Binnings other than linear with integer step are not supported"
-assert r_step % r_step_orig == 0, "Radial rebinning not possible"
-r_step //= r_step_orig
-assert r_max % r_step_orig == 0, "Max radial bin cut incompatible with original radial binning"
-r_max //= r_step_orig
+def sample_cov_from_pycorr_files(infile_names: list[list[str]], outfile_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf):
+    if len(infile_names) <= 0: raise ValueError("Need at least one correlation function group in the outer list")
+    if len(infile_names[0]) < 2: raise ValueError("Need at least two samples to compute the covariance matrix")
+    if any(len(infile_names_c) != len(infile_names[0]) for infile_names_c in infile_names[1:]):
+        raise ValueError("Need the same number of files for different correlation functions")
+    xi_estimators = [[pycorr.TwoPointCorrelationFunction.load(infile_name) for infile_name in infile_names_c] for infile_names_c in infile_names]
+    sample_cov_from_pycorr_to_file(xi_estimators, outfile_name, n_mu, r_step, r_max)
 
-result = result_orig[:r_max:r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
-n_bins = np.prod(result.corr.shape) # number of (s, mu) bins
+if __name__ == "__main__": # if invoked as a script
+    ## PARAMETERS
+    if len(sys.argv) < 8:
+        print("Usage: python sample_cov_from_pycorr.py {INPUT_NPY_FILE1} {INPUT_NPY_FILE2} [{INPUT_NPY_FILE3} ...] {OUTPUT_COV_FILE} {R_STEP} {N_MU} {R_MAX} {N_CORRELATIONS}.")
+        sys.exit(1)
+    infile_names = sys.argv[1:-5]
+    outfile_name = str(sys.argv[-5])
+    r_step = float(sys.argv[-4])
+    n_mu = int(sys.argv[-3])
+    r_max = float(sys.argv[-2])
+    n_corr = int(sys.argv[-1])
 
-# start xi and weights arrays
-xi, weights = np.zeros((2, len(infile_names), n_corr, n_bins))
-weights[0, 0] = result.R1R2.wcounts.ravel()
-xi[0, 0] = result.corr.ravel()
+    assert n_corr >= 1, "Need to have at least one correlation"
+    n_files = len(infile_names)
+    assert n_files % n_corr == 0, "Need to have the same number of files for all correlations"
+    n_samples = n_files // n_corr
+    infile_names = [infile_names[n_samples * i, n_samples * (i+1)] for i in range(n_corr)]
 
-# load remaining input files if any
-for i in range(1, n_files):
-    infile_name = infile_names[i]
-    result_tmp = TwoPointCorrelationFunction.load(infile_name)
-    assert result_tmp.shape == result_orig.shape, "Different shape in file %s" % infile_name
-    result = result_tmp[:r_max:r_step, ::mu_factor].wrap() # rebin and accumulate
-    i_sample = i % n_samples # sample index
-    i_corr = i // n_samples # correlation function index
-    weights[i_sample, i_corr] = result.R1R2.wcounts.ravel()
-    xi[i_sample, i_corr] = result.corr.ravel()
-
-# convert arrays to 2D
-weights = weights.reshape(len(infile_names), n_corr * n_bins)
-xi = xi.reshape(len(infile_names), n_corr * n_bins)
-
-cov = np.cov(xi.T, aweights=np.sum(weights, axis=1)) # xi has to be transposed, because variables (bins) are in columns (2nd index) of it and cov expects otherwise. Weights are collapsed across the bins; the proper expression for covariance with weights changing for different variables within one sample has not been found yet; the jackknife expression is short by ~n_samples.
-np.savetxt(outfile_name, cov)
+    sample_cov_from_pycorr_files(infile_names, outfile_name, n_mu, r_step, r_max)
