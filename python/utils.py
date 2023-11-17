@@ -19,9 +19,22 @@ def my_a2s(a, fmt='%.18e'):
     # custom array to string function
     return ' '.join([fmt % e for e in a])
 
+def my_str_to_bool(s: str) -> bool:
+    # naive conversion to bool for all non-empty strings is True, and one can't give an empty string as a command line argument, so need to make it more explicit
+    return s not in ("0", "false")
+
 def symmetrized(A):
     # symmetrize a 2D matrix
     return 0.5 * (A + A.T)
+
+def parse_FKP_arg(FKP_weights: str) -> bool | tuple[float, str]:
+    if not my_str_to_bool(FKP_weights): return False
+    # determine if it actually has P0,NZ_name format. Such strings should convert to True
+    arg_FKP_split = FKP_weights.split(",")
+    if len(arg_FKP_split) == 2:
+        return (float(arg_FKP_split[0]), arg_FKP_split[1])
+    if len(arg_FKP_split) == 1: return True
+    raise ValueError("FKP parameter matched neither USE_FKP_WEIGHTS (true/false in any register or 0/1) nor P0,NZ_name (float and string without space).")
 
 def read_particles_fits_file(input_file: str, FKP_weights: bool | (float, str) = False, mask: int = 0, use_weights: bool = True):
     # Read FITS file with particles. Can apply mask filtering and compute FKP weights in different ways. Works for DESI setups

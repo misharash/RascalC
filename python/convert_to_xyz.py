@@ -78,7 +78,7 @@ if __name__ == "__main__": # if invoked as a script
     input_file = str(sys.argv[1])
     output_file = str(sys.argv[2])
 
-    from utils import get_arg_safe
+    from utils import get_arg_safe, parse_FKP_arg, my_str_to_bool
     # Read in optional cosmology parameters
     Omega_m = get_arg_safe(3, float, 0.31)
     Omega_k = get_arg_safe(4, float, 0)
@@ -86,20 +86,8 @@ if __name__ == "__main__": # if invoked as a script
     # defaults from the BOSS DR12 2016 clustering paper assuming LCDM
 
     # The next only applies to (DESI) FITS files
-    # Determine whether to use FKP weights
-    FKP_weights = get_arg_safe(6, str, "False")
-    if FKP_weights.lower() in ("0", "false"): FKP_weights = False # naive conversion to bool for all non-empty strings is True, and one can't give an empty string as a command line argument, so need to make it more explicit
-    # determine if it actually has P0,NZ_name format. Such strings should convert to True
-    if FKP_weights:
-        arg_FKP_split = sys.argv[6].split(",")
-        if len(arg_FKP_split) == 2:
-            FKP_weights = (float(arg_FKP_split[0]), arg_FKP_split[1])
-        elif len(arg_FKP_split) == 1:
-            FKP_weights = True
-        else:
-            print("FKP parameter matched neither USE_FKP_WEIGHTS (true/false in any register or 0/1) nor P0,NZ_name (float and string without space).")
-            sys.exit(1)
+    FKP_weights = parse_FKP_arg(get_arg_safe(6, str, "False")) # determine whether to use FKP weights
     mask = get_arg_safe(7, int, 0) # default is 0 - no mask filtering
-    use_weights = (get_arg_safe(8, str, "True") not in ("0", "false")) # use weights by default
+    use_weights = my_str_to_bool(get_arg_safe(8, str, "True")) # use weights by default
 
     convert_to_xyz_files(input_file, output_file, Omega_m, Omega_k, w_dark_energy, FKP_weights, mask, use_weights)
