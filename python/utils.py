@@ -85,7 +85,7 @@ def fix_bad_bins_pycorr(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEsti
         kw[name] = counts
     return cls(**kw)
 
-def reshape_pycorr(xi_estimator: pycorr.TwoPointEstimator, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf) -> pycorr.TwoPointEstimator:
+def reshape_pycorr(xi_estimator: pycorr.TwoPointEstimator, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, skip_r_bins: int = 0) -> pycorr.TwoPointEstimator:
     n_mu_orig = xi_estimator.shape[1]
     if n_mu_orig % 2 != 0: raise ValueError("Wrapping not possible")
     if n_mu:
@@ -105,4 +105,4 @@ def reshape_pycorr(xi_estimator: pycorr.TwoPointEstimator, n_mu: int | None = No
     r_values = xi_estimator.sepavg(axis = 0)
     xi_estimator = xi_estimator[r_values <= r_max]
 
-    return fix_bad_bins_pycorr(xi_estimator)[::r_factor, ::mu_factor].wrap() # first fix bad bins, then rebin and wrap to positive mu
+    return fix_bad_bins_pycorr(xi_estimator[skip_r_bins * r_factor:])[::r_factor, ::mu_factor].wrap() # first skip bins, then fix bad bins, then rebin and wrap to positive mu
