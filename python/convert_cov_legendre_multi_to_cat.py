@@ -1,91 +1,80 @@
 "This reads a .npy file of RascalC Legendre results (or txt covariance converted previously) and a triplet of cosmodesi/pycorr .npy files to produce a covariance for a catalog of these two tracers concatenated."
 
 from pycorr import TwoPointCorrelationFunction
-from scipy.special import legendre
 import numpy as np
 import sys
+from utils import reshape_pycorr
+from convert_cov_legendre_multi import get_cov_header, load_cov_legendre_multi
+from convert_counts_from_pycorr import get_counts_from_pycorr
+from mu_bin_legendre_factors import compute_mu_bin_legendre_factors
 
-## PARAMETERS
-if len(sys.argv) not in (9, 11):
-    print("Usage: python combine_cov_multi_to_cat.py {RASCALC_RESULTS} {PYCORR_FILE_11} {PYCORR_FILE_12} {PYCORR_FILE_22} {N_R_BINS} {MAX_L} {R_BINS_SKIP} {OUTPUT_COV_FILE} [{BIAS1} {BIAS2}].")
-    sys.exit(1)
-rascalc_results = str(sys.argv[1])
-pycorr_files = [str(sys.argv[i]) for i in range(2, 5)]
-n_r_bins = int(sys.argv[5])
-max_l = int(sys.argv[6])
-assert max_l % 2 == 0, "Odd multipoles not supported"
-n_l = max_l // 2 + 1
-r_bins_skip = int(sys.argv[7])
-output_cov_file = str(sys.argv[8])
-bias1 = float(sys.argv[9]) if len(sys.argv) >= 10 else 1
-bias2 = float(sys.argv[10]) if len(sys.argv) >= 11 else 1
 
-# Read RascalC results
-if any(rascalc_results.endswith(ext) for ext in (".npy", ".npz")):
-    # read numpy file
-    with np.load(rascalc_results) as f:
-        header = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]) # form the header with shot-noise rescaling value
-        cov_in = f['full_theory_covariance']
-        n_bins = len(cov_in)
-        assert n_bins % (3*n_l) == 0, "Number of bins mismatch"
-        n = n_bins // (3*n_l)
-        cov_in = cov_in.reshape(3, n, n_l, 3, n, n_l) # convert to 6D from 2D with [t, r, l] ordering for both rows and columns
-        cov_in = cov_in.transpose(0, 2, 1, 3, 5, 4) # change ordering to [t, l, r] for both rows and columns
-        cov_in = cov_in.reshape(n_bins, n_bins) # convert back from 6D to 2D
-        print(f"Max abs eigenvalue of bias correction matrix in 1st results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
-else:
-    # read text file
-    cov_in = np.loadtxt(rascalc_results)
-    n_bins = len(cov_in)
-    assert n_bins % (3*n_l) == 0, "Number of bins mismatch"
-    n = n_bins // (3*n_l)
-    # assume it has been transposed
+def load_cov_text(filename: str) -> (np.ndarray[float], str):
+    cov = np.loadtxt(filename)
     # read header line if present
     header = '' # blank header by default
-    with open(rascalc_results) as f:
+    with open(filename) as f:
         l = f.readline() # read the first line
         if l[0] == '#': # if it starts as a comment
             header = l[1:].strip() # take the rest of it as header, removing the leading/trailing spaces and the newline
+    return cov, header
 
-# Read pycorr files to figure out weights
-weights = []
-for pycorr_file in pycorr_files:
-    result = TwoPointCorrelationFunction.load(pycorr_file)
-    result = result[::result.shape[0]//n_r_bins].wrap() # there should be no normalization here
-    result = result[r_bins_skip:]
-    weights.append(result.R1R2.wcounts)
-weights = np.array(weights)
-assert weights.shape[:-1] == (3, n), "Wrong shape of weights"
+def convert_cov_legendre_multi_to_cat(rascalc_results: str, pycorr_files: list[str], output_cov_file: str, max_l: int, r_step: float = 1, skip_r_bins: int = 0, bias1: float = 1, bias2: float = 1, print_function = print):
+    # Read RascalC results
+    if any(rascalc_results.endswith(ext) for ext in (".npy", ".npz")):
+        # read numpy file
+        header = get_cov_header(rascalc_results)
+        cov_in = load_cov_legendre_multi(rascalc_results, max_l, print_function)
+    else:
+        # read text file
+        header, cov_in = load_cov_text(rascalc_results)
+    
+    n_bins = len(cov_in)
 
-n_mu_bins = result.shape[1]
-mu_edges = result.edges[1]
+    # Read pycorr files to figure out weights
+    weights = []
+    for pycorr_file in pycorr_files:
+        xi_estimator = reshape_pycorr(TwoPointCorrelationFunction.load(pycorr_file), n_mu_bins = None, r_step = r_step, skip_r_bins = skip_r_bins)
+        weights.append(get_counts_from_pycorr(xi_estimator, counts_factor = 1))
+    weights = np.array(weights)
 
-# Add weighting by bias for each tracer
-bias_weights = np.array((bias1**2, 2*bias1*bias2, bias2**2)) # auto1, cross12, auto2 are multiplied by product of biases of tracers involved in each. Moreover, cross12 enters twice because wrapped cross21 is the same.
-weights *= bias_weights[:, None, None]
+    n = xi_estimator.shape[0]
+    mu_edges = xi_estimator.edges[1]
 
-# Normalize weights across the correlation type axis
-weights /= np.sum(weights, axis=0)[None, :, :]
+    # Add weighting by bias for each tracer
+    bias_weights = np.array((bias1**2, 2*bias1*bias2, bias2**2)) # auto1, cross12, auto2 are multiplied by product of biases of tracers involved in each. Moreover, cross12 enters twice because wrapped cross21 is the same.
+    weights *= bias_weights[:, None, None]
 
-ells = np.arange(0, max_l+1, 2)
-# Legendre multipoles integrated over mu bins, do not depend on radial binning
-leg_mu_ints = np.zeros((n_l, n_mu_bins))
+    # Normalize weights across the correlation type axis
+    weights /= np.sum(weights, axis=0)[None, :, :]
 
-for i, ell in enumerate(ells):
-    leg_pol = legendre(ell) # Legendre polynomial
-    leg_pol_int = np.polyint(leg_pol) # its indefinite integral (analytic)
-    leg_mu_ints[i] = np.diff(leg_pol_int(mu_edges)) # differences of indefinite integral between edges of mu bins = integral of Legendre polynomial over each mu bin
+    mu_leg_factors, leg_mu_factors = compute_mu_bin_legendre_factors(mu_edges, max_l, do_inverse = True)
 
-leg_mu_avg = leg_mu_ints / np.diff(mu_edges) # average value of Legendre polynomial in each bin
+    # Derivatives of angularly binned 2PCF wrt Legendre are leg_mu_factors[ell//2, mu_bin]
+    # Angularly binned 2PCF are added with weights (normalized) weights[tracer, r_bin, mu_bin]
+    # Derivatives of Legendre wrt binned 2PCF are mu_leg_factors[mu_bin, ell//2]
+    # So we need to sum such product over mu bins, while tracers and radial bins stay independent, and the partial derivative of combined 2PCF wrt the 2PCFs 1/2 will be
+    pd = np.einsum('il,tkl,lj,km->tikjm', leg_mu_factors, weights, mu_leg_factors, np.eye(n)).reshape(n_bins, n_bins // 3)
+    # We have correct [t_in, l_in, r_in, l_out, r_out] ordering and want to make these matrices in the end thus the reshape.
+    # The output cov is single-tracer (for the combined catalog) so there is no t_out.
 
-# Derivatives of angularly binned 2PCF wrt Legendre are leg_mu_avg[ell//2, mu_bin]
-# Angularly binned 2PCF are added with weights (normalized) weights[tracer, r_bin, mu_bin]
-# Derivatives of Legendre wrt binned 2PCF are leg_mu_ints[ell//2, mu_bin] * (2*ell+1)
-# So we need to sum such product over mu bins, while tracers and radial bins stay independent, and the partial derivative of combined 2PCF wrt the 2PCFs 1/2 will be
-pd = np.einsum('il,tkl,jl,km->tikjm', leg_mu_avg, weights, (2*ells[:, None]+1) * leg_mu_ints, np.eye(n)).reshape(n_bins, n_l*n)
-# We have correct [t_in, l_in, r_in, l_out, r_out] ordering and want to make these matrices in the end thus the reshape.
-# The output cov is single-tracer (for the combined catalog) so there is no t_out.
+    # Produce and save combined cov
+    cov_out = pd.T.dot(cov_in).dot(pd)
+    np.savetxt(output_cov_file, cov_out, header = header)
 
-# Produce and save combined cov
-cov_out = pd.T.dot(cov_in).dot(pd)
-np.savetxt(output_cov_file, cov_out, header=header)
+if __name__ == "__main__": # if invoked as a script
+    ## PARAMETERS
+    if len(sys.argv) not in (9, 11):
+        print("Usage: python combine_cov_multi_to_cat.py {RASCALC_RESULTS} {PYCORR_FILE_11} {PYCORR_FILE_12} {PYCORR_FILE_22} {R_STEP} {MAX_L} {SKIP_R_BINS} {OUTPUT_COV_FILE} [{BIAS1} {BIAS2}].")
+        sys.exit(1)
+    rascalc_results = str(sys.argv[1])
+    pycorr_files = [str(sys.argv[i]) for i in range(2, 5)]
+    r_step = float(sys.argv[5])
+    max_l = int(sys.argv[6])
+    skip_r_bins = int(sys.argv[7])
+    output_cov_file = str(sys.argv[8])
+    from utils import get_arg_safe
+    bias1 = get_arg_safe(9, float, 1)
+    bias2 = get_arg_safe(10, float, 1)
+
+    convert_cov_legendre_multi_to_cat(rascalc_results, pycorr_files, output_cov_file, max_l, r_step, skip_r_bins, bias1, bias2)

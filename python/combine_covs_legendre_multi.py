@@ -1,7 +1,6 @@
 "This reads two sets of RascalC results and two triplets of cosmodesi/pycorr .npy files to combine two full 2-tracer covs following NS/GCcomb procedure for 2 tracers in Legendre mode. Covariance of N(GC) and S(GC) 2PCF is neglected."
 
 from pycorr import TwoPointCorrelationFunction
-from scipy.special import legendre
 import numpy as np
 import sys
 from utils import reshape_pycorr
@@ -46,10 +45,10 @@ def combine_covs_legendre_multi(rascalc_results1: str, rascalc_results2: str, py
 
     # Derivatives of angularly binned 2PCF wrt Legendre are leg_mu_factors[ell//2, mu_bin]
     # Angularly binned 2PCF are added with weights (normalized) weight1/2[tracer, r_bin, mu_bin]
-    # Derivatives of Legendre wrt binned 2PCF are mu_leg_factors[ell//2, mu_bin]
+    # Derivatives of Legendre wrt binned 2PCF are mu_leg_factors[mu_bin, ell//2]
     # So we need to sum such product over mu bins, while tracers and radial bins stay independent, and the partial derivative of combined 2PCF wrt the 2PCFs 1/2 will be
-    pd1 = np.einsum('il,tkl,jl,km,tr->tikrjm', leg_mu_factors, weight1, mu_leg_factors, np.eye(n_r_bins), np.eye(3)).reshape(n_bins, n_bins)
-    pd2 = np.einsum('il,tkl,jl,km,tr->tikrjm', leg_mu_factors, weight2, mu_leg_factors, np.eye(n_r_bins), np.eye(3)).reshape(n_bins, n_bins)
+    pd1 = np.einsum('il,tkl,lj,km,tr->tikrjm', leg_mu_factors, weight1, mu_leg_factors, np.eye(n_r_bins), np.eye(3)).reshape(n_bins, n_bins)
+    pd2 = np.einsum('il,tkl,lj,km,tr->tikrjm', leg_mu_factors, weight2, mu_leg_factors, np.eye(n_r_bins), np.eye(3)).reshape(n_bins, n_bins)
     # We have correct [t_in, l_in, r_in, t_out, l_out, r_out] ordering and want to make these matrices in the end thus the reshape
 
     # Produce and save combined cov
