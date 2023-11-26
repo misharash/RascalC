@@ -6,7 +6,7 @@ import sys
 from utils import reshape_pycorr
 
 
-def sample_cov_from_pycorr(xi_estimators: list[list[pycorr.TwoPointEstimator]], n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf):
+def sample_cov_from_pycorr(xi_estimators: list[list[pycorr.twopoint_estimator.BaseTwoPointEstimator]], n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf):
     if len(xi_estimators) <= 0: raise ValueError("Need at least one correlation function group in the outer list")
     if len(xi_estimators[0]) < 2: raise ValueError("Need at least two samples to compute the covariance matrix")
     if any(len(xi_estimators_c) != len(xi_estimators[0]) for xi_estimators_c in xi_estimators[1:]):
@@ -21,7 +21,7 @@ def sample_cov_from_pycorr(xi_estimators: list[list[pycorr.TwoPointEstimator]], 
     return np.cov(xi.T) # xi has to be transposed, because variables (bins) are in columns (2nd index) of it and np.cov expects otherwise.
     # Weights are assumed the same, hard to figure out alternatives, and they do not seem necessary
 
-def sample_cov_from_pycorr_to_file(xi_estimators: list[list[pycorr.TwoPointEstimator]], outfile_name, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf):
+def sample_cov_from_pycorr_to_file(xi_estimators: list[list[pycorr.twopoint_estimator.BaseTwoPointEstimator]], outfile_name, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf):
     np.savetxt(outfile_name, sample_cov_from_pycorr(xi_estimators, n_mu, r_step, r_max))
 
 def sample_cov_from_pycorr_files(infile_names: list[list[str]], outfile_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf):

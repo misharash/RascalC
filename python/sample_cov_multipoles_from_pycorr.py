@@ -6,7 +6,7 @@ import sys
 from utils import reshape_pycorr
 
 
-def sample_cov_multipoles_from_pycorr(xi_estimators: list[list[pycorr.TwoPointEstimator]], max_l: int, r_step: float = 1, r_max: float = np.inf):
+def sample_cov_multipoles_from_pycorr(xi_estimators: list[list[pycorr.twopoint_estimator.BaseTwoPointEstimator]], max_l: int, r_step: float = 1, r_max: float = np.inf):
     if max_l < 0: raise ValueError("Maximal multipole can not be negative")
     assert max_l % 2 == 0, "Only even multipoles supported"
     if len(xi_estimators) <= 0: raise ValueError("Need at least one correlation function group in the outer list")
@@ -24,7 +24,7 @@ def sample_cov_multipoles_from_pycorr(xi_estimators: list[list[pycorr.TwoPointEs
     return np.cov(xi.T) # xi has to be transposed, because variables (bins) are in columns (2nd index) of it and np.cov expects otherwise.
     # Weights are assumed the same, hard to figure out alternatives, and they do not seem necessary
 
-def sample_cov_multipoles_from_pycorr_to_file(xi_estimators: list[list[pycorr.TwoPointEstimator]], outfile_name, max_l: int, r_step: float = 1, r_max: float = np.inf):
+def sample_cov_multipoles_from_pycorr_to_file(xi_estimators: list[list[pycorr.twopoint_estimator.BaseTwoPointEstimator]], outfile_name, max_l: int, r_step: float = 1, r_max: float = np.inf):
     np.savetxt(outfile_name, sample_cov_multipoles_from_pycorr(xi_estimators, max_l, r_step, r_max))
 
 def sample_cov_multipoles_from_pycorr_files(infile_names: list[list[str]], outfile_name: str, max_l: int, r_step: float = 1, r_max: float = np.inf):
