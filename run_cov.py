@@ -440,43 +440,35 @@ if ntracers == 1:
     if legendre:
         if jackknife:
             from python.post_process_legendre_mix_jackknife import post_process_legendre_mix_jackknife
-            post_process_legendre_mix_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, max_l, outdir, skip_r_bins, skip_l, print_function = print_and_log)
-            results_file = 'Rescaled_Covariance_Matrices_Legendre_Jackknife_n%d_l%d_j%d.npz' % (nbin, max_l, njack)
+            results = post_process_legendre_mix_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, max_l, outdir, skip_r_bins, skip_l, print_function = print_and_log)
         else:
             from python.post_process_legendre import post_process_legendre
-            post_process_legendre(outdir, nbin, max_l, outdir, shot_noise_rescaling, skip_r_bins, skip_l, print_function = print_and_log)
-            results_file = 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
+            results = post_process_legendre(outdir, nbin, max_l, outdir, shot_noise_rescaling, skip_r_bins, skip_l, print_function = print_and_log)
     elif jackknife:
         from python.post_process_jackknife import post_process_jackknife
-        post_process_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
-        results_file = 'Rescaled_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (nbin, mbin, njack)
+        results = post_process_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
     else: # default
         from python.post_process_default import post_process_default
-        post_process_default(outdir, nbin, mbin, outdir, shot_noise_rescaling, skip_r_bins, print_function = print_and_log)
-        results_file = 'Rescaled_Covariance_Matrices_Default_n%d_m%d.npz' % (nbin, mbin)
+        results = post_process_default(outdir, nbin, mbin, outdir, shot_noise_rescaling, skip_r_bins, print_function = print_and_log)
 elif ntracers == 2:
     if legendre:
         from python.post_process_legendre_multi import post_process_legendre_multi
-        post_process_legendre_multi(outdir, nbin, max_l, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, skip_l, print_function = print_and_log)
-        results_file = 'Rescaled_Multi_Field_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
+        results = post_process_legendre_multi(outdir, nbin, max_l, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, skip_l, print_function = print_and_log)
     elif jackknife:
         from python.post_process_jackknife_multi import post_process_jackknife_multi
-        post_process_jackknife_multi(*xi_jack_names, os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
-        results_file = 'Rescaled_Multi_Field_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (nbin, mbin, njack)
+        results = post_process_jackknife_multi(*xi_jack_names, os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
     else: # default
         from python.post_process_default_multi import post_process_default_multi
-        post_process_default_multi(outdir, nbin, mbin, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, print_function = print_and_log)
-        results_file = 'Rescaled_Multi_Field_Covariance_Matrices_Default_n%d_m%d.npz' % (nbin, mbin)
+        results = post_process_default_multi(outdir, nbin, mbin, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, print_function = print_and_log)
 else:
     print("Number of tracers not supported for this operation (yet)")
     sys.exit(1)
 
-results_file = os.path.join(outdir, results_file)
 print_and_log(datetime.now())
 
 # Convergence check
 from python.convergence_check_extra import convergence_check_extra
-convergence_check_extra(results_file, print_function = print_and_log)
+convergence_check_extra(results, print_function = print_and_log)
 
 print_and_log(datetime.now())
 print_and_log(f"Finished execution.")
