@@ -133,13 +133,13 @@ if not cat_randoms or make_randoms:
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
 outdir = prevent_override("_".join(tlabels) + "_" + reg + f"_z{z_min}-{z_max}") # output file directory
 tmpdir = outdir # directory to write intermediate files, mainly data processing steps
-cornames = [os.path.join(tmpdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
-binned_pair_names = [os.path.join(tmpdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
+cornames = [os.path.join(outdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
+binned_pair_names = [os.path.join(outdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
 if jackknife:
-    jackknife_weights_names = [os.path.join(tmpdir, f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
+    jackknife_weights_names = [os.path.join(outdir, f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
     if convert_cf:
-        xi_jack_names = [os.path.join(tmpdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
-        jackknife_pairs_names = [os.path.join(tmpdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
+        xi_jack_names = [os.path.join(outdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
+        jackknife_pairs_names = [os.path.join(outdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
 if legendre_orig:
     phi_names = [f"BinCorrectionFactor_n{nbin}_" + ("periodic" if periodic else f'm{mbin}') + f"_{index}.txt" for index in indices_corr]
 
@@ -188,8 +188,8 @@ def exec_print_and_log(commandline: str) -> None:
 print("Starting Computation")
 
 # binning files to be created automatically
-binfile = os.path.join(tmpdir, "radial_binning_cov.csv")
-binfile_cf = os.path.join(tmpdir, "radial_binning_corr.csv")
+binfile = os.path.join(outdir, "radial_binning_cov.csv")
+binfile_cf = os.path.join(outdir, "radial_binning_corr.csv")
 from python.write_binning_file_linear import write_binning_file_linear
 write_binning_file_linear(binfile, rmin, rmax, nbin, print_and_log)
 write_binning_file_linear(binfile_cf, rmin_cf, rmax_cf, nbin_cf, print_and_log)
