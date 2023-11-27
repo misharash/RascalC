@@ -142,8 +142,6 @@ if jackknife:
         jackknife_pairs_names = [os.path.join(tmpdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
 if legendre_orig:
     phi_names = [f"BinCorrectionFactor_n{nbin}_" + ("periodic" if periodic else f'm{mbin}') + f"_{index}.txt" for index in indices_corr]
-if legendre_mix:
-    mu_bin_legendre_file = os.path.join(tmpdir, f"weights/mu_bin_legendre_factors_m{mbin}_l{max_l}.txt")
 
 if do_counts or cat_randoms: # move concatenated randoms file to tmpdir as well
     cat_randoms_files = [os.path.join(tmpdir, cat_randoms_file) for cat_randoms_file in cat_randoms_files]
@@ -198,7 +196,7 @@ write_binning_file_linear(binfile_cf, rmin_cf, rmax_cf, nbin_cf, print_and_log)
 
 if legendre_mix: # write mu bin Legendre factors for the code
     from python.mu_bin_legendre_factors import write_mu_bin_legendre_factors
-    write_mu_bin_legendre_factors(mbin, max_l, os.path.dirname(mu_bin_legendre_file))
+    mu_bin_legendre_file = write_mu_bin_legendre_factors(mbin, max_l, os.path.dirname(binned_pair_names[0]))
 
 # full-survey CF conversion, will also load number of data points from pycorr
 if convert_cf:
@@ -407,7 +405,7 @@ for i in range(nfiles):
             compute_correction_function(input_filenames[0][i], binfile, this_outdir, periodic, binned_pair_names[0], print_and_log)
         elif ntracers == 2:
             from python.compute_correction_function_multi import compute_correction_function_multi
-            compute_correction_function_multi(input_filenames[0][i], input_filenames[1][i],input_filenames[0][i], binfile, this_outdir, periodic, *binned_pair_names, print_function = print_and_log)
+            compute_correction_function_multi(input_filenames[0][i], input_filenames[1][i], binfile, this_outdir, periodic, *binned_pair_names, print_function = print_and_log)
         else:
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
