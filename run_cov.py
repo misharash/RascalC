@@ -82,7 +82,7 @@ assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 10
 
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
-no_subsamples_per_file = maxloops // loopspersample
+# no_subsamples_per_file = maxloops // loopspersample
 
 # data processing steps
 redshift_cut = 1
@@ -111,7 +111,7 @@ if convert_cf:
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
-    max_l = 4
+    max_l_smoothing = 4
     radial_window_len = 5
     radial_polyorder = 2
 
@@ -192,23 +192,27 @@ print("Starting Computation")
 # binning files to be created automatically
 binfile = os.path.join(tmpdir, "radial_binning_cov.csv")
 binfile_cf = os.path.join(tmpdir, "radial_binning_corr.csv")
-exec_print_and_log(f"python python/write_binning_file_linear.py {nbin} {rmin} {rmax} {binfile}")
-exec_print_and_log(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax_cf} {binfile_cf}")
+from python.write_binning_file_linear import write_binning_file_linear
+write_binning_file_linear(binfile, rmin, rmax, nbin, print_and_log)
+write_binning_file_linear(binfile_cf, rmin_cf, rmax_cf, nbin_cf, print_and_log)
 
 if legendre_mix: # write mu bin Legendre factors for the code
-    exec_print_and_log(f"python python/mu_bin_legendre_factors.py {mbin} {max_l} {os.path.dirname(mu_bin_legendre_file)}")
+    from python.mu_bin_legendre_factors import write_mu_bin_legendre_factors
+    write_mu_bin_legendre_factors(mbin, max_l, os.path.dirname(mu_bin_legendre_file))
 
 # full-survey CF conversion, will also load number of data points from pycorr
 if convert_cf:
-    r_step_cf = (rmax_cf-rmin_cf)//nbin_cf
+    r_step_cf = (rmax_cf - rmin_cf) / nbin_cf
     for c, corname in enumerate(cornames):
         os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
-        exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames[c])} {corname} {r_step_cf} {mbin_cf}")
-        ndata[tracer2_corr[c]] = np.loadtxt(corname + ".ndata")[1] # override ndata for second tracer, so that autocorrelations are prioritized
+        from python.convert_xi_from_pycorr import convert_xi_from_pycorr_files
+        _, ndata2 = convert_xi_from_pycorr_files(pycorr_filenames[c], corname, n_mu = mbin_cf, r_step = r_step_cf, print_function = print_and_log)
+        ndata[tracer2_corr[c]] = ndata2 # override ndata for second tracer, so that autocorrelations are prioritized
         if smoothen_cf:
             corname_old = corname
-            corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_11_smooth.dat"
-            exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
+            corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_{indices_corr[c]}_smooth.dat"
+            from python.smoothen_xi import smoothen_xi_files
+            smoothen_xi_files(corname_old, max_l_smoothing, radial_window_len, radial_polyorder, corname)
             cornames[c] = corname # save outside of the loop
 
 if count_ndata:
@@ -234,7 +238,8 @@ if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
         if create_jackknives or ndata_isbad[t]:
             print_and_log("Processing data file for" + create_jackknives * " jackknife reference" + (create_jackknives and count_ndata) * " and" + count_ndata * " galaxy counts")
             rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-            exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
+            from python.redshift_cut import redshift_cut_files
+            redshift_cut_files(data_ref_filename, rdzw_ref_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
             data_ref_filenames[t] = rdzw_ref_filename
         if ndata_isbad[t]:
             with open(data_ref_filenames[t]) as f:
@@ -269,15 +274,18 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
         else: # (potentially) run through all data processing steps
             if redshift_cut:
                 rdzw_filename = change_extension(input_filename, "rdzw")
-                exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
+                from python.redshift_cut import redshift_cut_files
+                redshift_cut_files(input_filename, rdzw_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
                 input_filename = rdzw_filename
             if convert_to_xyz:
                 xyzw_filename = change_extension(input_filename, "xyzw")
-                exec_print_and_log(f"python python/convert_to_xyz.py {input_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
+                from python.convert_to_xyz import convert_to_xyz_files
+                convert_to_xyz_files(input_filename, xyzw_filename, Omega_m, Omega_k, w_dark_energy, FKP_weights[t], masks[t], use_weights[t], print_and_log)
                 input_filename = xyzw_filename
             if create_jackknives:
                 xyzwj_filename = change_extension(input_filename, "xyzwj")
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {input_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
+                from python.create_jackknives_pycorr import create_jackknives_pycorr_files
+                create_jackknives_pycorr_files(data_ref_filenames[t], input_filename, xyzwj_filename, njack, print_and_log) # keep in mind some subtleties for multi-tracer jackknife assigment
                 input_filename = xyzwj_filename
         input_filenames[t][i] = input_filename # save final input filename for next loop
         print_and_log(f"Finished preparing file {i+1} of {nfiles_t}")
@@ -307,7 +315,8 @@ if normalize_weights:
             print_and_log(f"Starting normalizing weights in file {i+1} of {nfiles}")
             print_and_log(datetime.now())
             n_filename = append_to_filename(input_filename, "n") # append letter n to the original filename
-            exec_print_and_log(f"python python/normalize_weights.py {input_filename} {n_filename}")
+            from python.normalize_weights import normalize_weights_files
+            normalize_weights_files(input_filename, n_filename, print_and_log)
             input_filenames[t][i] = n_filename # update input filename for later
             print_and_log(f"Finished normalizing weights in file {i+1} of {nfiles}")
 
@@ -322,9 +331,9 @@ if convert_cf: # this is really for pair counts and jackknives
                 cat_randoms_files[t] = input_filenames[t][0]
             # compute jackknife weights
             if ntracers == 1:
-                exec_print_and_log(f"python python/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
+                exec_print_and_log(f"python python/legacy/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             elif ntracers == 2:
-                exec_print_and_log(f"python python/jackknife_weights_cross.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
+                exec_print_and_log(f"python python/legacy/jackknife_weights_cross.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             else:
                 print("Number of tracers not supported for this operation (yet)")
                 sys.exit(1)
@@ -332,35 +341,39 @@ if convert_cf: # this is really for pair counts and jackknives
             for t in range(ntracers):
                 data_filename = data_ref_filenames[t]
                 xyzw_filename = change_extension(data_filename, "xyzw")
-                exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
+                from python.convert_to_xyz import convert_to_xyz_files
+                convert_to_xyz_files(data_filename, xyzw_filename, Omega_m, Omega_k, w_dark_energy, FKP_weights[t], masks[t], use_weights[t], print_and_log)
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
                 # keep in mind some subtleties for multi-tracer jackknife assigment
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {data_filename} {xyzwj_filename} {njack}") # the first file must be rdzw, the second xyzw!
+                from python.create_jackknives_pycorr import create_jackknives_pycorr_files
+                create_jackknives_pycorr_files(data_ref_filenames[t], data_filename, xyzwj_filename, njack, print_and_log) # the first file must be rdzw, the second xyzw!
                 data_filename = xyzwj_filename
                 if normalize_weights:
                     n_filename = append_to_filename(data_filename, "n") # append letter n to the original filename
-                    exec_print_and_log(f"python python/normalize_weights.py {data_filename} {n_filename}")
+                    from python.normalize_weights import normalize_weights_files
+                    normalize_weights_files(data_filename, n_filename, print_and_log)
                     data_filename = n_filename
                 data_ref_filenames[t] = data_filename # update the name in list
             # run RascalC own xi jack estimator
             if ntracers == 1:
-                exec_print_and_log(f"python python/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]}") # 1. is max mu
+                exec_print_and_log(f"python python/legacy/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]}") # 1. is max mu
             elif ntracers == 2:
-                exec_print_and_log(f"python python/xi_estimator_jack_cross.py {' '.join(data_ref_filenames)} {' '.join(cat_randoms_files)} {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {' '.join(jackknife_pairs_names)}") # 1. is max mu
+                exec_print_and_log(f"python python/legacy/xi_estimator_jack_cross.py {' '.join(data_ref_filenames)} {' '.join(cat_randoms_files)} {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {' '.join(jackknife_pairs_names)}") # 1. is max mu
             else:
                 print("Number of tracers not supported for this operation (yet)")
                 sys.exit(1)
             if not cat_randoms: # reload full counts from pycorr, override jackknives - to prevent normalization issues
-                r_step = (rmax-rmin)//nbin
+                r_step = (rmax - rmin) / nbin
+                from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
                 for c in range(ncorr):
-                    exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
+                    convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step =  r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
         else: # only need full, binned pair counts
             if cat_randoms: # compute counts with our own script
                 if ntracers == 1:
-                    exec_print_and_log(f"python python/RR_counts.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
+                    exec_print_and_log(f"python python/legacy/RR_counts.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
                 elif ntracers == 2:
-                    exec_print_and_log(f"python python/RR_counts_multi.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
+                    exec_print_and_log(f"python python/legacy/RR_counts_multi.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
                 else:
                     print("Number of tracers not supported for this operation (yet)")
                     sys.exit(1)
@@ -374,9 +387,11 @@ if convert_cf: # this is really for pair counts and jackknives
             if jackknife: # convert jackknife xi and all counts
                 for filename in (xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c]):
                     os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-                exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filenames[c][0]} {xi_jack_names[c]} {jackknife_weights_names[c]} {jackknife_pairs_names[c]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
+                from python.convert_xi_jack_from_pycorr import convert_jack_xi_weights_counts_from_pycorr_files
+                convert_jack_xi_weights_counts_from_pycorr_files(pycorr_filenames[c][0], xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
             else: # convert full, binned pair counts
-                exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
+                from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
+                convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
 
 # running main code for each random file/part
 for i in range(nfiles):
@@ -388,9 +403,11 @@ for i in range(nfiles):
     if legendre_orig: # need correction function
         os.makedirs(this_outdir, exist_ok=1)
         if ntracers == 1:
-            exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
+            from python.compute_correction_function import compute_correction_function
+            compute_correction_function(input_filenames[0][i], binfile, this_outdir, periodic, binned_pair_names[0], print_and_log)
         elif ntracers == 2:
-            exec_print_and_log(f"python python/compute_correction_function_multi.py {' '.join([names[i] for names in input_filenames])} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {' '.join(binned_pair_names)}")
+            from python.compute_correction_function_multi import compute_correction_function_multi
+            compute_correction_function_multi(input_filenames[0][i], input_filenames[1][i],input_filenames[0][i], binfile, this_outdir, periodic, *binned_pair_names, print_function = print_and_log)
         else:
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
@@ -404,43 +421,51 @@ print_and_log(datetime.now())
 # Concatenate samples
 if nfiles > 1:
     print_and_log("Concatenating samples")
-    exec_print_and_log(f"python python/cat_subsets_of_integrals.py {nbin} {'l' + str(max_l) if legendre else 'm' + str(mbin)} " + " ".join([f"{os.path.join(outdir, str(i))} {no_subsamples_per_file}" for i in range(nfiles)]) + f" {outdir}")
+    from python.cat_raw_covariance_matrices import cat_raw_covariance_matrices
+    cat_raw_covariance_matrices(nbin, f'l{max_l}' if legendre else f'm{mbin}', [os.path.join(outdir, str(i)) for i in range(nfiles)], [None] * nfiles, outdir, print_function = print_and_log)
     print_and_log(datetime.now())
 
 # Post-process
 print_and_log("Post-processing")
 # Parameters
-skip_bins = 5
+skip_r_bins = 5
 if not jackknife:
     shot_noise_rescaling = 1
     if ntracers >= 2: shot_noise_rescaling2 = 1
 if legendre:
     skip_l = 0
 
-n_subsamples = no_subsamples_per_file * nfiles # every case needs this number
+# n_subsamples = no_subsamples_per_file * nfiles
 if ntracers == 1:
     if legendre:
         if jackknife:
-            exec_print_and_log(f"python python/post_process_legendre_mix_jackknife.py {xi_jack_names[0]} {os.path.dirname(jackknife_weights_names[0])} {outdir} {mbin} {max_l} {n_subsamples} {outdir} {skip_bins} {skip_l}")
+            from python.post_process_legendre_mix_jackknife import post_process_legendre_mix_jackknife
+            post_process_legendre_mix_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, max_l, outdir, skip_r_bins, skip_l, print_function = print_and_log)
             results_file = 'Rescaled_Covariance_Matrices_Legendre_Jackknife_n%d_l%d_j%d.npz' % (nbin, max_l, njack)
         else:
-            exec_print_and_log(f"python python/post_process_legendre.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins} {skip_l}")
+            from python.post_process_legendre import post_process_legendre
+            post_process_legendre(outdir, nbin, max_l, outdir, shot_noise_rescaling, skip_r_bins, skip_l, print_function = print_and_log)
             results_file = 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
     elif jackknife:
-        exec_print_and_log(f"python python/post_process_jackknife.py {xi_jack_names[0]} {os.path.dirname(jackknife_weights_names[0])} {outdir} {mbin} {n_subsamples} {outdir} {skip_bins}")
+        from python.post_process_jackknife import post_process_jackknife
+        post_process_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
         results_file = 'Rescaled_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (nbin, mbin, njack)
     else: # default
-        exec_print_and_log(f"python python/post_process_default.py {outdir} {nbin} {mbin} {n_subsamples} {outdir} {shot_noise_rescaling} {skip_bins}")
+        from python.post_process_default import post_process_default
+        post_process_default(outdir, nbin, mbin, outdir, shot_noise_rescaling, skip_r_bins, print_function = print_and_log)
         results_file = 'Rescaled_Covariance_Matrices_Default_n%d_m%d.npz' % (nbin, mbin)
 elif ntracers == 2:
     if legendre:
-        exec_print_and_log(f"python python/post_process_legendre_multi.py {outdir} {nbin} {max_l} {n_subsamples} {outdir} {shot_noise_rescaling} {shot_noise_rescaling2} {skip_bins} {skip_l}")
+        from python.post_process_legendre_multi import post_process_legendre_multi
+        post_process_legendre_multi(outdir, nbin, max_l, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, skip_l, print_function = print_and_log)
         results_file = 'Rescaled_Multi_Field_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l)
     elif jackknife:
-        exec_print_and_log(f"python python/post_process_jackknife_multi.py {' '.join(xi_jack_names)} {os.path.dirname(jackknife_weights_names[0])} {outdir} {mbin} {n_subsamples} {outdir} {skip_bins}")
+        from python.post_process_jackknife_multi import post_process_jackknife_multi
+        post_process_jackknife_multi(*xi_jack_names, os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
         results_file = 'Rescaled_Multi_Field_Covariance_Matrices_Jackknife_n%d_m%d_j%d.npz' % (nbin, mbin, njack)
     else: # default
-        exec_print_and_log(f"python python/post_process_default_multi.py {outdir} {nbin} {mbin} {n_subsamples} {outdir} {shot_noise_rescaling} {shot_noise_rescaling2} {skip_bins}")
+        from python.post_process_default_multi import post_process_default_multi
+        post_process_default_multi(outdir, nbin, mbin, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, print_function = print_and_log)
         results_file = 'Rescaled_Multi_Field_Covariance_Matrices_Default_n%d_m%d.npz' % (nbin, mbin)
 else:
     print("Number of tracers not supported for this operation (yet)")
@@ -450,7 +475,8 @@ results_file = os.path.join(outdir, results_file)
 print_and_log(datetime.now())
 
 # Convergence check
-exec_print_and_log(f"python python/convergence_check_extra.py {results_file}")
+from python.convergence_check_extra import convergence_check_extra
+convergence_check_extra(results_file, print_function = print_and_log)
 
 print_and_log(datetime.now())
 print_and_log(f"Finished execution.")
