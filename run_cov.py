@@ -93,6 +93,7 @@ zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0
 tlabels = [tracers[id]] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 1 if tlabels[0].startswith("BGS") else 4 # 1 random for BGS only
+if any(tlabels[0].startswith(t) for t in ("BGS", "LRG")): version_label = "v0.6.1" # newer version for BGS and LRG, older for ELG and QSO
 
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
 # no_subsamples_per_file = maxloops // loopspersample
@@ -114,7 +115,7 @@ if do_counts or cat_randoms:
 
 z_min, z_max = zs[id] # for redshift cut and filenames
 
-input_dir = f"/global/cfs/cdirs/desi/users/uendert/desi_blinding/double_blinded/LSScats/{version_label}/blinded/"
+input_dir = f"/global/cfs/cdirs/desi/users/uendert/desi_blinding/LSScats/{version_label}/doubleblinded/"
 
 # CF options
 convert_cf = 1
