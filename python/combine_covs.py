@@ -3,49 +3,46 @@
 from pycorr import TwoPointCorrelationFunction
 import numpy as np
 import sys
+from .utils import reshape_pycorr
+from .convert_cov import get_cov_header, load_cov
+from .convert_counts_from_pycorr import get_counts_from_pycorr
 
-## PARAMETERS
-if len(sys.argv) not in (9, 11):
-    print("Usage: python combine_covs.py {RASCALC_RESULTS1} {RASCALC_RESULTS2} {PYCORR_FILE1} {PYCORR_FILE2} {N_R_BINS} {N_MU_BINS} {R_BINS_SKIP} {OUTPUT_COV_FILE} [{OUTPUT_COV_FILE1} {OUTPUT_COV_FILE2}].")
-    sys.exit(1)
-rascalc_results1 = str(sys.argv[1])
-rascalc_results2 = str(sys.argv[2])
-pycorr_file1 = str(sys.argv[3])
-pycorr_file2 = str(sys.argv[4])
-n_r_bins = int(sys.argv[5])
-n_mu_bins = int(sys.argv[6])
-r_bins_skip = int(sys.argv[7])
-output_cov_file = str(sys.argv[8])
-if len(sys.argv) >= 11:
-    output_cov_file1 = str(sys.argv[9])
-    output_cov_file2 = str(sys.argv[10])
 
-# Read RascalC results
-with np.load(rascalc_results1) as f:
-    header1 = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]) # form the header with shot-noise rescaling value
-    cov1 = f['full_theory_covariance']
-    print(f"Max abs eigenvalue of bias correction matrix in 1st results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
-with np.load(rascalc_results2) as f:
-    header2 = "shot_noise_rescaling = " + str(f["shot_noise_rescaling"]) # form the header with shot-noise rescaling value
-    cov2 = f['full_theory_covariance']
-    print(f"Max abs eigenvalue of bias correction matrix in 2nd results is {np.max(np.abs(np.linalg.eigvals(f['full_theory_D_matrix']))):.2e}")
-# Save to their files if any
-if len(sys.argv) >= 11:
-    np.savetxt(output_cov_file1, cov1, header=header1) # includes shot-noise rescaling value in the header
-    np.savetxt(output_cov_file2, cov2, header=header2) # includes shot-noise rescaling value in the header
-header = f"combined from {rascalc_results1} with {header1} and {rascalc_results2} with {header2}" # form the final header to include both
+def combine_covs(rascalc_results1: str, rascalc_results2: str, pycorr_file1: str, pycorr_file2: str, output_cov_file: str, n_mu_bins: int | None = None, r_step: float = 1, skip_r_bins: int = 0, output_cov_file1: str | None = None, output_cov_file2: str | None = None, print_function = print):
+    # Read RascalC results
+    header1 = get_cov_header(rascalc_results1)
+    cov1 = load_cov(rascalc_results1, print_function)
+    header2 = get_cov_header(rascalc_results2)
+    cov2 = load_cov(rascalc_results2, print_function)
+    # Save to their files if any
+    if output_cov_file1: np.savetxt(output_cov_file1, cov1, header = header1)
+    if output_cov_file2: np.savetxt(output_cov_file2, cov2, header = header2)
+    header = f"combined from {rascalc_results1} with {header1} and {rascalc_results2} with {header2}" # form the final header to include both
 
-# Read pycorr files to figure out weights
-result = TwoPointCorrelationFunction.load(pycorr_file1)
-result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].wrap().normalize()
-result = result[r_bins_skip:]
-weight1 = result.R1R2.wcounts.ravel()
-result = TwoPointCorrelationFunction.load(pycorr_file2)
-result = result[::result.shape[0]//n_r_bins, ::result.shape[1]//2//n_mu_bins].wrap().normalize()
-result = result[r_bins_skip:]
-weight2 = result.R1R2.wcounts.ravel()
+    # Read pycorr files to figure out weights
+    weight1 = get_counts_from_pycorr(reshape_pycorr(TwoPointCorrelationFunction.load(pycorr_file1), n_mu_bins, r_step, skip_r_bins = skip_r_bins), counts_factor = 1).ravel()
+    weight2 = get_counts_from_pycorr(reshape_pycorr(TwoPointCorrelationFunction.load(pycorr_file2), n_mu_bins, r_step, skip_r_bins = skip_r_bins), counts_factor = 1).ravel()
 
-# Produce and save combined cov
-# following xi = (xi1 * weight1 + xi2 * weight2) / (weight1 + weight2)
-cov = (cov1 * weight1[None, :] * weight1[:, None] + cov2 * weight2[None, :] * weight2[:, None]) / (weight1 + weight2)[None, :] / (weight1 + weight2)[:, None]
-np.savetxt(output_cov_file, cov, header=header) # includes source parts and their shot-noise rescaling values in the header
+    # Produce and save combined cov
+    # following xi = (xi1 * weight1 + xi2 * weight2) / (weight1 + weight2)
+    cov = (cov1 * weight1[None, :] * weight1[:, None] + cov2 * weight2[None, :] * weight2[:, None]) / (weight1 + weight2)[None, :] / (weight1 + weight2)[:, None]
+    np.savetxt(output_cov_file, cov, header = header) # includes source parts and their shot-noise rescaling values in the header
+
+if __name__ == "__main__": # if invoked as a script
+    ## PARAMETERS
+    if len(sys.argv) not in (9, 11):
+        print("Usage: python combine_covs.py {RASCALC_RESULTS1} {RASCALC_RESULTS2} {PYCORR_FILE1} {PYCORR_FILE2} {R_STEP} {N_MU_BINS} {SKIP_R_BINS} {OUTPUT_COV_FILE} [{OUTPUT_COV_FILE1} {OUTPUT_COV_FILE2}].")
+        sys.exit(1)
+    rascalc_results1 = str(sys.argv[1])
+    rascalc_results2 = str(sys.argv[2])
+    pycorr_file1 = str(sys.argv[3])
+    pycorr_file2 = str(sys.argv[4])
+    r_step = float(sys.argv[5])
+    n_mu_bins = int(sys.argv[6])
+    skip_r_bins = int(sys.argv[7])
+    output_cov_file = str(sys.argv[8])
+    from .utils import get_arg_safe
+    output_cov_file1 = get_arg_safe(9, str, None)
+    output_cov_file2 = get_arg_safe(10, str, None)
+    
+    combine_covs(rascalc_results1, rascalc_results2, pycorr_file1, pycorr_file2, output_cov_file, n_mu_bins, r_step, skip_r_bins, output_cov_file1, output_cov_file2)

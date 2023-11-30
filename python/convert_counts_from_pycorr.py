@@ -1,46 +1,43 @@
 "This reads a cosmodesi/pycorr .npy file and generates binned pair counts text file for RascalC to use"
 
-from pycorr import TwoPointCorrelationFunction
+import pycorr
 import numpy as np
 import sys
+from .utils import reshape_pycorr
 
-## PARAMETERS
-if len(sys.argv) not in (5, 6, 7, 8):
-    print("Usage: python convert_counts_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_PAIRCOUNTS_TEXT_FILE} {R_STEP} {N_MU} [{COUNTS_FACTOR} [{SPLIT_ABOVE}] [{R_MAX}]]]. COUNTS_FACTOR=0 is a special value to use normalized counts.")
-    sys.exit(1)
-infile_name = str(sys.argv[1])
-outfile_name = str(sys.argv[2])
-r_step = int(sys.argv[3])
-n_mu = int(sys.argv[4])
-counts_factor = float(sys.argv[5]) if len(sys.argv) >= 6 else 1 # basically number of randoms used for these counts, used to convert from total to 1 catalog count estimate
-split_above = float(sys.argv[6]) if len(sys.argv) >= 7 else 0 # divide weighted RR counts by counts_factor**2 below this and by counts_factor above
-r_max = int(sys.argv[7]) if len(sys.argv) >= 8 else None # if given, limit used r_bins at that
-if r_max: assert r_max % r_step == 0, "Radial rebinning impossible after max radial bin cut"
 
-result_orig = TwoPointCorrelationFunction.load(infile_name)
-n_mu_orig = result_orig.shape[1]
-assert n_mu_orig % (2 * n_mu) == 0, "Angular rebinning not possible"
-mu_factor = n_mu_orig // 2 // n_mu
-
-# determine the radius step in pycorr
-r_steps_orig = np.diff(result_orig.edges[0])
-r_step_orig = int(np.around(np.mean(r_steps_orig)))
-assert np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3), "Binnings other than linear with integer step are not supported"
-assert r_step % r_step_orig == 0, "Radial rebinning not possible"
-r_step //= r_step_orig
-
-if r_max:
-    assert r_max % r_step_orig == 0, "Max radial bin cut incompatible with original radial binning"
-    r_max //= r_step_orig
-    result_orig = result_orig[:r_max] # cut to max bin
-
-result = result_orig[::r_step, ::mu_factor].wrap() # rebin and wrap to positive mu
-if counts_factor: # nonzero value
-    paircounts = result.R1R2.wcounts / counts_factor
-    nonsplit_mask = (result.sepavg(axis=0) < split_above)
+def get_counts_from_pycorr(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator, counts_factor: float | None = None, split_above: float = np.inf) -> np.ndarray[float]:
+    if not counts_factor: # use normalized counts
+        return xi_estimator.R1R2.normalized_wcounts()
+    paircounts = xi_estimator.R1R2.wcounts / counts_factor
+    nonsplit_mask = (xi_estimator.sepavg(axis=0) < split_above)
     if split_above > 0: paircounts[nonsplit_mask] /= counts_factor # divide once more below the splitting scale
-else: # zero value, use normalized counts
-    paircounts = result.R1R2.normalized_wcounts()
+    return paircounts
 
-## Write to file using numpy funs
-np.savetxt(outfile_name, paircounts.reshape(-1, 1)) # the file always has 1 column
+def convert_counts_from_pycorr_to_file(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator, outfile_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, counts_factor: float | None = None, split_above: float = np.inf):
+    xi_estimator_reshaped = reshape_pycorr(xi_estimator, n_mu, r_step, r_max)
+    paircounts = get_counts_from_pycorr(xi_estimator_reshaped, counts_factor, split_above)
+    ## Write to file using numpy funs
+    np.savetxt(outfile_name, paircounts.reshape(-1, 1)) # the file always has 1 column
+
+def convert_counts_from_pycorr_files(infile_name: str, outfile_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, counts_factor: float | None = None, split_above: float = np.inf):
+    xi_estimator_orig = pycorr.TwoPointCorrelationFunction.load(infile_name)
+    convert_counts_from_pycorr_to_file(xi_estimator_orig, outfile_name, n_mu, r_step, r_max, counts_factor, split_above)
+
+if __name__ == "__main__": # if invoked as a script
+    ## PARAMETERS
+    if len(sys.argv) not in (3, 4, 5, 6, 7, 8):
+        print("Usage: python convert_counts_from_pycorr.py {INPUT_NPY_FILE} {OUTPUT_PAIRCOUNTS_TEXT_FILE} [{R_STEP} [{N_MU} [{COUNTS_FACTOR} [{SPLIT_ABOVE}] [{R_MAX}]]]]]. COUNTS_FACTOR=0 is a special value to use normalized counts.")
+        sys.exit(1)
+    infile_name = str(sys.argv[1])
+    outfile_name = str(sys.argv[2])
+    from .utils import get_arg_safe
+    r_step = get_arg_safe(3, float, 1)
+    n_mu = get_arg_safe(4, int, None)
+    counts_factor = get_arg_safe(5, float, None) # basically number of randoms used for these counts, used to convert from total to 1 catalog count estimate
+    split_above = get_arg_safe(6, float, np.inf) # divide weighted RR counts by counts_factor**2 below this and by counts_factor above
+    r_max = get_arg_safe(7, float, np.inf) # if given, limit used r_bins at that
+
+    if n_mu == 0: n_mu = None
+    if counts_factor == 0: counts_factor = None
+    convert_counts_from_pycorr_files(infile_name, outfile_name, n_mu, r_step, r_max, counts_factor, split_above)
