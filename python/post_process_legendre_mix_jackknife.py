@@ -100,7 +100,7 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
     output_dict = {"jackknife_theory_covariance": jack_cov, "full_theory_covariance": full_cov, "jackknife_data_covariance": data_cov, "shot_noise_rescaling": alpha_best, "jackknife_theory_precision": jack_prec, "full_theory_precision": full_prec, "N_eff": N_eff_D, "full_theory_D_matrix": full_D_est, "individual_theory_covariances": partial_cov, "individual_theory_jackknife_covariances": partial_jack_cov}
 
     output_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_Jackknife_n%d_l%d_j%d.npz' % (n, max_l, n_jack))
-    np.savez(output_name, **output_dict)
+    np.savez_compressed(output_name, **output_dict)
 
     print_function("Saved output covariance matrices as %s"%output_name)
 
