@@ -46,7 +46,7 @@ def save_safe(output_dir: str, output_group_name: str, output_dictionary: dict[s
         warn(f"The default output filename for group {output_group_name}, {output_filename}, already exists. Will try to find a replacement.")
         i = 1
         while True:
-            output_filename = os.path.join(cov_dir, f"Raw_Covariance_Matrices_{output_group_name}.{i}.npz")
+            output_filename = os.path.join(output_dir, f"Raw_Covariance_Matrices_{output_group_name}.{i}.npz")
             if not os.path.exists(output_filename):
                 warn(f"Found unused name {output_filename}, will save there.")
                 break
