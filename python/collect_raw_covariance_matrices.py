@@ -54,7 +54,7 @@ def save_safe(output_dir: str, output_group_name: str, output_dictionary: dict[s
             
     np.savez_compressed(output_filename, **output_dictionary)
 
-def collect_raw_covariance_matrices(cov_dir: str, print_function = print) -> None:
+def collect_raw_covariance_matrices(cov_dir: str, print_function = print, cleanup: bool = False) -> dict[str, dict[str, np.ndarray[float]]]:
     cov_dir_all = os.path.join(cov_dir, 'CovMatricesAll/')
     cov_dir_jack = os.path.join(cov_dir, 'CovMatricesJack/')
 
@@ -129,15 +129,17 @@ def collect_raw_covariance_matrices(cov_dir: str, print_function = print) -> Non
 
         # now that the file is saved (not any earlier to be sure), can remove all the text files
         # the list contains only the files that had their contents loaded and saved
-        for matrix_filenames_dictionary in output_group.values():
-            for input_filename in matrix_filenames_dictionary.values():
-                os.remove(input_filename)
+        if cleanup:
+            for matrix_filenames_dictionary in output_group.values():
+                for input_filename in matrix_filenames_dictionary.values():
+                    os.remove(input_filename)
         
         print_function(f"Finished with output group {output_group_name}")
 
     # remove subdirectories too if they are empty
-    rmdir_safe(cov_dir_all)
-    rmdir_safe(cov_dir_jack)
+    if cleanup:
+        rmdir_safe(cov_dir_all)
+        rmdir_safe(cov_dir_jack)
 
     return return_dictionary
 
