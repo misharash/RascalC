@@ -134,7 +134,7 @@ def load_matrices_single(input_data: dict[str], cov_filter: np.ndarray[int], tra
     c4 = input_data["c4" + joint + str(tracer) * 2 + "," + suffix]
     matrices = (c2, c3, c4)
 
-    def finalize_matrix(a: np.ndarra):
+    def finalize_matrix(a: np.ndarray):
         return symmetrized(a[cov_filter])
     
     if full: # 2D matrices, filter can be applied directly

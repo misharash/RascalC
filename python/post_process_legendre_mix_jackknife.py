@@ -14,6 +14,7 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
     xi_jack = np.loadtxt(jackknife_file, skiprows = 2)
     n_jack = xi_jack.shape[0] # total jackknives
     n = xi_jack.shape[1] // m # radial bins
+    n_l = max_l // 2 + 1 # number of even multipoles
     n_bins = (n_l - skip_l) * (n - skip_r_bins) # total Legendre bins to work with
 
     weight_file = os.path.join(weight_dir, 'jackknife_weights_n%d_m%d_j%d_11.dat' % (n, m, n_jack))
