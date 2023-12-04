@@ -105,7 +105,8 @@ def collect_raw_covariance_matrices(cov_dir: str, print_function = print, cleanu
                 output_dictionary[matrix_name][suffix] = matrix
 
             # special treatment for string suffixes (at the moment, only "full")
-            for suffix in output_dictionary[matrix_name].keys():
+            tmp_keys = output_dictionary[matrix_name].keys()
+            for suffix in tmp_keys:
                 if isinstance(suffix, str):
                     output_dictionary[matrix_name + "_" + suffix] = output_dictionary[matrix_name].pop(suffix)
                     # this creates a separate array to be saved
