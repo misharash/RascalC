@@ -68,7 +68,7 @@ def collect_raw_covariance_matrices(cov_dir: str, print_function = print, cleanu
     for input_filename in glob(cov_dir_jack + "*.txt"):
         organize_filename(input_filename, output_groups, jack = True)
     
-    print_function(f"Detected {len(output_groups)} output groups in {cov_dir}")
+    print_function(f"Detected {len(output_groups)} output group(s) in {cov_dir}")
 
     return_dictionary = {}
     
@@ -105,7 +105,7 @@ def collect_raw_covariance_matrices(cov_dir: str, print_function = print, cleanu
                 output_dictionary[matrix_name][suffix] = matrix
 
             # special treatment for string suffixes (at the moment, only "full")
-            tmp_keys = output_dictionary[matrix_name].keys()
+            tmp_keys = list(output_dictionary[matrix_name].keys())
             for suffix in tmp_keys:
                 if isinstance(suffix, str):
                     output_dictionary[matrix_name + "_" + suffix] = output_dictionary[matrix_name].pop(suffix)
