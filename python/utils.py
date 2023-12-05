@@ -101,14 +101,15 @@ def reshape_pycorr(xi_estimator: pycorr.TwoPointEstimator, n_mu: int | None = No
     # determine the radius step in pycorr
     r_steps_orig = np.diff(xi_estimator.edges[0])
     r_step_orig = np.mean(r_steps_orig)
-    if not np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3): raise ValueError("Binning appears not linear with integer step; such case is not supported")
-    r_factor_exact = r_step_orig / r_step
+    if not np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3): raise ValueError("Binning appears not linear; such case is not supported")
+    r_factor_exact = r_step / r_step_orig
     r_factor = int(np.rint(r_factor_exact))
-    if not np.allclose(r_factor, r_factor_exact, rtol=5e-3): raise ValueError("Radial rebinning seems impossible")
+    if not np.allclose(r_factor, r_factor_exact, rtol=5e-3): raise ValueError(f"Radial rebinning seems impossible: exact rebinning factor is {r_factor_exact}, its integer approximation is {r_factor}")
 
     # Apply r_max cut
     r_values = xi_estimator.sepavg(axis = 0)
-    xi_estimator = xi_estimator[r_values <= r_max]
+    r_bins_indices = np.where(r_values <= r_max)[0]
+    xi_estimator = xi_estimator[:r_bins_indices.max() + 1] # can not apply mask to pycorr estimators; the bins are adjacent anyway
 
     return fix_bad_bins_pycorr(xi_estimator[skip_r_bins * r_factor:])[::r_factor, ::mu_factor].wrap() # first skip bins, then fix bad bins, then rebin and wrap to positive mu
 
