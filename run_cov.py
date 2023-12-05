@@ -407,6 +407,9 @@ if convert_cf: # this is really for pair counts and jackknives
                 from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
                 convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
 
+print_and_log("Pre-processing test finished. Exiting")
+sys.exit(0)
+
 # running main code for each random file/part
 for i in range(nfiles):
     print_and_log(f"Starting main computation {i+1} of {nfiles}")
