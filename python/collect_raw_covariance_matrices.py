@@ -54,7 +54,7 @@ def save_safe(output_dir: str, output_group_name: str, output_dictionary: dict[s
             
     np.savez_compressed(output_filename, **output_dictionary)
 
-def collect_raw_covariance_matrices(cov_dir: str, print_function = print, cleanup: bool = False) -> dict[str, dict[str, np.ndarray[float]]]:
+def collect_raw_covariance_matrices(cov_dir: str, cleanup: bool = True, print_function = print) -> dict[str, dict[str, np.ndarray[float]]]:
     cov_dir_all = os.path.join(cov_dir, 'CovMatricesAll/')
     cov_dir_jack = os.path.join(cov_dir, 'CovMatricesJack/')
 
