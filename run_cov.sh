@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --job-name=RascalC-Y1-v0.6.1-double-blinded-test
-#SBATCH --array=0-5 # only LRG so far
+#SBATCH --array=0-5,8-11,16,17 # LRG and ELG without full ranges + QSO, no BGS yet
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
