@@ -2,6 +2,7 @@
 
 import numpy as np
 import sys
+from typing import Callable
 from .convert_cov import load_cov, get_cov_header
 
 
@@ -16,8 +17,11 @@ def convert_cov_legendre(cov: np.ndarray[float], max_l: int):
     cov = cov.reshape(n_bins, n_bins) # convert back from 4D to 2D
     return cov
 
-def load_cov_legendre(rascalc_results_file: str, max_l: int, print_function = print):
+def load_cov_legendre(rascalc_results_file: str, max_l: int, print_function: Callable = print):
     return convert_cov_legendre(load_cov(rascalc_results_file, print_function), max_l)
+
+def export_cov_legendre(rascalc_results_file: str, max_l: int, output_cov_file: str, print_function: Callable = print):
+    np.savetxt(output_cov_file, load_cov_legendre(rascalc_results_file, max_l, print_function = print_function), header = get_cov_header(rascalc_results))
 
 if __name__ == "__main__": # if invoked as a script
     ## PARAMETERS
@@ -28,4 +32,4 @@ if __name__ == "__main__": # if invoked as a script
     max_l = int(sys.argv[2])
     output_cov_file = str(sys.argv[3])
 
-    np.savetxt(output_cov_file, load_cov_legendre(rascalc_results, max_l), header = get_cov_header(rascalc_results))
+    export_cov_legendre(rascalc_results, max_l, output_cov_file)
