@@ -91,7 +91,7 @@ def fix_bad_bins_pycorr(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEsti
         kw[name] = counts
     return cls(**kw)
 
-def reshape_pycorr(xi_estimator: pycorr.TwoPointEstimator, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, skip_r_bins: int = 0) -> pycorr.TwoPointEstimator:
+def reshape_pycorr(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator, n_mu: int | None = None, r_step: float | None = None, r_max: float = np.inf, skip_r_bins: int = 0) -> pycorr.twopoint_estimator.BaseTwoPointEstimator:
     n_mu_orig = xi_estimator.shape[1]
     if n_mu_orig % 2 != 0: raise ValueError("Wrapping not possible")
     if n_mu:
@@ -99,13 +99,15 @@ def reshape_pycorr(xi_estimator: pycorr.TwoPointEstimator, n_mu: int | None = No
         mu_factor = n_mu_orig // 2 // n_mu
     else: mu_factor = 1 # leave the original number of mu bins
 
-    # determine the radius step in pycorr
-    r_steps_orig = np.diff(xi_estimator.edges[0])
-    r_step_orig = np.mean(r_steps_orig)
-    if not np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3): raise ValueError("Binning appears not linear; such case is not supported")
-    r_factor_exact = r_step / r_step_orig
-    r_factor = int(np.rint(r_factor_exact))
-    if not np.allclose(r_factor, r_factor_exact, rtol=5e-3): raise ValueError(f"Radial rebinning seems impossible: exact rebinning factor is {r_factor_exact}, its integer approximation is {r_factor}")
+    if not r_step: r_factor = 1
+    else:
+        # determine the radius step in pycorr
+        r_steps_orig = np.diff(xi_estimator.edges[0])
+        r_step_orig = np.mean(r_steps_orig)
+        if not np.allclose(r_steps_orig, r_step_orig, rtol=5e-3, atol=5e-3): raise ValueError("Radial rebinning only supported for linear bins")
+        r_factor_exact = r_step / r_step_orig
+        r_factor = int(np.rint(r_factor_exact))
+        if not np.allclose(r_factor, r_factor_exact, rtol=5e-3): raise ValueError(f"Radial rebinning seems impossible: exact ratio of steps is {r_factor_exact}, closest integer is {r_factor} and that is too far")
 
     # Apply r_max cut
     r_values = xi_estimator.sepavg(axis = 0)
