@@ -274,7 +274,6 @@ if periodic: # append periodic flag
     command += " -perbox"
 if jackknife: # provide jackknife weight files for all correlations
     command += "".join([f" -jackknife{suffixes_corr[c]} {jackknife_weights_names[c]}" for c in range(ncorr)])
-command += " -cf_loops 0" # disables the correlation function rescaling
 print_and_log(f"Common command for C++ code: {command}")
 
 # processing steps for each random file
