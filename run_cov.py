@@ -158,6 +158,8 @@ if jackknife:
         jackknife_pairs_names = [os.path.join(outdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
 if legendre_orig:
     phi_names = [f"BinCorrectionFactor_n{nbin}_" + ("periodic" if periodic else f'm{mbin}') + f"_{index}.txt" for index in indices_corr]
+if legendre_mix:
+    mu_bin_legendre_file = os.path.join(tmpdir, f"weights/mu_bin_legendre_factors_m{mbin}_l{max_l}.txt")
 
 if do_counts or cat_randoms: # move concatenated randoms file to tmpdir as well
     cat_randoms_files = [os.path.join(tmpdir, cat_randoms_file) for cat_randoms_file in cat_randoms_files]
@@ -206,13 +208,11 @@ print("Starting Computation")
 # binning files to be created automatically
 binfile = os.path.join(outdir, "radial_binning_cov.csv")
 binfile_cf = os.path.join(outdir, "radial_binning_corr.csv")
-from python.write_binning_file_linear import write_binning_file_linear
-write_binning_file_linear(binfile, rmin, rmax, nbin, print_and_log)
-write_binning_file_linear(binfile_cf, rmin_cf, rmax_cf, nbin_cf, print_and_log)
+exec_print_and_log(f"python python/write_binning_file_linear.py {nbin} {rmin} {rmax} {binfile}")
+exec_print_and_log(f"python python/write_binning_file_linear.py {nbin_cf} {rmin_cf} {rmax_cf} {binfile_cf}")
 
 if legendre_mix: # write mu bin Legendre factors for the code
-    from python.mu_bin_legendre_factors import write_mu_bin_legendre_factors
-    mu_bin_legendre_file = write_mu_bin_legendre_factors(mbin, max_l, os.path.dirname(binned_pair_names[0]))
+    exec_print_and_log(f"python python/mu_bin_legendre_factors.py {mbin} {max_l} {os.path.dirname(mu_bin_legendre_file)}")
 
 # full-survey CF conversion, will also load number of data points from pycorr
 if convert_cf:
@@ -250,8 +250,7 @@ if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
         if create_jackknives or ndata_isbad[t]:
             print_and_log("Processing data file for" + create_jackknives * " jackknife reference" + (create_jackknives and count_ndata) * " and" + count_ndata * " galaxy counts")
             rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-            from python.redshift_cut import redshift_cut_files
-            redshift_cut_files(data_ref_filename, rdzw_ref_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
+            exec_print_and_log(f"python python/redshift_cut.py {data_ref_filename} {rdzw_ref_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
             data_ref_filenames[t] = rdzw_ref_filename
         if ndata_isbad[t]:
             with open(data_ref_filenames[t]) as f:
@@ -370,9 +369,8 @@ if convert_cf: # this is really for pair counts and jackknives
                 sys.exit(1)
             if not cat_randoms: # reload full counts from pycorr, override jackknives - to prevent normalization issues
                 r_step = (rmax - rmin) / nbin
-                from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
                 for c in range(ncorr):
-                    convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step =  r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
+                    exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
         else: # only need full, binned pair counts
             if cat_randoms: # compute counts with our own script
                 if ntracers == 1:
