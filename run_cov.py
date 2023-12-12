@@ -219,14 +219,12 @@ if convert_cf:
     r_step_cf = (rmax_cf - rmin_cf) / nbin_cf
     for c, corname in enumerate(cornames):
         os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
-        from python.convert_xi_from_pycorr import convert_xi_from_pycorr_files
-        _, ndata2 = convert_xi_from_pycorr_files(pycorr_filenames[c], corname, n_mu = mbin_cf, r_step = r_step_cf, print_function = print_and_log)
-        ndata[tracer2_corr[c]] = ndata2 # override ndata for second tracer, so that autocorrelations are prioritized
+        exec_print_and_log(f"python python/convert_xi_from_pycorr.py {' '.join(pycorr_filenames[c])} {corname} {r_step_cf} {mbin_cf}")
+        ndata[tracer2_corr[c]] = np.loadtxt(corname + ".ndata")[1] # override ndata for second tracer, so that autocorrelations are prioritized
         if smoothen_cf:
             corname_old = corname
             corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_{indices_corr[c]}_smooth.dat"
-            from python.smoothen_xi import smoothen_xi_files
-            smoothen_xi_files(corname_old, max_l_smoothing, radial_window_len, radial_polyorder, corname)
+            exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
             cornames[c] = corname # save outside of the loop
 
 if count_ndata:
@@ -288,18 +286,15 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
         else: # (potentially) run through all data processing steps
             if redshift_cut:
                 rdzw_filename = change_extension(input_filename, "rdzw")
-                from python.redshift_cut import redshift_cut_files
-                redshift_cut_files(input_filename, rdzw_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
+                exec_print_and_log(f"python python/redshift_cut.py {input_filename} {rdzw_filename} {z_min} {z_max} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
                 input_filename = rdzw_filename
             if convert_to_xyz:
                 xyzw_filename = change_extension(input_filename, "xyzw")
-                from python.convert_to_xyz import convert_to_xyz_files
-                convert_to_xyz_files(input_filename, xyzw_filename, Omega_m, Omega_k, w_dark_energy, FKP_weights[t], masks[t], use_weights[t], print_and_log)
+                exec_print_and_log(f"python python/convert_to_xyz.py {input_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
                 input_filename = xyzw_filename
             if create_jackknives:
                 xyzwj_filename = change_extension(input_filename, "xyzwj")
-                from python.create_jackknives_pycorr import create_jackknives_pycorr_files
-                create_jackknives_pycorr_files(data_ref_filenames[t], input_filename, xyzwj_filename, njack, print_and_log) # keep in mind some subtleties for multi-tracer jackknife assigment
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {input_filename} {xyzwj_filename} {njack}")
                 input_filename = xyzwj_filename
         input_filenames[t][i] = input_filename # save final input filename for next loop
         print_and_log(f"Finished preparing file {i+1} of {nfiles_t}")
@@ -329,8 +324,7 @@ if normalize_weights:
             print_and_log(f"Starting normalizing weights in file {i+1} of {nfiles}")
             print_and_log(datetime.now())
             n_filename = append_to_filename(input_filename, "n") # append letter n to the original filename
-            from python.normalize_weights import normalize_weights_files
-            normalize_weights_files(input_filename, n_filename, print_and_log)
+            exec_print_and_log(f"python python/normalize_weights.py {input_filename} {n_filename}")
             input_filenames[t][i] = n_filename # update input filename for later
             print_and_log(f"Finished normalizing weights in file {i+1} of {nfiles}")
 
@@ -355,18 +349,15 @@ if convert_cf: # this is really for pair counts and jackknives
             for t in range(ntracers):
                 data_filename = data_ref_filenames[t]
                 xyzw_filename = change_extension(data_filename, "xyzw")
-                from python.convert_to_xyz import convert_to_xyz_files
-                convert_to_xyz_files(data_filename, xyzw_filename, Omega_m, Omega_k, w_dark_energy, FKP_weights[t], masks[t], use_weights[t], print_and_log)
+                exec_print_and_log(f"python python/convert_to_xyz.py {data_filename} {xyzw_filename} {Omega_m} {Omega_k} {w_dark_energy} {FKP_weights[t]} {masks[t]} {use_weights[t]}")
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
                 # keep in mind some subtleties for multi-tracer jackknife assigment
-                from python.create_jackknives_pycorr import create_jackknives_pycorr_files
-                create_jackknives_pycorr_files(data_ref_filenames[t], data_filename, xyzwj_filename, njack, print_and_log) # the first file must be rdzw, the second xyzw!
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {data_filename} {xyzwj_filename} {njack}") # the first file must be rdzw, the second xyzw!
                 data_filename = xyzwj_filename
                 if normalize_weights:
                     n_filename = append_to_filename(data_filename, "n") # append letter n to the original filename
-                    from python.normalize_weights import normalize_weights_files
-                    normalize_weights_files(data_filename, n_filename, print_and_log)
+                    exec_print_and_log(f"python python/normalize_weights.py {data_filename} {n_filename}")
                     data_filename = n_filename
                 data_ref_filenames[t] = data_filename # update the name in list
             # run RascalC own xi jack estimator
@@ -401,11 +392,9 @@ if convert_cf: # this is really for pair counts and jackknives
             if jackknife: # convert jackknife xi and all counts
                 for filename in (xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c]):
                     os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-                from python.convert_xi_jack_from_pycorr import convert_jack_xi_weights_counts_from_pycorr_files
-                convert_jack_xi_weights_counts_from_pycorr_files(pycorr_filenames[c][0], xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
+                exec_print_and_log(f"python python/convert_xi_jack_from_pycorr.py {pycorr_filenames[c][0]} {xi_jack_names[c]} {jackknife_weights_names[c]} {jackknife_pairs_names[c]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
             else: # convert full, binned pair counts
-                from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
-                convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
+                exec_print_and_log(f"python python/convert_counts_from_pycorr.py {pycorr_filenames[c][0]} {binned_pair_names[c]} {r_step} {mbin} {counts_factor} {split_above} {rmax}")
 
 # running main code for each random file/part
 for i in range(nfiles):
@@ -417,11 +406,9 @@ for i in range(nfiles):
     if legendre_orig: # need correction function
         os.makedirs(this_outdir, exist_ok=1)
         if ntracers == 1:
-            from python.compute_correction_function import compute_correction_function
-            compute_correction_function(input_filenames[0][i], binfile, this_outdir, periodic, binned_pair_names[0], print_and_log)
+            exec_print_and_log(f"python python/compute_correction_function.py {input_filenames[0][i]} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {binned_pair_names[0]}")
         elif ntracers == 2:
-            from python.compute_correction_function_multi import compute_correction_function_multi
-            compute_correction_function_multi(input_filenames[0][i], input_filenames[1][i], binfile, this_outdir, periodic, *binned_pair_names, print_function = print_and_log)
+            exec_print_and_log(f"python python/compute_correction_function_multi.py {' '.join([names[i] for names in input_filenames])} {binfile} {this_outdir} {periodic}" + (not periodic) * f" {' '.join(binned_pair_names)}")
         else:
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
