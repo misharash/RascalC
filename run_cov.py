@@ -224,7 +224,7 @@ if convert_cf:
         if smoothen_cf:
             corname_old = corname
             corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_{indices_corr[c]}_smooth.dat"
-            exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l} {radial_window_len} {radial_polyorder} {corname}")
+            exec_print_and_log(f"python python/smoothen_xi.py {corname_old} {max_l_smoothing} {radial_window_len} {radial_polyorder} {corname}")
             cornames[c] = corname # save outside of the loop
 
 if count_ndata:
@@ -293,7 +293,7 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
                 input_filename = xyzw_filename
             if create_jackknives:
                 xyzwj_filename = change_extension(input_filename, "xyzwj")
-                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {input_filename} {xyzwj_filename} {njack}")
+                exec_print_and_log(f"python python/create_jackknives_pycorr.py {data_ref_filenames[t]} {input_filename} {xyzwj_filename} {njack}") # keep in mind some subtleties for multi-tracer jackknife assigment
                 input_filename = xyzwj_filename
         input_filenames[t][i] = input_filename # save final input filename for next loop
         print_and_log(f"Finished preparing file {i+1} of {nfiles_t}")
