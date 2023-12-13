@@ -19,7 +19,7 @@ export OMP_PLACES=threads
 export OMP_NUM_THREADS=256 # should match what is set in python script
 
 # Hopefully let numpy use all threads
-export NUMEXPR_MAX_THREADS=256
+export NUMEXPR_MAX_THREADS=32
 # Limit OpenBLAS thread usage (for jackknife assignment, error otherwise)
 export OPENBLAS_NUM_THREADS=1
 
