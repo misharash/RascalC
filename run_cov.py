@@ -4,6 +4,7 @@
 import os, sys
 from datetime import datetime
 import numpy as np
+import ctypes
 
 def check_path(filename: str, fallback_dir: str | None = None) -> str:
     if fallback_dir is not None:
@@ -201,6 +202,14 @@ def exec_print_and_log(commandline: str, slurm_fix: bool = True) -> None:
         if terminate_on_error:
             print("Terminating the running script execution due to this error.")
             sys.exit(1)
+
+def run_rascalc(commandline: str):
+    args = commandline.split()
+    c_argc = ctypes.c_int(len(args))
+    args_c = [ctypes.cast(ctypes.create_string_buffer(arg.encode()), ctypes.c_char_p) for arg in args]
+    c_argv = (ctypes.c_char_p * len(args))(*args_c)
+    rascalc_lib = ctypes.cdll.LoadLibrary("cov.dll")
+    rascalc_lib.main(c_argc, c_argv)
 
 print("Starting Computation")
 
@@ -427,7 +436,7 @@ for i in range(nfiles):
             print("Number of tracers not supported for this operation (yet)")
             sys.exit(1)
     # run code
-    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre_orig else ""))
+    run_rascalc(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre_orig else ""))
     print_and_log(f"Finished main computation {i+1} of {nfiles}")
 # end running main code for each random file/part
 
