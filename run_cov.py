@@ -203,12 +203,13 @@ def exec_print_and_log(commandline: str, slurm_fix: bool = True) -> None:
             print("Terminating the running script execution due to this error.")
             sys.exit(1)
 
+rascalc_lib = ctypes.cdll.LoadLibrary("./cov.dll")
+
 def run_rascalc(commandline: str):
     args = commandline.split()
     c_argc = ctypes.c_int(len(args))
     args_c = [ctypes.cast(ctypes.create_string_buffer(arg.encode()), ctypes.c_char_p) for arg in args]
     c_argv = (ctypes.c_char_p * len(args))(*args_c)
-    rascalc_lib = ctypes.cdll.LoadLibrary("cov.dll")
     rascalc_lib.main(c_argc, c_argv)
 
 print("Starting Computation")
