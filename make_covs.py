@@ -110,7 +110,7 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
         outdir = "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}" # output file directory
         if not os.path.isdir(outdir): continue # if doesn't exist can't really do anything else
         
-        raw_name = f"Raw_Covariance_Matrices_n{nbin}_m{max_l}.npz"
+        raw_name = os.path.join(outdir, f"Raw_Covariance_Matrices_n{nbin}_l{max_l}.npz")
 
         # detect the per-file dirs if any
         outdirs_perfile = [int(name) for name in os.listdir(outdir) if name.isdigit()] # per-file dir names are pure integers
