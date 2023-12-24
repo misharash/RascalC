@@ -37,7 +37,7 @@ def run_cov(mode: str,
             boxsize: float | None = None,
             skip_s_bins: int = 0, skip_l: int = 0,
             shot_noise_rescaling1: float = 1, shot_noise_rescaling2: float = 1,
-            sampling_grid_size: int = 301, coordinate_scaling: float = 1) -> dict[str]:
+            sampling_grid_size: int = 301, coordinate_scaling: float = 1) -> dict[str, np.ndarray[float]]:
     r"""
     Run the 2-point correlation function covariance integration.
 
@@ -160,7 +160,8 @@ def run_cov(mode: str,
     n_loops : integer
         Number of integration loops.
         For optimal balancing and minimal idle time, should be a few times (at least twice) ``nthread`` and exactly divisible by it.
-        The runtime roughly scales as O(N_randoms * N2 * N3 * N4 * n_loops / nthread).
+        The runtime roughly scales as the number of quads per the number of threads, O(N_randoms * N2 * N3 * N4 * n_loops / nthread).
+        For reference, on NERSC Perlmutter CPU node the code processed about 5 millions (5e6) quads per second per hyperthread (a node has 256 of them) as of October 2023. (In Legendre projected mode, which is probably the slowest, with N2=5, N3=10, N4=20.)
 
     loops_per_sample : integer
         Number of loops to merge into one output sample.
@@ -196,6 +197,12 @@ def run_cov(mode: str,
     coordinate_scaling : float
         (Optional) scaling factor for all the Cartesian coordinates. Default 1 (no rescaling).
         This option is supported by the C++ code, but its use cases are unclear.
+
+    Returns
+    -------
+    post_processing_results : dict[str, np.ndarray[float]]
+        Post-processing results as a dictionary with string keys and Numpy array values. All this information is also saved in a *.npz file in the output directory.
+        Selected common keys are: "full_theory_covariance" for the final covariance matrix and "shot_noise_rescaling" for the shot-noise rescaling value(s).
     """
 
     if mode not in ("s_mu", "legendre_accumulated", "legendre_projected"): raise ValueError("Given mode not supported")
