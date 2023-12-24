@@ -345,9 +345,9 @@ if convert_cf: # this is really for pair counts and jackknives
                 cat_randoms_files[t] = input_filenames[t][0]
             # compute jackknife weights
             if ntracers == 1:
-                exec_print_and_log(f"python python/legacy/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
+                exec_print_and_log(f"python scripts/legacy/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             elif ntracers == 2:
-                exec_print_and_log(f"python python/legacy/jackknife_weights_cross.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
+                exec_print_and_log(f"python scripts/legacy/jackknife_weights_cross.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
             else:
                 print("Number of tracers not supported for this operation (yet)")
                 sys.exit(1)
@@ -371,9 +371,9 @@ if convert_cf: # this is really for pair counts and jackknives
                 data_ref_filenames[t] = data_filename # update the name in list
             # run RascalC own xi jack estimator
             if ntracers == 1:
-                exec_print_and_log(f"python python/legacy/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]}") # 1. is max mu
+                exec_print_and_log(f"python scripts/legacy/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]}") # 1. is max mu
             elif ntracers == 2:
-                exec_print_and_log(f"python python/legacy/xi_estimator_jack_cross.py {' '.join(data_ref_filenames)} {' '.join(cat_randoms_files)} {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {' '.join(jackknife_pairs_names)}") # 1. is max mu
+                exec_print_and_log(f"python scripts/legacy/xi_estimator_jack_cross.py {' '.join(data_ref_filenames)} {' '.join(cat_randoms_files)} {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {' '.join(jackknife_pairs_names)}") # 1. is max mu
             else:
                 print("Number of tracers not supported for this operation (yet)")
                 sys.exit(1)
@@ -385,9 +385,9 @@ if convert_cf: # this is really for pair counts and jackknives
         else: # only need full, binned pair counts
             if cat_randoms: # compute counts with our own script
                 if ntracers == 1:
-                    exec_print_and_log(f"python python/legacy/RR_counts.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
+                    exec_print_and_log(f"python scripts/legacy/RR_counts.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
                 elif ntracers == 2:
-                    exec_print_and_log(f"python python/legacy/RR_counts_multi.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
+                    exec_print_and_log(f"python scripts/legacy/RR_counts_multi.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
                 else:
                     print("Number of tracers not supported for this operation (yet)")
                     sys.exit(1)
