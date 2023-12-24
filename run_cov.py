@@ -184,15 +184,16 @@ print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
 print_and_log(datetime.now())
 print_and_log(f"Executing {__file__}")
 
-def exec_print_and_log(commandline: str) -> None:
+def exec_print_and_log(commandline: str, slurm_fix: bool = True) -> None:
     print_and_log(f"Running command: {commandline}")
     if commandline.startswith("python"): # additional anti-buffering for python
         commandline = commandline.replace("python", "python -u", 1)
-    status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}'")
+    status = os.system("srun " * slurm_fix + f"bash -c 'set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}'")
     # tee prints what it gets to stdout AND saves to file
     # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
     # without pipefail, the exit_code would be of tee, not reflecting main command failures
     # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
+    # srun should regain control of all the threads for the subprocess - without it the C++ code seemed to run with single thread (very low performance) after this script used numpy routines
     exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
     if exit_code:
         print(f"{commandline} exited with error (code {exit_code}).")
@@ -205,12 +206,12 @@ print("Starting Computation")
 # binning files to be created automatically
 binfile = os.path.join(outdir, "radial_binning_cov.csv")
 binfile_cf = os.path.join(outdir, "radial_binning_corr.csv")
-from python.write_binning_file_linear import write_binning_file_linear
+from RascalC.write_binning_file import write_binning_file_linear
 write_binning_file_linear(binfile, rmin, rmax, nbin, print_and_log)
 write_binning_file_linear(binfile_cf, rmin_cf, rmax_cf, nbin_cf, print_and_log)
 
 if legendre_mix: # write mu bin Legendre factors for the code
-    from python.mu_bin_legendre_factors import write_mu_bin_legendre_factors
+    from RascalC.mu_bin_legendre_factors import write_mu_bin_legendre_factors
     mu_bin_legendre_file = write_mu_bin_legendre_factors(mbin, max_l, os.path.dirname(binned_pair_names[0]))
 
 # full-survey CF conversion, will also load number of data points from pycorr
@@ -218,13 +219,13 @@ if convert_cf:
     r_step_cf = (rmax_cf - rmin_cf) / nbin_cf
     for c, corname in enumerate(cornames):
         os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
-        from python.convert_xi_from_pycorr import convert_xi_from_pycorr_files
+        from RascalC.pycorr_utils.input_xi import convert_xi_from_pycorr_files
         _, ndata2 = convert_xi_from_pycorr_files(pycorr_filenames[c], corname, n_mu = mbin_cf, r_step = r_step_cf, print_function = print_and_log)
         ndata[tracer2_corr[c]] = ndata2 # override ndata for second tracer, so that autocorrelations are prioritized
         if smoothen_cf:
             corname_old = corname
             corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_{indices_corr[c]}_smooth.dat"
-            from python.smoothen_xi import smoothen_xi_files
+            from RascalC.xi.smoothen import smoothen_xi_files
             smoothen_xi_files(corname_old, max_l_smoothing, radial_window_len, radial_polyorder, corname)
             cornames[c] = corname # save outside of the loop
 
@@ -251,7 +252,7 @@ if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
         if create_jackknives or ndata_isbad[t]:
             print_and_log("Processing data file for" + create_jackknives * " jackknife reference" + (create_jackknives and count_ndata) * " and" + count_ndata * " galaxy counts")
             rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-            from python.redshift_cut import redshift_cut_files
+            from RascalC.pre_process.redshift_cut import redshift_cut_files
             redshift_cut_files(data_ref_filename, rdzw_ref_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
             data_ref_filenames[t] = rdzw_ref_filename
         if ndata_isbad[t]:
@@ -287,17 +288,17 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
         else: # (potentially) run through all data processing steps
             if redshift_cut:
                 rdzw_filename = change_extension(input_filename, "rdzw")
-                from python.redshift_cut import redshift_cut_files
+                from RascalC.pre_process.redshift_cut import redshift_cut_files
                 redshift_cut_files(input_filename, rdzw_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
                 input_filename = rdzw_filename
             if convert_to_xyz:
                 xyzw_filename = change_extension(input_filename, "xyzw")
-                from python.convert_to_xyz import convert_to_xyz_files
+                from RascalC.pre_process.convert_to_xyz import convert_to_xyz_files
                 convert_to_xyz_files(input_filename, xyzw_filename, Omega_m, Omega_k, w_dark_energy, FKP_weights[t], masks[t], use_weights[t], print_and_log)
                 input_filename = xyzw_filename
             if create_jackknives:
                 xyzwj_filename = change_extension(input_filename, "xyzwj")
-                from python.create_jackknives_pycorr import create_jackknives_pycorr_files
+                from RascalC.pre_process.create_jackknives_pycorr import create_jackknives_pycorr_files
                 create_jackknives_pycorr_files(data_ref_filenames[t], input_filename, xyzwj_filename, njack, print_and_log) # keep in mind some subtleties for multi-tracer jackknife assigment
                 input_filename = xyzwj_filename
         input_filenames[t][i] = input_filename # save final input filename for next loop
@@ -308,7 +309,7 @@ if cat_randoms: # concatenate randoms
     for t in range(ntracers):
         if nfiles[t] > 1: # real action is needed
             print_and_log(datetime.now())
-            exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+            exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}", slurm_fix = False) # should not be multi-threaded
             input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
         else: # skip actual concatenation, just reuse the only input file
             cat_randoms_files[t] = input_filenames[t][0]
@@ -328,7 +329,7 @@ if normalize_weights:
             print_and_log(f"Starting normalizing weights in file {i+1} of {nfiles}")
             print_and_log(datetime.now())
             n_filename = append_to_filename(input_filename, "n") # append letter n to the original filename
-            from python.normalize_weights import normalize_weights_files
+            from RascalC.pre_process.normalize_weights import normalize_weights_files
             normalize_weights_files(input_filename, n_filename, print_and_log)
             input_filenames[t][i] = n_filename # update input filename for later
             print_and_log(f"Finished normalizing weights in file {i+1} of {nfiles}")
@@ -339,7 +340,7 @@ if convert_cf: # this is really for pair counts and jackknives
         if jackknife: # do jackknife xi and all counts
             if nfiles > 1: # concatenate randoms now if needed
                 for t in range(ntracers):
-                    exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
+                    exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}", slurm_fix = False) # should not be multi-threaded
             else:
                 cat_randoms_files[t] = input_filenames[t][0]
             # compute jackknife weights
@@ -354,17 +355,17 @@ if convert_cf: # this is really for pair counts and jackknives
             for t in range(ntracers):
                 data_filename = data_ref_filenames[t]
                 xyzw_filename = change_extension(data_filename, "xyzw")
-                from python.convert_to_xyz import convert_to_xyz_files
+                from RascalC.pre_process.convert_to_xyz import convert_to_xyz_files
                 convert_to_xyz_files(data_filename, xyzw_filename, Omega_m, Omega_k, w_dark_energy, FKP_weights[t], masks[t], use_weights[t], print_and_log)
                 data_filename = xyzw_filename
                 xyzwj_filename = change_extension(data_filename, "xyzwj")
                 # keep in mind some subtleties for multi-tracer jackknife assigment
-                from python.create_jackknives_pycorr import create_jackknives_pycorr_files
+                from RascalC.pre_process.create_jackknives_pycorr import create_jackknives_pycorr_files
                 create_jackknives_pycorr_files(data_ref_filenames[t], data_filename, xyzwj_filename, njack, print_and_log) # the first file must be rdzw, the second xyzw!
                 data_filename = xyzwj_filename
                 if normalize_weights:
                     n_filename = append_to_filename(data_filename, "n") # append letter n to the original filename
-                    from python.normalize_weights import normalize_weights_files
+                    from RascalC.pre_process.normalize_weights import normalize_weights_files
                     normalize_weights_files(data_filename, n_filename, print_and_log)
                     data_filename = n_filename
                 data_ref_filenames[t] = data_filename # update the name in list
@@ -378,7 +379,7 @@ if convert_cf: # this is really for pair counts and jackknives
                 sys.exit(1)
             if not cat_randoms: # reload full counts from pycorr, override jackknives - to prevent normalization issues
                 r_step = (rmax - rmin) / nbin
-                from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
+                from RascalC.pycorr_utils.counts import convert_counts_from_pycorr_files
                 for c in range(ncorr):
                     convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step =  r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
         else: # only need full, binned pair counts
@@ -400,10 +401,10 @@ if convert_cf: # this is really for pair counts and jackknives
             if jackknife: # convert jackknife xi and all counts
                 for filename in (xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c]):
                     os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-                from python.convert_xi_jack_from_pycorr import convert_jack_xi_weights_counts_from_pycorr_files
+                from RascalC.pycorr_utils.jack import convert_jack_xi_weights_counts_from_pycorr_files
                 convert_jack_xi_weights_counts_from_pycorr_files(pycorr_filenames[c][0], xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
             else: # convert full, binned pair counts
-                from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
+                from RascalC.pycorr_utils.counts import convert_counts_from_pycorr_files
                 convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
 
 # running main code for each random file/part
@@ -416,10 +417,10 @@ for i in range(nfiles):
     if legendre_orig: # need correction function
         os.makedirs(this_outdir, exist_ok=1)
         if ntracers == 1:
-            from python.compute_correction_function import compute_correction_function
+            from RascalC.correction_function import compute_correction_function
             compute_correction_function(input_filenames[0][i], binfile, this_outdir, periodic, binned_pair_names[0], print_and_log)
         elif ntracers == 2:
-            from python.compute_correction_function_multi import compute_correction_function_multi
+            from RascalC.correction_function import compute_correction_function_multi
             compute_correction_function_multi(input_filenames[0][i], input_filenames[1][i], binfile, this_outdir, periodic, *binned_pair_names, print_function = print_and_log)
         else:
             print("Number of tracers not supported for this operation (yet)")
@@ -434,7 +435,7 @@ print_and_log(datetime.now())
 # Concatenate samples
 if nfiles > 1:
     print_and_log("Concatenating samples")
-    from python.cat_raw_covariance_matrices import cat_raw_covariance_matrices
+    from RascalC.raw_covariance_matrices import cat_raw_covariance_matrices
     cat_raw_covariance_matrices(nbin, f'l{max_l}' if legendre else f'm{mbin}', [os.path.join(outdir, str(i)) for i in range(nfiles)], [None] * nfiles, outdir, print_function = print_and_log)
     print_and_log(datetime.now())
 
@@ -452,26 +453,26 @@ if legendre:
 if ntracers == 1:
     if legendre:
         if jackknife:
-            from python.post_process_legendre_mix_jackknife import post_process_legendre_mix_jackknife
+            from RascalC.post_process.legendre_mix_jackknife import post_process_legendre_mix_jackknife
             results = post_process_legendre_mix_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, max_l, outdir, skip_r_bins, skip_l, print_function = print_and_log)
         else:
-            from python.post_process_legendre import post_process_legendre
+            from RascalC.post_process.legendre import post_process_legendre
             results = post_process_legendre(outdir, nbin, max_l, outdir, shot_noise_rescaling, skip_r_bins, skip_l, print_function = print_and_log)
     elif jackknife:
-        from python.post_process_jackknife import post_process_jackknife
+        from RascalC.post_process.jackknife import post_process_jackknife
         results = post_process_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
     else: # default
-        from python.post_process_default import post_process_default
+        from RascalC.post_process.default import post_process_default
         results = post_process_default(outdir, nbin, mbin, outdir, shot_noise_rescaling, skip_r_bins, print_function = print_and_log)
 elif ntracers == 2:
     if legendre:
-        from python.post_process_legendre_multi import post_process_legendre_multi
+        from RascalC.post_process.legendre_multi import post_process_legendre_multi
         results = post_process_legendre_multi(outdir, nbin, max_l, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, skip_l, print_function = print_and_log)
     elif jackknife:
-        from python.post_process_jackknife_multi import post_process_jackknife_multi
+        from RascalC.post_process.jackknife_multi import post_process_jackknife_multi
         results = post_process_jackknife_multi(*xi_jack_names, os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
     else: # default
-        from python.post_process_default_multi import post_process_default_multi
+        from RascalC.post_process.default_multi import post_process_default_multi
         results = post_process_default_multi(outdir, nbin, mbin, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, print_function = print_and_log)
 else:
     print("Number of tracers not supported for this operation (yet)")
@@ -480,7 +481,7 @@ else:
 print_and_log(datetime.now())
 
 # Convergence check
-from python.convergence_check_extra import convergence_check_extra
+from RascalC.convergence_check_extra import convergence_check_extra
 convergence_check_extra(results, print_function = print_and_log)
 
 print_and_log(datetime.now())
