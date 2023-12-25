@@ -169,7 +169,9 @@ print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
 print_and_log(datetime.now())
 print_and_log(f"Executing {__file__}")
 
-def exec_print_and_log(commandline: str, slurm_fix: bool = True) -> None:
+slurm_launch = "SLURM_JOB_ID" in os.environ() # detect if launched by SLURM
+
+def exec_print_and_log(commandline: str, slurm_fix: bool = slurm_launch) -> None:
     print_and_log(f"Running command: {commandline}")
     if commandline.startswith("python"): # additional anti-buffering for python
         commandline = commandline.replace("python", "python -u", 1)
