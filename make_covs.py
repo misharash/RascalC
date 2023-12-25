@@ -7,13 +7,12 @@ import hashlib
 from glob import glob
 from typing import Callable
 import fnmatch
-from python.cat_raw_covariance_matrices import cat_raw_covariance_matrices
-from python.collect_raw_covariance_matrices import collect_raw_covariance_matrices
-from python.post_process_legendre import post_process_legendre
-from python.post_process_legendre_mix_jackknife import post_process_legendre_mix_jackknife
-from python.convergence_check_extra import convergence_check_extra
-from python.convert_cov_legendre import export_cov_legendre
-from python.combine_covs_legendre import combine_covs_legendre
+from RascalC.raw_covariance_matrices import cat_raw_covariance_matrices, collect_raw_covariance_matrices
+from RascalC.post_process.legendre import post_process_legendre
+from RascalC.post_process.legendre_mix_jackknife import post_process_legendre_mix_jackknife
+from RascalC.convergence_check_extra import convergence_check_extra
+from RascalC.cov_utils import export_cov_legendre
+from RascalC.comb.combine_covs_legendre import combine_covs_legendre
 
 max_l = 4
 nbin = 50 # radial bins for output cov
