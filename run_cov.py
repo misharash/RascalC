@@ -208,6 +208,7 @@ def exec_print_and_log(commandline: str, slurm_fix: bool = slurm_launch) -> None
 rascalc_lib = ctypes.cdll.LoadLibrary("./cov.dll")
 
 def run_rascalc(commandline: str):
+    os.sync() # force all files to be written before C++ code tries to read them
     args = commandline.split()
     c_argc = ctypes.c_int(len(args))
     args_c = [ctypes.cast(ctypes.create_string_buffer(arg.encode()), ctypes.c_char_p) for arg in args]
