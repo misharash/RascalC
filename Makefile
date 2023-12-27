@@ -21,12 +21,12 @@ ifeq ($(shell uname -s),Darwin)
 ifndef HOMEBREW_PREFIX
 HOMEBREW_PREFIX = /usr/local
 endif
-CXX = ${HOMEBREW_PREFIX}/opt/llvm/bin/clang++ -g -std=c++0x -fopenmp -ffast-math $(shell pkg-config --cflags gsl)
+CXX = ${HOMEBREW_PREFIX}/opt/llvm/bin/clang++ -g -std=c++0x -fopenmp $(shell pkg-config --cflags gsl)
 LD	= ${HOMEBREW_PREFIX}/opt/llvm/bin/clang++ -shared
 LFLAGS	= -g $(shell pkg-config --libs gsl) -fopenmp -lomp
 else
 # default (Linux) case
-CXX = g++ -g -fopenmp -lgomp -std=c++0x -ffast-math $(shell pkg-config --cflags gsl)
+CXX = g++ -g -fopenmp -lgomp -std=c++0x $(shell pkg-config --cflags gsl)
 LD	= g++ -shared
 LFLAGS	= -g -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu $(shell pkg-config --libs gsl) -lgomp
 endif
