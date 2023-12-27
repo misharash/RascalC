@@ -237,6 +237,7 @@ public:
                 c2v /= JK12->RR_pair_counts[tmp_bin] * JK12->RR_pair_counts[tmp_bin]; // normalize by product of RR counts in the current s,mu bin - same for all Legendre multipoles
 #ifdef JACKKNIFE
                 c2vj = c2v * JK_weight / (1.-product_weights12_12[tmp_bin*mbin*nbin+tmp_bin]); // additionally multiply by jackknife weight tensor and divide by 1 - sum of products of jackknife weights in the current s,mu bin
+                if (!isfinite(c2vj)) fprintf(stderr, "c2vj = %lf, c2v = %lf, JK_weight = %lf, product_weights = %lf\n", c2vj, c2v, JK_weight, product_weights12_12[tmp_bin*mbin*nbin+tmp_bin]);
 #endif
                 int r_bin = tmp_bin / mbin;
                 int mu_bin = tmp_bin % mbin;
@@ -338,6 +339,7 @@ public:
             c3v /= JK12->RR_pair_counts[bin_ij[i]] * JK23->RR_pair_counts[tmp_bin]; // normalize by product of RR counts in the current s,mu bins - same for all Legendre multipoles
 #ifdef JACKKNIFE
             c3vj = c3v * JK_weight / (1.-product_weights12_23[bin_ij[i]*mbin*nbin+tmp_bin]); // additionally multiply by jackknife weight tensor and divide by 1 - sum of products of jackknife weights for the current s,mu bins
+            if (!isfinite(c3vj)) fprintf(stderr, "c3vj = %lf, c3v = %lf, JK_weight = %lf, product_weights = %lf\n", c3vj, c3v, JK_weight, product_weights12_23[bin_ij[i]*mbin*nbin+tmp_bin]);
 #endif
             int r_bin1 = bin_ij[i] / mbin;
             int mu_bin1 = bin_ij[i] % mbin;
@@ -408,6 +410,7 @@ public:
             c4v /= JK12->RR_pair_counts[bin_ij[i]] * JK34->RR_pair_counts[tmp_bin]; // normalize by product of RR counts in the current s,mu bins - same for all Legendre multipoles
 #ifdef JACKKNIFE
             c4vj = c4v * JK_weight / (1.-product_weights12_34[bin_ij[i]*mbin*nbin+tmp_bin]); // additionally divide by 1 - sum of products of jackknife weights for the current s,mu bins
+            if (!isfinite(c4vj)) fprintf(stderr, "c4vj = %lf, c4v = %lf, JK_weight = %lf, product_weights = %lf\n", c4vj, c4v, JK_weight, product_weights12_34[bin_ij[i]*mbin*nbin+tmp_bin]);
 #endif
             int r_bin1 = bin_ij[i] / mbin;
             int mu_bin1 = bin_ij[i] % mbin;
