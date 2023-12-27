@@ -21,14 +21,14 @@ ifeq ($(shell uname -s),Darwin)
 ifndef HOMEBREW_PREFIX
 HOMEBREW_PREFIX = /usr/local
 endif
-CXX = ${HOMEBREW_PREFIX}/opt/llvm/bin/clang++ -std=c++0x -fopenmp -ffast-math $(shell pkg-config --cflags gsl)
+CXX = ${HOMEBREW_PREFIX}/opt/llvm/bin/clang++ -g -std=c++0x -fopenmp -ffast-math $(shell pkg-config --cflags gsl)
 LD	= ${HOMEBREW_PREFIX}/opt/llvm/bin/clang++ -shared
-LFLAGS	= $(shell pkg-config --libs gsl) -fopenmp -lomp
+LFLAGS	= -g $(shell pkg-config --libs gsl) -fopenmp -lomp
 else
 # default (Linux) case
-CXX = g++ -fopenmp -lgomp -std=c++0x -ffast-math $(shell pkg-config --cflags gsl)
+CXX = g++ -g -fopenmp -lgomp -std=c++0x -ffast-math $(shell pkg-config --cflags gsl)
 LD	= g++ -shared
-LFLAGS	= -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu $(shell pkg-config --libs gsl) -lgomp
+LFLAGS	= -g -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu $(shell pkg-config --libs gsl) -lgomp
 endif
 
 AUNTIE	= cov.dll
