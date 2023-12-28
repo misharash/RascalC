@@ -212,7 +212,8 @@ def run_rascalc(commandline: str):
     args = commandline.split()
     c_argc = ctypes.c_int(len(args))
     args_c = [ctypes.cast(ctypes.create_string_buffer(arg.encode()), ctypes.c_char_p) for arg in args]
-    c_argv = (ctypes.c_char_p * len(args))(*args_c)
+    args_c.append(ctypes.c_char_p(None)) # the standard requires that argv[argc] = NULL
+    c_argv = (ctypes.c_char_p * len(args_c))(*args_c)
     rascalc_lib.main(c_argc, c_argv)
 
 print("Starting Computation")
