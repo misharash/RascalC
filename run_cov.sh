@@ -2,10 +2,10 @@
 #SBATCH --account=desi
 #SBATCH --constraint=cpu
 #SBATCH --qos=regular
-#SBATCH --time=2:00:00
+#SBATCH --time=0:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --job-name=RascalC-Y1-v0.6.1-double-blinded-test
+#SBATCH --job-name=RascalC-openmp-issue
 #SBATCH --array=4 # only LRG 0.8-1.1 SGC for testing, not to waste allocated time
 
 # load cosmodesi environment

@@ -407,82 +407,8 @@ if convert_cf: # this is really for pair counts and jackknives
                 from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
                 convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
 
-# running main code for each random file/part
-for i in range(nfiles):
-    print_and_log(f"Starting main computation {i+1} of {nfiles}")
-    print_and_log(datetime.now())
-    # define output subdirectory
-    this_outdir = os.path.join(outdir, str(i)) if nfiles > 1 else outdir # create output subdirectory only if processing multiple files
-    this_outdir = os.path.normpath(this_outdir) + "/" # make sure there is exactly one slash in the end
-    if legendre_orig: # need correction function
-        os.makedirs(this_outdir, exist_ok=1)
-        if ntracers == 1:
-            from python.compute_correction_function import compute_correction_function
-            compute_correction_function(input_filenames[0][i], binfile, this_outdir, periodic, binned_pair_names[0], print_and_log)
-        elif ntracers == 2:
-            from python.compute_correction_function_multi import compute_correction_function_multi
-            compute_correction_function_multi(input_filenames[0][i], input_filenames[1][i], binfile, this_outdir, periodic, *binned_pair_names, print_function = print_and_log)
-        else:
-            print("Number of tracers not supported for this operation (yet)")
-            sys.exit(1)
-    # run code
-    exec_print_and_log(command + "".join([f" -in{suffixes_tracer[t]} {input_filenames[t][i]}" for t in range(ntracers)]) + f" -output {this_outdir}" + ("".join([f" -phi_file{suffixes_corr[c]} {os.path.join(this_outdir, phi_names[c])}" for c in range(ncorr)]) if legendre_orig else ""))
-    print_and_log(f"Finished main computation {i+1} of {nfiles}")
-# end running main code for each random file/part
-
-print_and_log(datetime.now())
-
-# Concatenate samples
-if nfiles > 1:
-    print_and_log("Concatenating samples")
-    from python.cat_raw_covariance_matrices import cat_raw_covariance_matrices
-    cat_raw_covariance_matrices(nbin, f'l{max_l}' if legendre else f'm{mbin}', [os.path.join(outdir, str(i)) for i in range(nfiles)], [None] * nfiles, outdir, print_function = print_and_log)
-    print_and_log(datetime.now())
-
-# Post-process
-print_and_log("Post-processing")
-# Parameters
-skip_r_bins = 5
-if not jackknife:
-    shot_noise_rescaling = 1
-    if ntracers >= 2: shot_noise_rescaling2 = 1
-if legendre:
-    skip_l = 0
-
-# n_subsamples = no_subsamples_per_file * nfiles
-if ntracers == 1:
-    if legendre:
-        if jackknife:
-            from python.post_process_legendre_mix_jackknife import post_process_legendre_mix_jackknife
-            results = post_process_legendre_mix_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, max_l, outdir, skip_r_bins, skip_l, print_function = print_and_log)
-        else:
-            from python.post_process_legendre import post_process_legendre
-            results = post_process_legendre(outdir, nbin, max_l, outdir, shot_noise_rescaling, skip_r_bins, skip_l, print_function = print_and_log)
-    elif jackknife:
-        from python.post_process_jackknife import post_process_jackknife
-        results = post_process_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
-    else: # default
-        from python.post_process_default import post_process_default
-        results = post_process_default(outdir, nbin, mbin, outdir, shot_noise_rescaling, skip_r_bins, print_function = print_and_log)
-elif ntracers == 2:
-    if legendre:
-        from python.post_process_legendre_multi import post_process_legendre_multi
-        results = post_process_legendre_multi(outdir, nbin, max_l, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, skip_l, print_function = print_and_log)
-    elif jackknife:
-        from python.post_process_jackknife_multi import post_process_jackknife_multi
-        results = post_process_jackknife_multi(*xi_jack_names, os.path.dirname(jackknife_weights_names[0]), outdir, mbin, outdir, skip_r_bins, print_function = print_and_log)
-    else: # default
-        from python.post_process_default_multi import post_process_default_multi
-        results = post_process_default_multi(outdir, nbin, mbin, outdir, shot_noise_rescaling, shot_noise_rescaling2, skip_r_bins, print_function = print_and_log)
-else:
-    print("Number of tracers not supported for this operation (yet)")
-    sys.exit(1)
-
-print_and_log(datetime.now())
-
-# Convergence check
-from python.convergence_check_extra import convergence_check_extra
-convergence_check_extra(results, print_function = print_and_log)
+# runthe test code
+exec_print_and_log(f"./demo {nthread} {10**9}")
 
 print_and_log(datetime.now())
 print_and_log(f"Finished execution.")
