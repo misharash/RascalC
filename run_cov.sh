@@ -10,8 +10,8 @@
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
-# load GSL for the C++ code
-module load gsl
+# GSL needed by the C++ code should already be loaded in cosmodesi
+# module load gsl
 
 # OpenMP settings
 export OMP_PROC_BIND=spread
