@@ -111,22 +111,6 @@ print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
 print_and_log(datetime.now())
 print_and_log(f"Executing {__file__}")
 
-def exec_print_and_log(commandline: str) -> None:
-    print_and_log(f"Running command: {commandline}")
-    if commandline.startswith("python"): # additional anti-buffering for python
-        commandline = commandline.replace("python", "python -u", 1)
-    status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}'")
-    # tee prints what it gets to stdout AND saves to file
-    # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
-    # without pipefail, the exit_code would be of tee, not reflecting main command failures
-    # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
-    exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
-    if exit_code:
-        print(f"{commandline} exited with error (code {exit_code}).")
-        if terminate_on_error:
-            print("Terminating the running script execution due to this error.")
-            sys.exit(1)
-
 print("Starting Computation")
 
 def change_extension(name: str, ext: str) -> str:
@@ -173,7 +157,7 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
 # end processing steps for each random file
 
 # run the test code
-exec_print_and_log(f"./demo {nthread} {10**8}")
+os.system(f"./demo {nthread} {10**8}")
 
 print_and_log(datetime.now())
 print_and_log(f"Finished execution.")
