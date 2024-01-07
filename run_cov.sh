@@ -2,7 +2,7 @@
 #SBATCH --account=desi
 #SBATCH --constraint=cpu
 #SBATCH --qos=regular
-#SBATCH --time=0:05:00
+#SBATCH --time=0:03:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --job-name=RascalC-openmp-issue
