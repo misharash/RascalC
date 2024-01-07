@@ -117,20 +117,6 @@ z_min, z_max = zs[id] # for redshift cut and filenames
 
 input_dir = f"/global/cfs/cdirs/desi/users/uendert/desi_blinding/LSScats/{version_label}/doubleblinded/"
 
-# CF options
-convert_cf = 1
-if convert_cf:
-    # first index is correlation function index
-    counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
-    split_above = 20
-    pycorr_filenames = [[check_path(input_dir + f"xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
-    assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
-smoothen_cf = 0
-if smoothen_cf:
-    max_l_smoothing = 4
-    radial_window_len = 5
-    radial_polyorder = 2
-
 # cosmology
 if convert_to_xyz:
     Omega_m = 0.31519
@@ -153,9 +139,6 @@ cornames = [os.path.join(outdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for
 binned_pair_names = [os.path.join(outdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
 if jackknife:
     jackknife_weights_names = [os.path.join(outdir, f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
-    if convert_cf:
-        xi_jack_names = [os.path.join(outdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
-        jackknife_pairs_names = [os.path.join(outdir, f"weights/jackknife_pair_counts_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
 if legendre_orig:
     phi_names = [f"BinCorrectionFactor_n{nbin}_" + ("periodic" if periodic else f'm{mbin}') + f"_{index}.txt" for index in indices_corr]
 
@@ -213,21 +196,6 @@ write_binning_file_linear(binfile_cf, rmin_cf, rmax_cf, nbin_cf, print_and_log)
 if legendre_mix: # write mu bin Legendre factors for the code
     from python.mu_bin_legendre_factors import write_mu_bin_legendre_factors
     mu_bin_legendre_file = write_mu_bin_legendre_factors(mbin, max_l, os.path.dirname(binned_pair_names[0]))
-
-# full-survey CF conversion, will also load number of data points from pycorr
-if convert_cf:
-    r_step_cf = (rmax_cf - rmin_cf) / nbin_cf
-    for c, corname in enumerate(cornames):
-        os.makedirs(os.path.dirname(corname), exist_ok=1) # make sure all dirs exist
-        from python.convert_xi_from_pycorr import convert_xi_from_pycorr_files
-        _, ndata2 = convert_xi_from_pycorr_files(pycorr_filenames[c], corname, n_mu = mbin_cf, r_step = r_step_cf, print_function = print_and_log)
-        ndata[tracer2_corr[c]] = ndata2 # override ndata for second tracer, so that autocorrelations are prioritized
-        if smoothen_cf:
-            corname_old = corname
-            corname = f"xi/xi_n{nbin_cf}_m{mbin_cf}_{indices_corr[c]}_smooth.dat"
-            from python.smoothen_xi import smoothen_xi_files
-            smoothen_xi_files(corname_old, max_l_smoothing, radial_window_len, radial_polyorder, corname)
-            cornames[c] = corname # save outside of the loop
 
 if count_ndata:
     ndata_isbad = [not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
@@ -318,79 +286,6 @@ if normalize_weights:
             normalize_weights_files(input_filename, n_filename, print_and_log)
             input_filenames[t][i] = n_filename # update input filename for later
             print_and_log(f"Finished normalizing weights in file {i+1} of {nfiles}")
-
-if convert_cf: # this is really for pair counts and jackknives
-    print_and_log(datetime.now())
-    if do_counts: # redo counts
-        if jackknife: # do jackknife xi and all counts
-            if nfiles > 1: # concatenate randoms now if needed
-                for t in range(ntracers):
-                    exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
-            else:
-                cat_randoms_files[t] = input_filenames[t][0]
-            # compute jackknife weights
-            if ntracers == 1:
-                exec_print_and_log(f"python python/legacy/jackknife_weights.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
-            elif ntracers == 2:
-                exec_print_and_log(f"python python/legacy/jackknife_weights_cross.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(jackknife_weights_names[0])}/") # 1. is max mu
-            else:
-                print("Number of tracers not supported for this operation (yet)")
-                sys.exit(1)
-            # continue processing of data files - from redshift-cut rdzw to xyzw and xyzwj
-            for t in range(ntracers):
-                data_filename = data_ref_filenames[t]
-                xyzw_filename = change_extension(data_filename, "xyzw")
-                from python.convert_to_xyz import convert_to_xyz_files
-                convert_to_xyz_files(data_filename, xyzw_filename, Omega_m, Omega_k, w_dark_energy, FKP_weights[t], masks[t], use_weights[t], print_and_log)
-                data_filename = xyzw_filename
-                xyzwj_filename = change_extension(data_filename, "xyzwj")
-                # keep in mind some subtleties for multi-tracer jackknife assigment
-                from python.create_jackknives_pycorr import create_jackknives_pycorr_files
-                create_jackknives_pycorr_files(data_ref_filenames[t], data_filename, xyzwj_filename, njack, print_and_log) # the first file must be rdzw, the second xyzw!
-                data_filename = xyzwj_filename
-                if normalize_weights:
-                    n_filename = append_to_filename(data_filename, "n") # append letter n to the original filename
-                    from python.normalize_weights import normalize_weights_files
-                    normalize_weights_files(data_filename, n_filename, print_and_log)
-                    data_filename = n_filename
-                data_ref_filenames[t] = data_filename # update the name in list
-            # run RascalC own xi jack estimator
-            if ntracers == 1:
-                exec_print_and_log(f"python python/legacy/xi_estimator_jack.py {data_ref_filenames[0]} {cat_randoms_files[0]} {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {jackknife_pairs_names[0]}") # 1. is max mu
-            elif ntracers == 2:
-                exec_print_and_log(f"python python/legacy/xi_estimator_jack_cross.py {' '.join(data_ref_filenames)} {' '.join(cat_randoms_files)} {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(xi_jack_names[0])}/ {' '.join(jackknife_pairs_names)}") # 1. is max mu
-            else:
-                print("Number of tracers not supported for this operation (yet)")
-                sys.exit(1)
-            if not cat_randoms: # reload full counts from pycorr, override jackknives - to prevent normalization issues
-                r_step = (rmax - rmin) / nbin
-                from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
-                for c in range(ncorr):
-                    convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step =  r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
-        else: # only need full, binned pair counts
-            if cat_randoms: # compute counts with our own script
-                if ntracers == 1:
-                    exec_print_and_log(f"python python/legacy/RR_counts.py {cat_randoms_files[0]} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
-                elif ntracers == 2:
-                    exec_print_and_log(f"python python/legacy/RR_counts_multi.py {' '.join(cat_randoms_files)} {binfile} 1. {mbin} {nthread} {periodic} {os.path.dirname(binned_pair_names[0])}/ 0") # 1. is max mu, 0 means not normed
-                else:
-                    print("Number of tracers not supported for this operation (yet)")
-                    sys.exit(1)
-            else:
-                print("Non-jackknife computation with not concatenated randoms not implemented yet")
-                sys.exit(1)
-    else: # convert from pycorr
-        for c in range(ncorr):
-            os.makedirs(os.path.dirname(binned_pair_names[c]), exist_ok=1) # make sure all dirs exist
-            r_step = (rmax-rmin)//nbin
-            if jackknife: # convert jackknife xi and all counts
-                for filename in (xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c]):
-                    os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
-                from python.convert_xi_jack_from_pycorr import convert_jack_xi_weights_counts_from_pycorr_files
-                convert_jack_xi_weights_counts_from_pycorr_files(pycorr_filenames[c][0], xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
-            else: # convert full, binned pair counts
-                from python.convert_counts_from_pycorr import convert_counts_from_pycorr_files
-                convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
 
 # runthe test code
 exec_print_and_log(f"./demo {nthread} {10**9}")
