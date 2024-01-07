@@ -41,46 +41,12 @@ assert not (make_randoms and jackknife), "Jackknives with generated randoms not 
 assert not (make_randoms and not periodic), "Non-periodic random generation not supported"
 assert not (jackknife and legendre_orig), "Jackknife and original Legendre modes are incompatible"
 
-rmin = 0 # minimum output cov radius in Mpc/h
-rmax = 200 # maximum output cov radius in Mpc/h
-nbin = 50 # radial bins for output cov
-mbin = 100 # angular (mu) bins for output cov; in original Legendre mode number of bins for correction function; in mixed Legendre mode the number of bins of the intermediate s,mu correlation function projected into multipoles
-rmin_cf = 0 # minimum input 2PCF radius in Mpc/h
-rmax_cf = 200 # maximum input 2PCF radius in Mpc/h
-nbin_cf = 100 # radial bins for input 2PCF
-mbin_cf = 10 # angular (mu) bins for input 2PCF
-xicutoff = 250 # beyond this assume xi/2PCF=0
-
 nthread = 256 # number of OMP threads to use
-maxloops = 1024 # number of integration loops per filename
-loopspersample = 64 # number of loops to collapse into one subsample
-N2 = 5 # number of secondary cells/particles per primary cell
-N3 = 10 # number of third cells/particles per secondary cell/particle
-N4 = 20 # number of fourth cells/particles per third cell/particle
-
-rescale = 1 # rescaling for co-ordinates
-nside = 301 # grid size for accelerating pair count
-boxsize = 2000 # only used if periodic=1
-
-suffixes_tracer_all = ("", "2") # all supported tracer suffixes
-suffixes_tracer = suffixes_tracer_all[:ntracers]
-indices_corr_all = ("11", "12", "22") # all supported 2PCF indices
-suffixes_corr_all = ("", "12", "2") # all supported 2PCF suffixes
-tracer1_corr_all = (0, 0, 1)
-tracer2_corr_all = (0, 1, 1)
-ncorr = ntracers*(ntracers+1)//2 # number of correlation functions
-indices_corr = indices_corr_all[:ncorr] # indices to use
-suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
-tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
 version_label = "v0.6"
 
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
-# known cases where more loops are needed consistently
-if id in (4,): maxloops *= 2
-elif id in (0, 1, 3, 15): maxloops *= 3
-elif id in (2, 14): maxloops *= 4
 
 id //= 2 # extracted all needed info from parity, move on
 tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
@@ -92,9 +58,6 @@ assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 1 if tlabels[0].startswith("BGS") else 4 # 1 random for BGS only
 if any(tlabels[0].startswith(t) for t in ("BGS", "LRG")): version_label = "v0.6.1" # newer version for BGS and LRG, older for ELG and QSO
 
-assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
-# no_subsamples_per_file = maxloops // loopspersample
-
 # data processing steps
 redshift_cut = 1
 convert_to_xyz = 1
@@ -105,9 +68,8 @@ if redshift_cut or convert_to_xyz:
     masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Does nothing with plain text files.
 create_jackknives = jackknife and 1
 normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
-do_counts = 0 # (re)compute total pair counts, jackknife weights/xi with RascalC script, on concatenated randoms, instead of reusing them from pycorr
 cat_randoms = 1 # concatenate random files for RascalC input
-if do_counts or cat_randoms:
+if cat_randoms:
     cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
 z_min, z_max = zs[id] # for redshift cut and filenames
@@ -132,14 +94,8 @@ if not cat_randoms or make_randoms:
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
 outdir = prevent_override("_".join(tlabels) + "_" + reg + f"_z{z_min}-{z_max}") # output file directory
 tmpdir = os.path.join("tmpdirs", outdir) # directory to write intermediate files, mainly data processing steps
-cornames = [os.path.join(outdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
-binned_pair_names = [os.path.join(outdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
-if jackknife:
-    jackknife_weights_names = [os.path.join(outdir, f"weights/jackknife_weights_n{nbin}_m{mbin}_j{njack}_{index}.dat") for index in indices_corr]
-if legendre_orig:
-    phi_names = [f"BinCorrectionFactor_n{nbin}_" + ("periodic" if periodic else f'm{mbin}') + f"_{index}.txt" for index in indices_corr]
 
-if do_counts or cat_randoms: # move concatenated randoms file to tmpdir as well
+if cat_randoms: # move concatenated randoms file to tmpdir as well
     cat_randoms_files = [os.path.join(tmpdir, cat_randoms_file) for cat_randoms_file in cat_randoms_files]
 
 ##########################################################
@@ -182,17 +138,6 @@ def exec_print_and_log(commandline: str) -> None:
             sys.exit(1)
 
 print("Starting Computation")
-
-# binning files to be created automatically
-binfile = os.path.join(outdir, "radial_binning_cov.csv")
-binfile_cf = os.path.join(outdir, "radial_binning_corr.csv")
-from python.write_binning_file_linear import write_binning_file_linear
-write_binning_file_linear(binfile, rmin, rmax, nbin, print_and_log)
-write_binning_file_linear(binfile_cf, rmin_cf, rmax_cf, nbin_cf, print_and_log)
-
-if legendre_mix: # write mu bin Legendre factors for the code
-    from python.mu_bin_legendre_factors import write_mu_bin_legendre_factors
-    mu_bin_legendre_file = write_mu_bin_legendre_factors(mbin, max_l, os.path.dirname(binned_pair_names[0]))
 
 def change_extension(name: str, ext: str) -> str:
     return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
