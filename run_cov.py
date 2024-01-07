@@ -41,9 +41,6 @@ assert not (make_randoms and jackknife), "Jackknives with generated randoms not 
 assert not (make_randoms and not periodic), "Non-periodic random generation not supported"
 assert not (jackknife and legendre_orig), "Jackknife and original Legendre modes are incompatible"
 
-ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
-count_ndata = 1 # whether to count data galaxies if can't load useful info from pycorr
-
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
 nbin = 50 # radial bins for output cov
@@ -124,7 +121,7 @@ if convert_to_xyz:
     w_dark_energy = -1
 
 # File names and directories
-if jackknife or count_ndata:
+if jackknife:
     data_ref_filenames = [check_path(input_dir + f"{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
 input_filenames = [[check_path(input_dir + f"{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
@@ -197,37 +194,20 @@ if legendre_mix: # write mu bin Legendre factors for the code
     from python.mu_bin_legendre_factors import write_mu_bin_legendre_factors
     mu_bin_legendre_file = write_mu_bin_legendre_factors(mbin, max_l, os.path.dirname(binned_pair_names[0]))
 
-if count_ndata:
-    ndata_isbad = [not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
-    count_ndata = any(ndata_isbad) # no need to count data if all ndata are good
-
-if periodic and make_randoms:
-    # create random points
-    print_and_log(f"Generating random points")
-    np.random.seed(42) # for reproducibility
-    randoms = [np.append(np.random.rand(nfiles_t, int(ndata_t), 3) * boxsize, np.ones((nfiles_t, int(ndata_t), 1)), axis=-1) for nfiles_t, ndata_t in zip(nfiles, ndata)]
-    # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to unity. List of array; list index is tracer number, first array index is file number and the second is number of point. Keep number of points roughly equal to number of data for each tracer
-    print_and_log(f"Generated random points")
-
 def change_extension(name: str, ext: str) -> str:
     return os.path.join(tmpdir, os.path.basename(".".join(name.split(".")[:-1] + [ext]))) # change extension and switch to tmpdir
 
 def append_to_filename(name: str, appendage: str) -> str:
     return os.path.join(tmpdir, os.path.basename(name + appendage)) # append part and switch to tmpdir
 
-if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
+if create_jackknives and redshift_cut: # prepare reference file
     for t, data_ref_filename in enumerate(data_ref_filenames):
-        if create_jackknives or ndata_isbad[t]:
-            print_and_log("Processing data file for" + create_jackknives * " jackknife reference" + (create_jackknives and count_ndata) * " and" + count_ndata * " galaxy counts")
+        if create_jackknives:
+            print_and_log("Processing data file for jackknife reference")
             rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
             from python.redshift_cut import redshift_cut_files
             redshift_cut_files(data_ref_filename, rdzw_ref_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
             data_ref_filenames[t] = rdzw_ref_filename
-        if ndata_isbad[t]:
-            with open(data_ref_filenames[t]) as f:
-                for lineno, _ in enumerate(f):
-                    pass
-                ndata[t] = lineno + 1
 
 # processing steps for each random file
 for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
@@ -236,8 +216,7 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
         print_and_log(f"Starting preparing file {i+1} of {nfiles_t}")
         print_and_log(datetime.now())
         if periodic and make_randoms: # just save randoms to this file
-            input_filename = change_extension(input_filename, "xyzw")
-            np.savetxt(input_filename, randoms[t][i])
+            pass
         else: # (potentially) run through all data processing steps
             if redshift_cut:
                 rdzw_filename = change_extension(input_filename, "rdzw")
