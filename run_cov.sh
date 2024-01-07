@@ -23,4 +23,4 @@ export NUMEXPR_MAX_THREADS=256
 # Limit OpenBLAS thread usage (for jackknife assignment, error otherwise)
 export OPENBLAS_NUM_THREADS=1
 
-python run_cov.py $SLURM_ARRAY_TASK_ID
+python -u run_cov.py $SLURM_ARRAY_TASK_ID

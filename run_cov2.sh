@@ -15,4 +15,4 @@ export NUMEXPR_MAX_THREADS=256
 # Limit OpenBLAS thread usage (for jackknife assignment, error otherwise)
 export OPENBLAS_NUM_THREADS=1
 
-python run_cov.py 4
+python -u run_cov.py 4
