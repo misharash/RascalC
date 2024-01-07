@@ -66,7 +66,6 @@ if redshift_cut or convert_to_xyz:
     use_weights = [1] * ntracers # For FITS files: 0 - do not use the WEIGHT column even if present. 1 - use WEIGHT column if present. Has no effect with plain text files
     FKP_weights = [1] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
     masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Does nothing with plain text files.
-create_jackknives = jackknife and 1
 
 z_min, z_max = zs[id] # for redshift cut and filenames
 
@@ -79,9 +78,6 @@ if convert_to_xyz:
     w_dark_energy = -1
 
 # File names and directories
-if jackknife:
-    data_ref_filenames = [check_path(input_dir + f"{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
-    assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
 input_filenames = [[check_path(input_dir + f"{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
@@ -119,15 +115,6 @@ def change_extension(name: str, ext: str) -> str:
 def append_to_filename(name: str, appendage: str) -> str:
     return os.path.join(tmpdir, os.path.basename(name + appendage)) # append part and switch to tmpdir
 
-if create_jackknives and redshift_cut: # prepare reference file
-    for t, data_ref_filename in enumerate(data_ref_filenames):
-        if create_jackknives:
-            print_and_log("Processing data file for jackknife reference")
-            rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
-            from python.redshift_cut import redshift_cut_files
-            redshift_cut_files(data_ref_filename, rdzw_ref_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
-            data_ref_filenames[t] = rdzw_ref_filename
-
 # processing steps for each random file
 for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
     print_and_log(f"Starting preparing tracer {t+1} of {ntracers}")
@@ -147,11 +134,6 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
                 from python.convert_to_xyz import convert_to_xyz_files
                 convert_to_xyz_files(input_filename, xyzw_filename, Omega_m, Omega_k, w_dark_energy, FKP_weights[t], masks[t], use_weights[t], print_and_log)
                 input_filename = xyzw_filename
-            if create_jackknives:
-                xyzwj_filename = change_extension(input_filename, "xyzwj")
-                from python.create_jackknives_pycorr import create_jackknives_pycorr_files
-                create_jackknives_pycorr_files(data_ref_filenames[t], input_filename, xyzwj_filename, njack, print_and_log) # keep in mind some subtleties for multi-tracer jackknife assigment
-                input_filename = xyzwj_filename
         input_filenames[t][i] = input_filename # save final input filename for next loop
         print_and_log(f"Finished preparing file {i+1} of {nfiles_t}")
 # end processing steps for each random file
