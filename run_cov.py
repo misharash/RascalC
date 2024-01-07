@@ -261,21 +261,6 @@ if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
                     pass
                 ndata[t] = lineno + 1
 
-command = f"srun ./cov -boxsize {boxsize} -nside {nside} -rescale {rescale} -nthread {nthread} -maxloops {maxloops} -loopspersample {loopspersample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xicutoff} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {mbin_cf}" # here are universally acceptable parameters
-command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
-command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
-if legendre: # only provide max multipole l for now
-    command += f" -max_l {max_l}"
-if legendre_mix: # provide factors filename
-    command += f" -mu_bin_legendre_file {mu_bin_legendre_file}"
-if not legendre_orig: # provide binned pair counts files and number of mu bin
-    command += "".join([f" -RRbin{suffixes_corr[c]} {binned_pair_names[c]}" for c in range(ncorr)]) + f" -mbin {mbin}"
-if periodic: # append periodic flag
-    command += " -perbox"
-if jackknife: # provide jackknife weight files for all correlations
-    command += "".join([f" -jackknife{suffixes_corr[c]} {jackknife_weights_names[c]}" for c in range(ncorr)])
-print_and_log(f"Common command for C++ code: {command}")
-
 # processing steps for each random file
 for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
     print_and_log(f"Starting preparing tracer {t+1} of {ntracers}")
