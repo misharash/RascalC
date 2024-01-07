@@ -267,7 +267,7 @@ if normalize_weights:
             print_and_log(f"Finished normalizing weights in file {i+1} of {nfiles}")
 
 # runthe test code
-exec_print_and_log(f"./demo {nthread} {10**9}")
+exec_print_and_log(f"./demo {nthread} {10**8}")
 
 print_and_log(datetime.now())
 print_and_log(f"Finished execution.")
