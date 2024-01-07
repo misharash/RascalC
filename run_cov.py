@@ -55,7 +55,7 @@ zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0
 
 tlabels = [tracers[id]] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 1 if tlabels[0].startswith("BGS") else 4 # 1 random for BGS only
+nrandoms = 1 # one file should be enough
 if any(tlabels[0].startswith(t) for t in ("BGS", "LRG")): version_label = "v0.6.1" # newer version for BGS and LRG, older for ELG and QSO
 
 # data processing steps
@@ -67,10 +67,6 @@ if redshift_cut or convert_to_xyz:
     FKP_weights = [1] * ntracers # For FITS files: 0 - do not use FKP weights. 1 - load them from WEIGHT_FKP column. "P0,NZ_name" - compute manually with given P0 and NZ from column "NZ_name". Has no effect with plain text files.
     masks = [0] * ntracers # default, basically no mask. All bits set to 1 in the mask have to be set in the FITS data STATUS. Does nothing with plain text files.
 create_jackknives = jackknife and 1
-normalize_weights = 1 # rescale weights in each catalog so that their sum is 1. Will also use normalized RR counts from pycorr
-cat_randoms = 1 # concatenate random files for RascalC input
-if cat_randoms:
-    cat_randoms_files = [f"{tlabel}_{reg}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
 z_min, z_max = zs[id] # for redshift cut and filenames
 
@@ -89,14 +85,8 @@ if jackknife:
 input_filenames = [[check_path(input_dir + f"{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
-if not cat_randoms or make_randoms:
-    for i in range(1, ntracers):
-        assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
 outdir = prevent_override("_".join(tlabels) + "_" + reg + f"_z{z_min}-{z_max}") # output file directory
 tmpdir = os.path.join("tmpdirs", outdir) # directory to write intermediate files, mainly data processing steps
-
-if cat_randoms: # move concatenated randoms file to tmpdir as well
-    cat_randoms_files = [os.path.join(tmpdir, cat_randoms_file) for cat_randoms_file in cat_randoms_files]
 
 ##########################################################
 
@@ -182,36 +172,7 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
         print_and_log(f"Finished preparing file {i+1} of {nfiles_t}")
 # end processing steps for each random file
 
-if cat_randoms: # concatenate randoms
-    for t in range(ntracers):
-        if nfiles[t] > 1: # real action is needed
-            print_and_log(datetime.now())
-            exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}")
-            input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
-        else: # skip actual concatenation, just reuse the only input file
-            cat_randoms_files[t] = input_filenames[t][0]
-    nfiles = 1
-else:
-    nfiles = nfiles[0]
-    if ntracers > 1 and nfiles > 1 and cycle_randoms:
-        for t in range(1, ntracers):
-            input_filenames[t] = input_filenames[t][t*cycle_randoms:] + input_filenames[t][:t*cycle_randoms] # shift the filename list cyclically by number of tracer, this makes sure files with different numbers for different tracers are fed to the C++ code, otherwise overlapping positions are likely at least between LRG and ELG
-    # now the number of files to process is the same for sure
-
-# most sensible to normalize weights after concatenation but before counts computation and main code run
-if normalize_weights:
-    for t, input_filenames_t in enumerate(input_filenames):
-        print_and_log(f"Normalizing weights for tracer {t+1} of {ntracers}")
-        for i, input_filename in enumerate(input_filenames_t):
-            print_and_log(f"Starting normalizing weights in file {i+1} of {nfiles}")
-            print_and_log(datetime.now())
-            n_filename = append_to_filename(input_filename, "n") # append letter n to the original filename
-            from python.normalize_weights import normalize_weights_files
-            normalize_weights_files(input_filename, n_filename, print_and_log)
-            input_filenames[t][i] = n_filename # update input filename for later
-            print_and_log(f"Finished normalizing weights in file {i+1} of {nfiles}")
-
-# runthe test code
+# run the test code
 exec_print_and_log(f"./demo {nthread} {10**8}")
 
 print_and_log(datetime.now())
