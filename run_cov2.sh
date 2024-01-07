@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# load cosmodesi environment
-source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
+# load cosmodesi environment - already loaded for my user?
+# source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
 # GSL needed by the C++ code should already be loaded in cosmodesi
 # module load gsl
 

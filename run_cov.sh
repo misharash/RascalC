@@ -8,8 +8,8 @@
 #SBATCH --job-name=RascalC-openmp-issue
 #SBATCH --array=4 # only LRG 0.8-1.1 SGC for testing, not to waste allocated time
 
-# load cosmodesi environment
-source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
+# load cosmodesi environment - already loaded for my user?
+# source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
 # GSL needed by the C++ code should already be loaded in cosmodesi
 # module load gsl
 
