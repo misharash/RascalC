@@ -169,18 +169,15 @@ print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
 print_and_log(datetime.now())
 print_and_log(f"Executing {__file__}")
 
-slurm_launch = "SLURM_JOB_ID" in os.environ # detect if launched by SLURM
-
-def exec_print_and_log(commandline: str, slurm_fix: bool = slurm_launch) -> None:
+def exec_print_and_log(commandline: str) -> None:
     print_and_log(f"Running command: {commandline}")
     if commandline.startswith("python"): # additional anti-buffering for python
         commandline = commandline.replace("python", "python -u", 1)
-    status = os.system("srun " * slurm_fix + f"bash -c 'set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}'")
+    status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {commandline} 2>&1 | tee -a {logfile}'")
     # tee prints what it gets to stdout AND saves to file
     # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
     # without pipefail, the exit_code would be of tee, not reflecting main command failures
     # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
-    # srun should regain control of all the threads for the subprocess - without it the C++ code seemed to run with single thread (very low performance) after this script used numpy routines
     exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
     if exit_code:
         print(f"{commandline} exited with error (code {exit_code}).")
@@ -296,7 +293,7 @@ if cat_randoms: # concatenate randoms
     for t in range(ntracers):
         if nfiles[t] > 1: # real action is needed
             print_and_log(datetime.now())
-            exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}", slurm_fix = False) # should not be multi-threaded
+            exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}") # should not be multi-threaded
             input_filenames[t] = [cat_randoms_files[t]] # now it is the only file
         else: # skip actual concatenation, just reuse the only input file
             cat_randoms_files[t] = input_filenames[t][0]
@@ -327,7 +324,7 @@ if convert_cf: # this is really for pair counts and jackknives
         if jackknife: # do jackknife xi and all counts
             if nfiles > 1: # concatenate randoms now if needed
                 for t in range(ntracers):
-                    exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}", slurm_fix = False) # should not be multi-threaded
+                    exec_print_and_log(f"cat {' '.join(input_filenames[t])} > {cat_randoms_files[t]}") # should not be multi-threaded
             else:
                 cat_randoms_files[t] = input_filenames[t][0]
             # compute jackknife weights
