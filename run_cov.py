@@ -28,7 +28,7 @@ if ntracers > 1:
     cycle_randoms = 1
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
 make_randoms = 0 # whether to generate randoms, only works in periodic case (cubic box)
-jackknife = 1 # whether to compute jackknife integrals (must also be set in Makefile)
+jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 njack = 60 if jackknife else 0 # number of jackknife regions; if jackknife flag is not set this is used for the pycorr filenames and should be 0
 legendre_orig = 0 # original Legendre mode - when each pair's contribution is accumulated to multipoles of 2PCF directly
 legendre_mix = 1 # mixed Legendre mode - when the s,mu-binned 2PCF is estimated and then projected into Legendre multipoles using integrals of Legendre polynomials 
@@ -85,7 +85,7 @@ reg = "NGC" if id%2 else "SGC" # region for filenames
 tlabels = ['LRG', 'ELG_LOPnotqso'] # tracer labels for filenames
 corlabels = [tlabels[0], "_".join(tlabels), tlabels[1]]
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 1 if tlabels[0].startswith("BGS") else 4 # 1 random for BGS only
+nrandoms = 4
 
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
 # no_subsamples_per_file = maxloops // loopspersample
@@ -114,8 +114,8 @@ convert_cf = 1
 if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
-    split_above = 20
-    pycorr_filenames = [[check_path(input_dir + f"xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")] for corlabel in tlabels]
+    split_above = np.inf
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Overlap/Y1/FOR_MISHA/{version_label}/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}.npy")] for corlabel in tlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
