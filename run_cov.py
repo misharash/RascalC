@@ -54,12 +54,12 @@ nbin_cf = 200 # radial bins for input 2PCF
 mbin_cf = 20 # angular (mu) bins for input 2PCF
 xicutoff = 250 # beyond this assume xi/2PCF=0
 
-nthread = 30 # number of OMP threads to use
-maxloops = 120 # number of integration loops per filename
-loopspersample = 10 # number of loops to collapse into one subsample
-N2 = 20 # number of secondary cells/particles per primary cell
-N3 = 40 # number of third cells/particles per secondary cell/particle
-N4 = 80 # number of fourth cells/particles per third cell/particle
+nthread = 256 # number of OMP threads to use
+maxloops = 2048 # number of integration loops per filename
+loopspersample = 32 # number of loops to collapse into one subsample
+N2 = 10 # number of secondary cells/particles per primary cell
+N3 = 20 # number of third cells/particles per secondary cell/particle
+N4 = 40 # number of fourth cells/particles per third cell/particle
 
 rescale = 1 # rescaling for co-ordinates
 nside = 101 # grid size for accelerating pair count
@@ -76,9 +76,11 @@ indices_corr = indices_corr_all[:ncorr] # indices to use
 suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
-tlabels = ["LRG"] # tracer labels for filenames
+tlabels = ["QSO"] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 1
+
+hod_label = sys.argv[1] # HOD label (number)
 
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
 # no_subsamples_per_file = maxloops // loopspersample
@@ -98,7 +100,8 @@ cat_randoms = 0 # concatenate random files for RascalC input
 if do_counts or cat_randoms:
     cat_randoms_files = [f"{tlabel}_0-{nrandoms-1}_clustering.ran.xyzw" + ("j" if jackknife else "") for tlabel in tlabels]
 
-z_min, z_max = 0.4, 1.1 # for redshift cut and filenames
+z_ref = 1.4
+z_min, z_max = [z_ref] * 2 # not really used
 
 # CF options
 convert_cf = 1
@@ -106,7 +109,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/projectdirs/desi/cosmosim/KP45/MC/Clustering/AbacusSummit/CubicBox/LRG/Xi/Pre/jmena/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}.npy") for i in range(25)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/AbacusHOD_mocks/varietyHOD/CubicBox/{tlabels[0]}/z{z_ref:.3f}/jmena/Xi/Pre/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}_HOD{hod_label}.npy") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
