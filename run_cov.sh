@@ -5,8 +5,8 @@
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --job-name=RascalC-Y1-v0.6-blinded-recon
-#SBATCH --array=0-3,14-16 # underconverged parts
+#SBATCH --job-name=RascalC-Y1-v1-blinded-recon
+#SBATCH --array=0-17 # all parts
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
