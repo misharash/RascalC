@@ -10,8 +10,8 @@
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
-# load GSL for the C++ code
-module load gsl
+# GSL needed by the C++ code should already be loaded in cosmodesi
+# module load gsl
 
 # OpenMP settings
 export OMP_PROC_BIND=spread
@@ -23,4 +23,4 @@ export NUMEXPR_MAX_THREADS=256
 # Limit OpenBLAS thread usage (for jackknife assignment, error otherwise)
 export OPENBLAS_NUM_THREADS=1
 
-srun python -u run_cov.py $SLURM_ARRAY_TASK_ID
+python -u run_cov.py $SLURM_ARRAY_TASK_ID
