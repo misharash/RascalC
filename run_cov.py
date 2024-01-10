@@ -258,6 +258,7 @@ if periodic: # append periodic flag
     command += " -perbox"
 if jackknife: # provide jackknife weight files for all correlations
     command += "".join([f" -jackknife{suffixes_corr[c]} {jackknife_weights_names[c]}" for c in range(ncorr)])
+command = "env OMP_PROC_BIND=spread OMP_PLACES=threads " + command # set OMP environment variables, they shall not be set for this Python script (IMPORTANT)
 print_and_log(f"Common command for C++ code: {command}")
 
 # processing steps for each random file
