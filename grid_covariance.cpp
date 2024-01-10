@@ -57,6 +57,9 @@ typedef double3 Float3;
 #else
     #include "modules/jackknife_weights.h"
     #include "modules/integrals.h"
+#ifdef LEGENDRE_MIX
+    #include "modules/legendre_mix_utilities.h"
+#endif
 #endif
     #include "modules/random_draws.h"
     #include "modules/driver.h"
@@ -222,6 +225,8 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    // Print the resulting grid size to be sure the stderr messages are not missed
+    printf("Final grid = %d\n", par.nside);
     // Print box size and max radius in grid units here, because they are adjusted while reading particles (non-periodic case)
     printf("Box Size = {%6.5e,%6.5e,%6.5e}\n", par.rect_boxsize.x, par.rect_boxsize.y, par.rect_boxsize.z);
     Float gridsize = par.rmax / par.cellsize;
