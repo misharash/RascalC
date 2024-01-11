@@ -2,7 +2,7 @@
 
 CC = gcc
 CFLAGS = -O3 -Wall -MMD
-CXXFLAGS	= -O3 -Wall -MMD -std=c++0x -fopenmp -ffast-math $(shell pkg-config --cflags gsl)
+CXXFLAGS	= -O3 -Wall -MMD -std=c++0x -fopenmp $(shell pkg-config --cflags gsl)
 CXXFLAGS	+= -DOPENMP -DPERIODIC -DLEGENDRE
 #-DOPENMP  # use this to run multi-threaded with OPENMP
 #-DPERIODIC # use this to enable periodic behavior
