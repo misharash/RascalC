@@ -117,7 +117,7 @@ def compute_correction_function(random_file: str, binfile: str, outdir: str, per
         print("Assuming periodic boundary conditions - so Phi(r,mu) = 1 everywhere")
     elif RR_file is None: raise TypeError("The RR file must be specified if aperiodic")
     
-    V, n_bar, w_bar = compute_V_n_w_bar(random_file)
+    V, n_bar, w_bar = compute_V_n_w_bar_from_file(random_file)
 
     # Load in binning files 
     r_bins = np.loadtxt(binfile)
