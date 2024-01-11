@@ -388,7 +388,7 @@ if convert_cf: # this is really for pair counts and jackknives
                     os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
                 from RascalC.pycorr_utils.jack import convert_jack_xi_weights_counts_from_pycorr_files
                 convert_jack_xi_weights_counts_from_pycorr_files(pycorr_filenames[c][0], xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
-            else: # convert full, binned pair counts
+            elif not (periodic and legendre_orig): # convert full, binned pair counts, unless original Legendre and periodic when counts are not needed
                 from RascalC.pycorr_utils.counts import convert_counts_from_pycorr_files
                 convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
 
