@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --job-name=RascalC-cubic-QSO-pre
-#SBATCH --array=1-4 # all HODs
+#SBATCH --array=1 # one HOD while tracking the issue
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
