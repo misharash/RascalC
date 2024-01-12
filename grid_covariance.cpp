@@ -22,7 +22,6 @@
 #include "./cubature/cubature.h"
 #include <limits>
 #include <sys/stat.h>
-#include <fenv.h>
 
 // For multi-threading:
 #ifdef OPENMP
@@ -83,8 +82,6 @@ STimer TotalTime;
 
 
 int main(int argc, char *argv[]) {
-
-    feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
 	Parameters par=Parameters(argc,argv);
 
