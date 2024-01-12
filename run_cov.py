@@ -42,7 +42,7 @@ assert not (make_randoms and not periodic), "Non-periodic random generation not 
 assert not (jackknife and legendre_orig), "Jackknife and original Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
-count_ndata = 1 # whether to count data galaxies if can't load useful info from pycorr
+count_ndata = 0 # whether to count data galaxies if can't load useful info from pycorr
 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
@@ -121,8 +121,8 @@ if convert_to_xyz:
     w_dark_energy = -1
 
 # File names and directories
-if jackknife:
-    data_ref_filenames = [None] * ntracers # for jackknife reference only, has to have rdz contents
+if jackknife or count_ndata:
+    data_ref_filenames = [None] * ntracers # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
 input_filenames = [[f"randoms{t}.xyzw"] for t in range(ntracers)] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
