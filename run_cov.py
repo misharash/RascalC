@@ -27,7 +27,7 @@ ntracers = 1 # number of tracers
 if ntracers > 1:
     cycle_randoms = 1
 periodic = 1 # whether to run with periodic boundary conditions (must also be set in Makefile)
-make_randoms = 1 # whether to generate randoms, only works in periodic case (cubic box)
+make_randoms = 1 # whether to generate randoms and how many compared to data, only works in periodic case (cubic box)
 jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 njack = 60 if jackknife else 0 # number of jackknife regions; if jackknife flag is not set this is used for the pycorr filenames and should be 0
 legendre_orig = 1 # original Legendre mode - when each pair's contribution is accumulated to multipoles of 2PCF directly
@@ -223,7 +223,7 @@ if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
     np.random.seed(42) # for reproducibility
-    randoms = [np.append(np.random.rand(nfiles_t, int(ndata_t), 3) * boxsize, np.ones((nfiles_t, int(ndata_t), 1)), axis=-1) for nfiles_t, ndata_t in zip(nfiles, ndata)]
+    randoms = [np.append(np.random.rand(nfiles_t, int(make_randoms * ndata_t), 3) * boxsize, np.ones((nfiles_t, int(make_randoms * ndata_t), 1)), axis=-1) for nfiles_t, ndata_t in zip(nfiles, ndata)]
     # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to unity. List of array; list index is tracer number, first array index is file number and the second is number of point. Keep number of points roughly equal to number of data for each tracer
     print_and_log(f"Generated random points")
 
