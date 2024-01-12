@@ -213,9 +213,11 @@ if convert_cf:
             smoothen_xi_files(corname_old, max_l_smoothing, radial_window_len, radial_polyorder, corname)
             cornames[c] = corname # save outside of the loop
 
-if count_ndata:
-    ndata_isbad = [not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
-    count_ndata = any(ndata_isbad) # no need to count data if all ndata are good
+ndata_is_bad = [ndata_i is None or not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
+if count_ndata: count_ndata = any(ndata_is_bad) # no need to count data if all ndata are good
+elif any(ndata_is_bad):
+    print(f"One of normalizations ({ndata}) is not a positive number. Can not proceed.")
+    sys.exit(1)
 
 if periodic and make_randoms:
     # create random points
@@ -233,13 +235,13 @@ def append_to_filename(name: str, appendage: str) -> str:
 
 if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
     for t, data_ref_filename in enumerate(data_ref_filenames):
-        if create_jackknives or ndata_isbad[t]:
+        if create_jackknives or ndata_is_bad[t]:
             print_and_log("Processing data file for" + create_jackknives * " jackknife reference" + (create_jackknives and count_ndata) * " and" + count_ndata * " galaxy counts")
             rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
             from RascalC.pre_process.redshift_cut import redshift_cut_files
             redshift_cut_files(data_ref_filename, rdzw_ref_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
             data_ref_filenames[t] = rdzw_ref_filename
-        if ndata_isbad[t]:
+        if ndata_is_bad[t]:
             with open(data_ref_filenames[t]) as f:
                 for lineno, _ in enumerate(f):
                     pass
