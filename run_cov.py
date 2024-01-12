@@ -27,7 +27,7 @@ ntracers = 1 # number of tracers
 if ntracers > 1:
     cycle_randoms = 1
 periodic = 1 # whether to run with periodic boundary conditions (must also be set in Makefile)
-make_randoms = 12 # whether to generate randoms and how many compared to data, only works in periodic case (cubic box)
+make_randoms = 12 # whether to generate randoms and how many times the number of data points per file, only works in periodic case (cubic box)
 jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 njack = 60 if jackknife else 0 # number of jackknife regions; if jackknife flag is not set this is used for the pycorr filenames and should be 0
 legendre_orig = 1 # original Legendre mode - when each pair's contribution is accumulated to multipoles of 2PCF directly
