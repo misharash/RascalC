@@ -118,7 +118,7 @@ public:
             cf_estimate[i]/=(n_pairs*corrf2*rr_estimate[i]);
         }
         if (fail_flag) {
-            fprintf(stderr, "Failed to obtain a correlation function estimate for rescaling.\nTry increasing N2 and/or number of integration loops, or use coarser correlation function binning, or provide denser randoms.\n");
+            fprintf(stderr, "Failed to obtain a correlation function estimate for rescaling.\nTry increasing N2 and/or number of integration loops, or using coarser correlation function binning, or providing denser randoms.\n");
             exit(1);
         }
     }
