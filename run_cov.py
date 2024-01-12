@@ -42,7 +42,7 @@ assert not (make_randoms and not periodic), "Non-periodic random generation not 
 assert not (jackknife and legendre_orig), "Jackknife and original Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
-count_ndata = 1 # whether to count data galaxies if can't load useful info from pycorr
+count_ndata = 0 # whether to count data galaxies if can't load useful info from pycorr
 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
@@ -124,8 +124,8 @@ if convert_to_xyz:
     w_dark_energy = -1
 
 # File names and directories
-if jackknife:
-    data_ref_filenames = [None] * ntracers # for jackknife reference only, has to have rdz contents
+if jackknife or count_ndata:
+    data_ref_filenames = [None] * ntracers # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
 input_filenames = [[f"randoms{t}.xyzw"] for t in range(ntracers)] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
@@ -215,9 +215,11 @@ if convert_cf:
             smoothen_xi_files(corname_old, max_l_smoothing, radial_window_len, radial_polyorder, corname)
             cornames[c] = corname # save outside of the loop
 
-if count_ndata:
-    ndata_isbad = [not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
-    count_ndata = any(ndata_isbad) # no need to count data if all ndata are good
+ndata_is_bad = [ndata_i is None or not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
+if count_ndata: count_ndata = any(ndata_is_bad) # no need to count data if all ndata are good
+elif any(ndata_is_bad):
+    print(f"One of normalizations ({ndata}) is not a positive number. Can not proceed.")
+    sys.exit(1)
 
 if periodic and make_randoms:
     # create random points
@@ -235,13 +237,13 @@ def append_to_filename(name: str, appendage: str) -> str:
 
 if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
     for t, data_ref_filename in enumerate(data_ref_filenames):
-        if create_jackknives or ndata_isbad[t]:
+        if create_jackknives or ndata_is_bad[t]:
             print_and_log("Processing data file for" + create_jackknives * " jackknife reference" + (create_jackknives and count_ndata) * " and" + count_ndata * " galaxy counts")
             rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
             from RascalC.pre_process.redshift_cut import redshift_cut_files
             redshift_cut_files(data_ref_filename, rdzw_ref_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
             data_ref_filenames[t] = rdzw_ref_filename
-        if ndata_isbad[t]:
+        if ndata_is_bad[t]:
             with open(data_ref_filenames[t]) as f:
                 for lineno, _ in enumerate(f):
                     pass
