@@ -135,6 +135,7 @@ public:
         for(int i=0;i<nbin*mbin;i++){
             cf_estimate[i]=0;
             rr_estimate[i]=0;
+            binct[i]=0;
         }
     }
 
