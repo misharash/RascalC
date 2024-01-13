@@ -315,12 +315,7 @@ public:
 
             tmp_weight = wij[i]*pk.w; // product of weights, w_iw_jw_k
 
-            if(rik_mag<1e-4){
-              printf("Particle separation of %.2e Mpc/h found between random particles %d and %d from files %d and %d. This is unusually small and will cause errors.\n", rik_mag, prim_ids[i], pk_id, I1, I3);
-              printf("Are the random particle files independent? The code will skip this pair.");
-              wijk[i] = -1; // skip the problematic pair
-              continue;
-            }
+            if (rik_mag < 1e-4) fprintf(stderr, "Particle separation of %.2e Mpc/h found between random particle files %d and %d. This is unusually small but should not cause errors. Still, may be worth checking the random files.\n", rik_mag, I1, I3);
 
             // save arrays for later
             xi_ik[i]=xi_ik_tmp;
