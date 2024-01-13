@@ -27,7 +27,7 @@ ntracers = 1 # number of tracers
 if ntracers > 1:
     cycle_randoms = 1
 periodic = 1 # whether to run with periodic boundary conditions (must also be set in Makefile)
-make_randoms = 1 # whether to generate randoms, only works in periodic case (cubic box)
+make_randoms = 1 # whether to generate randoms and how many times the number of data points per file, only works in periodic case (cubic box)
 jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 njack = 60 if jackknife else 0 # number of jackknife regions; if jackknife flag is not set this is used for the pycorr filenames and should be 0
 legendre_orig = 1 # original Legendre mode - when each pair's contribution is accumulated to multipoles of 2PCF directly
@@ -42,7 +42,7 @@ assert not (make_randoms and not periodic), "Non-periodic random generation not 
 assert not (jackknife and legendre_orig), "Jackknife and original Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
-count_ndata = 1 # whether to count data galaxies if can't load useful info from pycorr
+count_ndata = 0 # whether to count data galaxies if can't load useful info from pycorr
 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
@@ -121,8 +121,8 @@ if convert_to_xyz:
     w_dark_energy = -1
 
 # File names and directories
-if jackknife:
-    data_ref_filenames = [None] * ntracers # for jackknife reference only, has to have rdz contents
+if jackknife or count_ndata:
+    data_ref_filenames = [None] * ntracers # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
 input_filenames = [[f"randoms{t}.xyzw"] for t in range(ntracers)] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
@@ -212,15 +212,17 @@ if convert_cf:
             smoothen_xi_files(corname_old, max_l_smoothing, radial_window_len, radial_polyorder, corname)
             cornames[c] = corname # save outside of the loop
 
-if count_ndata:
-    ndata_isbad = [not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
-    count_ndata = any(ndata_isbad) # no need to count data if all ndata are good
+ndata_is_bad = [ndata_i is None or not np.isfinite(ndata_i) or ndata_i <= 0 for ndata_i in ndata]
+if count_ndata: count_ndata = any(ndata_is_bad) # no need to count data if all ndata are good
+elif any(ndata_is_bad):
+    print(f"One of normalizations ({ndata}) is not a positive number. Can not proceed.")
+    sys.exit(1)
 
 if periodic and make_randoms:
     # create random points
     print_and_log(f"Generating random points")
     np.random.seed(42) # for reproducibility
-    randoms = [np.append(np.random.rand(nfiles_t, int(ndata_t), 3) * boxsize, np.ones((nfiles_t, int(ndata_t), 1)), axis=-1) for nfiles_t, ndata_t in zip(nfiles, ndata)]
+    randoms = [np.append(np.random.rand(nfiles_t, int(make_randoms * ndata_t), 3) * boxsize, np.ones((nfiles_t, int(make_randoms * ndata_t), 1)), axis=-1) for nfiles_t, ndata_t in zip(nfiles, ndata)]
     # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to unity. List of array; list index is tracer number, first array index is file number and the second is number of point. Keep number of points roughly equal to number of data for each tracer
     print_and_log(f"Generated random points")
 
@@ -232,13 +234,13 @@ def append_to_filename(name: str, appendage: str) -> str:
 
 if (create_jackknives or count_ndata) and redshift_cut: # prepare reference file
     for t, data_ref_filename in enumerate(data_ref_filenames):
-        if create_jackknives or ndata_isbad[t]:
+        if create_jackknives or ndata_is_bad[t]:
             print_and_log("Processing data file for" + create_jackknives * " jackknife reference" + (create_jackknives and count_ndata) * " and" + count_ndata * " galaxy counts")
             rdzw_ref_filename = change_extension(data_ref_filename, "rdzw")
             from RascalC.pre_process.redshift_cut import redshift_cut_files
             redshift_cut_files(data_ref_filename, rdzw_ref_filename, z_min, z_max, FKP_weights[t], masks[t], use_weights[t], print_and_log)
             data_ref_filenames[t] = rdzw_ref_filename
-        if ndata_isbad[t]:
+        if ndata_is_bad[t]:
             with open(data_ref_filenames[t]) as f:
                 for lineno, _ in enumerate(f):
                     pass
@@ -387,7 +389,7 @@ if convert_cf: # this is really for pair counts and jackknives
                     os.makedirs(os.path.dirname(filename), exist_ok=1) # make sure all dirs exist
                 from RascalC.pycorr_utils.jack import convert_jack_xi_weights_counts_from_pycorr_files
                 convert_jack_xi_weights_counts_from_pycorr_files(pycorr_filenames[c][0], xi_jack_names[c], jackknife_weights_names[c], jackknife_pairs_names[c], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
-            else: # convert full, binned pair counts
+            elif not (periodic and legendre_orig): # convert full, binned pair counts, unless original Legendre and periodic when counts are not needed
                 from RascalC.pycorr_utils.counts import convert_counts_from_pycorr_files
                 convert_counts_from_pycorr_files(pycorr_filenames[c][0], binned_pair_names[c], n_mu = mbin, r_step = r_step, r_max = rmax, counts_factor = counts_factor, split_above = split_above)
 
