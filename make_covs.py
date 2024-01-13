@@ -4,21 +4,18 @@ import os
 from datetime import datetime
 import pickle
 import hashlib
-from glob import glob
 from typing import Callable
-import fnmatch
 from RascalC.raw_covariance_matrices import cat_raw_covariance_matrices, collect_raw_covariance_matrices
-from RascalC.post_process.legendre import post_process_legendre
-from RascalC.post_process.legendre_mix_jackknife import post_process_legendre_mix_jackknife
+from RascalC.post_process.legendre_multi import post_process_legendre_multi
 from RascalC.convergence_check_extra import convergence_check_extra
-from RascalC.cov_utils import export_cov_legendre
-from RascalC.comb.combine_covs_legendre import combine_covs_legendre
+from RascalC.cov_utils import export_cov_legendre_multi
+from RascalC.comb.combine_covs_legendre_multi import combine_covs_legendre_multi
 
 max_l = 4
 nbin = 50 # radial bins for output cov
 rmax = 200 # maximum output cov radius in Mpc/h
 
-jackknife = 1
+jackknife = 0
 njack = 60 if jackknife else 0
 if jackknife: mbin = 100
 
@@ -27,13 +24,14 @@ version_label = "v0.6"
 regs = ('SGC', 'NGC') # regions for filenames
 reg_comb = "GCcomb"
 
-tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
-zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
+tracers = [['LRG', 'ELG_LOPnotqso']]
+zs = [[0.8, 1.1]]
+alphas_ext = [[[0.97, 0.83], [0.87, 0.81]]] # from single-tracer jackknives, external to these runs. 
 
 skip_r_bins = 5
 skip_l = 0
 
-split_above = 20
+nrandoms = 4
 
 xilabel = "".join([str(i) for i in range(0, max_l+1, 2)])
 
@@ -100,12 +98,11 @@ def sha256sum(filename: str, buffer_size: int = 128*1024) -> str: # from https:/
     return h.hexdigest()
 
 # Make steps for making covs
-for tracer, (z_min, z_max) in zip(tracers, zs):
-    nrandoms = 1 if tracer.startswith("BGS") else 4 # 1 random for BGS only
-    tlabels = [tracer]
+for tlabels, (z_min, z_max), these_alphas_ext in zip(tracers, zs, alphas_ext):
+    corlabels = [tlabels[0], "_".join(tlabels), tlabels[1]]
     reg_results, reg_pycorr_names = [], []
-    if jackknife: reg_results_jack = []
-    for reg in regs:
+    reg_results_rescaled = []
+    for reg, alphas in zip(regs, these_alphas_ext):
         outdir = "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}" # output file directory
         if not os.path.isdir(outdir): continue # if doesn't exist can't really do anything else
         
@@ -124,10 +121,10 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
         results_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
         cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
-        reg_pycorr_names.append(f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/xi/smu/allcounts_{tracer}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy")
+        reg_pycorr_names.append([f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Overlap/Y1/FOR_MISHA/{version_label}/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}.npy" for corlabel in corlabels])
 
         def make_gaussian_cov():
-            results = post_process_legendre(outdir, nbin, max_l, outdir, skip_r_bins = skip_r_bins, skip_l = skip_l, print_function = print_and_log)
+            results = post_process_legendre_multi(outdir, nbin, max_l, outdir, skip_r_bins = skip_r_bins, skip_l = skip_l, print_function = print_and_log)
             convergence_check_extra(results, print_function = print_and_log)
 
         # RascalC results depend on full output (most straightforwardly)
@@ -136,39 +133,28 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
         # Also perform convergence check (optional but nice)
 
         # Individual cov file depends on RascalC results
-        my_make(cov_name, [results_name], lambda: export_cov_legendre(results_name, max_l, cov_name))
+        my_make(cov_name, [results_name], lambda: export_cov_legendre_multi(results_name, max_l, cov_name))
         # Recipe: export cov
 
-        # Jackknife post-processing
-        if jackknife:
-            results_name_jack = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_Jackknife_n%d_l%d_j%d.npz' % (nbin, max_l, njack))
-            reg_results_jack.append(results_name_jack)
-            xi_jack_name = os.path.join(outdir, f"xi_jack/xi_jack_n{nbin}_m{mbin}_j{njack}_11.dat")
+        # Post-processing with external alphas
+        if alphas:
+            results_name_rescaled = os.path.join(outdir, 'rescaled/Rescaled_Covariance_Legendre_n%d_l%d.npz' % (nbin, max_l))
+            reg_results_rescaled.append(results_name_rescaled)
 
             def make_rescaled_cov():
-                results = post_process_legendre_mix_jackknife(xi_jack_name, os.path.join(outdir, 'weights'), outdir, mbin, max_l, outdir, skip_r_bins = skip_r_bins, skip_l = skip_l, print_function = print_and_log)
+                results = post_process_legendre_multi(outdir, nbin, max_l, os.path.dirname(results_name_rescaled), skip_r_bins = skip_r_bins, skip_l = skip_l, alpha_1 = alphas[0], alpha_2 = alphas[1], print_function = print_and_log)
                 convergence_check_extra(results, print_function = print_and_log)
 
             # RascalC results depend on full output (most straightforwardly)
-            my_make(results_name_jack, [raw_name], make_rescaled_cov)
+            my_make(results_name_rescaled, [raw_name], make_rescaled_cov)
             # Recipe: run post-processing
             # Also perform convergence check (optional but nice)
 
             # Load shot-noise rescaling and make name
-            cov_name_jack = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt"
+            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt"
             # Individual cov file depends on RascalC results
-            my_make(cov_name_jack, [results_name_jack], lambda: export_cov_legendre(results_name_jack, max_l, cov_name_jack))
+            my_make(cov_name_rescaled, [results_name_rescaled], lambda: export_cov_legendre_multi(results_name_rescaled, max_l, cov_name_rescaled))
             # Recipe: run convert cov
-
-            # Here is a special case where the goal name could change (with shot-noise rescaling), so let us delete alternative versions from the directory and the hash dictionary if any
-            # Change of filename does not break the general make logic – the same jack results file must yield the same shot-noise rescaling anyway
-            cov_name_jack_pattern = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled*.txt"
-            # Filenames
-            for fname in glob(cov_name_jack_pattern): # all existing files matching the pattern
-                if not os.path.samefile(fname, cov_name_jack): os.remove(fname) # if not our result file, delete it
-            # Hash dictionary keys (goal names) - could be independent
-            for key in fnmatch.filter(hash_dict.keys(), cov_name_jack_pattern): # all hash dictionary keys matching the pattern
-                if key != cov_name_jack: hash_dict.pop(key) # if not our goal name, remove the key (and its value)
 
     if len(reg_pycorr_names) == len(regs): # if we have pycorr files for all regions
         if len(reg_results) == len(regs): # if we have RascalC results for all regions
@@ -177,15 +163,15 @@ for tracer, (z_min, z_max) in zip(tracers, zs):
             cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
 
             # Comb cov depends on the region RascalC results
-            my_make(cov_name, reg_results, lambda: combine_covs_legendre(*reg_results, *reg_pycorr_names, cov_name, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
+            my_make(cov_name, reg_results, lambda: combine_covs_legendre_multi(*reg_results, *reg_pycorr_names, cov_name, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
             # Recipe: run combine covs
 
-        if jackknife and len(reg_results_jack) == len(regs): # if jackknife and we have RascalC jack results for all regions
+        if len(reg_results_rescaled) == len(regs): # if we have RascalC rescaled results for all regions
             # Combined rescaled cov
-            cov_name_jack = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
+            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
 
             # Comb cov depends on the region RascalC results
-            my_make(cov_name_jack, reg_results_jack, lambda: combine_covs_legendre(*reg_results_jack, *reg_pycorr_names, cov_name_jack, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
+            my_make(cov_name_rescaled, reg_results_rescaled, lambda: combine_covs_legendre_multi(*reg_results_rescaled, *reg_pycorr_names, cov_name_rescaled, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
             # Recipe: run combine covs
 
 # Save the updated hash dictionary
