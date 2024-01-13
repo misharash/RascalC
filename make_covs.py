@@ -118,7 +118,7 @@ for tlabels, (z_min, z_max), these_alphas_ext in zip(tracers, zs, alphas_ext):
 
         # Gaussian covariances
 
-        results_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
+        results_name = os.path.join(outdir, 'Rescaled_Multi_Field_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
         cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
         reg_pycorr_names.append([f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Overlap/Y1/FOR_MISHA/{version_label}/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}.npy" for corlabel in corlabels])
@@ -138,7 +138,7 @@ for tlabels, (z_min, z_max), these_alphas_ext in zip(tracers, zs, alphas_ext):
 
         # Post-processing with external alphas
         if alphas:
-            results_name_rescaled = os.path.join(outdir, 'rescaled/Rescaled_Covariance_Legendre_n%d_l%d.npz' % (nbin, max_l))
+            results_name_rescaled = os.path.join(outdir, 'rescaled/Rescaled_Multi_Field_Covariance_Legendre_n%d_l%d.npz' % (nbin, max_l))
             reg_results_rescaled.append(results_name_rescaled)
 
             def make_rescaled_cov():
