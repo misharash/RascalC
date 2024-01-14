@@ -2,10 +2,10 @@
 #SBATCH --account=desi
 #SBATCH --constraint=cpu
 #SBATCH --qos=regular
-#SBATCH --time=6:00:00
+#SBATCH --time=10:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --job-name=RascalC-cubic-QSO-pre
+#SBATCH --job-name=RascalC-cubic-QSO-post
 #SBATCH --array=1-4 # all HODs
 
 # load cosmodesi environment
