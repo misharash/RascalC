@@ -138,7 +138,7 @@ for tlabels, (z_min, z_max), these_alphas_ext in zip(tracers, zs, alphas_ext):
 
         # Post-processing with external alphas
         if alphas:
-            results_name_rescaled = os.path.join(outdir, 'rescaled/Rescaled_Multi_Field_Covariance_Legendre_n%d_l%d.npz' % (nbin, max_l))
+            results_name_rescaled = os.path.join(outdir, 'rescaled/Rescaled_Multi_Field_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
             reg_results_rescaled.append(results_name_rescaled)
 
             def make_rescaled_cov():
