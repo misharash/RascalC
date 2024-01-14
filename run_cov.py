@@ -88,7 +88,7 @@ elif id in (2, 14): maxloops *= 4
 elif id in (17,): maxloops //= 2 # QSO NGC converge well and take rather long time
 
 id //= 2 # extracted all needed info from parity, move on
-tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
+tracers = ['LRG'] * 4 + ['ELG_LOP'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
 sms = [15] * 8 + [30]
 ns_randoms = [8] * 4 + [10] * 3 + [None, 4] # BGS unknown
