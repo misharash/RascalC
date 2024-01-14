@@ -5,8 +5,8 @@
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --job-name=RascalC-Y1-v1-blinded-recon
-#SBATCH --array=0-13,16,17 # no BGS
+#SBATCH --job-name=RascalC-Y1-EZmocks-recon
+#SBATCH --array=0-5,8-11,16,17 # LRG and ELG without full ranges, no BGS
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
