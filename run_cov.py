@@ -271,9 +271,16 @@ for t, (input_filenames_t, nfiles_t) in enumerate(zip(input_filenames, nfiles)):
     for i, input_filename in enumerate(input_filenames_t):
         print_and_log(f"Starting preparing file {i+1} of {nfiles_t}")
         print_and_log(datetime.now())
-        if periodic and make_randoms: # just save randoms to this file
-            input_filename = change_extension(input_filename, "xyzw")
-            np.savetxt(input_filename, randoms[t][i])
+        if periodic:
+            if make_randoms: # just save randoms to this file
+                input_filename = change_extension(input_filename, "xyzw")
+                np.savetxt(input_filename, randoms[t][i])
+            else: # not universal but right for this case
+                xyzw_filename = change_extension(input_filename, "xyzw")
+                from astropy.io import fits
+                with fits.open(input_filename) as f:
+                    np.savetxt(xyzw_filename, np.column_stack((f[1].data["x"], f[1].data["y"], f[1].data["z"], np.ones_like(f[1].data["z"]))))
+                input_filename = xyzw_filename
         else: # (potentially) run through all data processing steps
             if redshift_cut:
                 rdzw_filename = change_extension(input_filename, "rdzw")
