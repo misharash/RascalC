@@ -27,7 +27,7 @@ ntracers = 1 # number of tracers
 if ntracers > 1:
     cycle_randoms = 1
 periodic = 1 # whether to run with periodic boundary conditions (must also be set in Makefile)
-make_randoms = 12 # whether to generate randoms and how many times the number of data points per file, only works in periodic case (cubic box)
+make_randoms = 0 # whether to generate randoms and how many times the number of data points per file, only works in periodic case (cubic box)
 jackknife = 0 # whether to compute jackknife integrals (must also be set in Makefile)
 njack = 60 if jackknife else 0 # number of jackknife regions; if jackknife flag is not set this is used for the pycorr filenames and should be 0
 legendre_orig = 1 # original Legendre mode - when each pair's contribution is accumulated to multipoles of 2PCF directly
@@ -109,7 +109,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/AbacusHOD_mocks/varietyHOD/CubicBox/{tlabels[0]}/z{z_ref:.3f}/jmena/Xi/Pre/pycorr_format/Xi_AbacusSummit_base_c000_ph{i:03d}_HOD{hod_label}.npy") for i in range(25)]]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/cosmosim/AbacusHOD_mocks/varietyHOD/CubicBox/{tlabels[0]}/z{z_ref:.3f}/jmena/Xi/Post/pycorr_format/Xi_QSO_hod{hod_label}_ph{i:03d}.gcat_shift_MultiGrid_mesh512_smooth30_recsym_f0.920_b2.07.npy") for i in range(25)]]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -127,13 +127,13 @@ if convert_to_xyz:
 if jackknife or count_ndata:
     data_ref_filenames = [None] * ntracers # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[f"randoms{t}.xyzw"] for t in range(ntracers)] # random filenames
+input_filenames = [[f"/global/cfs/cdirs/desi/cosmosim/AbacusHOD_mocks/varietyHOD/CubicBox/{tlabel}/z{z_ref:.3f}/jmena/recon_catalogs/AbacusSummit_base_c000_ph000/QSO_hod{hod_label}_randoms_20x_ph000_shift_MultiGrid_mesh512_smooth30_recsym_f0.920_b2.07.fits"] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = prevent_override("_".join(tlabels) + f"-HOD{hod_label}") # output file directory
+outdir = prevent_override(os.path.join("recon_sm30_MGrecsym", "_".join(tlabels) + f"-HOD{hod_label}")) # output file directory
 tmpdir = os.path.join("tmpdirs", outdir) # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(outdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(outdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
