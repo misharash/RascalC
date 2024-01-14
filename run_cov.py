@@ -23,7 +23,7 @@ def prevent_override(filename: str, max_num: int = 10) -> str: # append _{number
 
 terminate_on_error = 1 # whether to terminate if any of executed scripts returns nonzero
 
-ntracers = 2 # number of tracers
+ntracers = 1 # number of tracers
 if ntracers > 1:
     cycle_randoms = 1
 periodic = 0 # whether to run with periodic boundary conditions (must also be set in Makefile)
@@ -82,8 +82,7 @@ id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # need 2 jobs in this array
 
-tlabels = ['LRG', 'ELG_LOPnotqso'] # tracer labels for filenames
-corlabels = [tlabels[0], "_".join(tlabels), tlabels[1]]
+tlabels = ['LRG+ELG_LOPnotqso'] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 4
 
@@ -107,7 +106,7 @@ if do_counts or cat_randoms:
 
 z_min, z_max = 0.8, 1.1 # for redshift cut and filenames
 
-input_dir = f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/"
+input_dir = "/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Overlap/Y1/"
 
 # CF options
 convert_cf = 1
@@ -115,7 +114,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
-    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Overlap/Y1/FOR_MISHA/{version_label}/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}.npy")] for corlabel in corlabels]
+    pycorr_filenames = [[check_path(input_dir + f"FOR_MISHA/{version_label}/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}.npy")] for corlabel in tlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -131,9 +130,9 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife or count_ndata:
-    data_ref_filenames = [check_path(input_dir + f"{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
+    data_ref_filenames = [check_path(input_dir + f"FITS_FILES/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(input_dir + f"{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(input_dir + f"FITS_FILES/{tlabel}_{reg}_{nrandoms}randoms_clustering.ran.fits")] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
