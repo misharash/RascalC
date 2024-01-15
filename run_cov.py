@@ -94,6 +94,8 @@ sms = [15] * 8 + [30]
 ns_randoms = [8] * 4 + [10] * 3 + [1, 4]
 # need 2 * 9 = 18 jobs in this array
 
+if ns_randoms >= 8: maxloops //= 2 # to keep closer to the old runtime & convergence level, when LRG and ELG had only 4 randoms
+
 tlabels = [tracers[id]] # tracer labels for filenames
 sm = sms[id] # smoothing scale in Mpc/h
 assert len(tlabels) == ntracers, "Need label for each tracer"
