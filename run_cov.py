@@ -118,7 +118,7 @@ if do_counts or cat_randoms:
 
 z_min, z_max = zs[id] # for redshift cut and filenames
 
-input_dir = f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/blinded/desipipe/2pt/recon_sm{sm}_{rectype}/"
+input_dir = f"/global/cfs/cdirs/desi/survey/catalogs/Y1/LSS/iron/LSScats/{version_label}/unblinded/desipipe/2pt/recon_sm{sm}_{rectype}/"
 
 # CF options
 convert_cf = 1
