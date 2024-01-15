@@ -3,7 +3,7 @@
 CC = gcc
 CFLAGS = -O3 -Wall -MMD
 CXXFLAGS	= -O3 -Wall -MMD -std=c++0x -fopenmp -ffast-math $(shell pkg-config --cflags gsl)
-CXXFLAGS	+= -DOPENMP -DLEGENDRE_MIX -DJACKKNIFE
+CXXFLAGS	+= -DOPENMP -DLEGENDRE_MIX
 #-DOPENMP  # use this to run multi-threaded with OPENMP
 #-DPERIODIC # use this to enable periodic behavior
 #-DLEGENDRE # use this to compute 2PCF covariances in Legendre bins (original mode, corresponding to direct accumulation into multipoles from pair counts)
