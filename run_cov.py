@@ -119,7 +119,7 @@ if do_counts or cat_randoms:
 
 z_min, z_max = zs[id] # for redshift cut and filenames
 
-input_dir = f"/desi/survey/catalogs/Y1/mocks/SecondGenMocks/EZmock/desipipe/{version_label}/ffa/2pt/"
+input_dir = f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/EZmock/desipipe/{version_label}/ffa/2pt/"
 
 # CF options
 convert_cf = 1
@@ -127,7 +127,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(input_dir + f"mock{i+1}/recon_sm{sm}_{rectype}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split{split_above}.npy") for i in range(1000)] for corlabel in tlabels]
+    pycorr_filenames = [[check_path(input_dir + f"mock{i+1}/recon_sm{sm}_{rectype}/xi/smu/allcounts_{corlabel}_{reg}_z{z_min}_{z_max}_default_FKP_lin_nran{nrandoms}_njack{njack}_split{split_above}.npy") for i in range(1000)] for corlabel in tlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
