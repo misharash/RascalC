@@ -60,7 +60,11 @@ else:
 # Set up logging
 logfile = "make_covs.log.txt"
 
-def print_and_log(s: object = "") -> None:
+def print_and_log(s: object = "", max_length = 1000) -> None:
+    if max_length:
+        s_length = len(s)
+        if s_length > max_length:
+            s = s[:max_length] + f" ... ({s_length - max_length} additional characters not shown)"
     print(s)
     print_log(s)
 print_log = lambda l: os.system(f"echo \"{l}\" >> {logfile}")
