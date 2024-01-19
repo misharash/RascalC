@@ -29,7 +29,7 @@ reg_comb = "GCcomb"
 tracers = ['LRG'] * 4 + ['ELG_LOP'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
 sms = [15] * 8 + [30]
-ns_randoms = [8] * 4 + [10] * 3 + [None, 4] # BGS unknown
+ns_randoms = [8] * 4 + [10] * 3 + [1, 4] # BGS missing but presumed 1 random
 
 skip_r_bins = 5
 skip_l = 0
