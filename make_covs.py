@@ -110,7 +110,7 @@ def sha256sum(filename: str, buffer_size: int = 128*1024) -> str: # from https:/
 for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
     tlabels = [tracer]
     reg_results, reg_pycorr_names = [], []
-    if jackknife: reg_results_rescaled = []
+    if jackknife or mocks: reg_results_rescaled = []
     for reg in regs:
         outdir = os.path.join(f"recon_sm{sm}_{rectype}", "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}") # output file directory
         if not os.path.isdir(outdir): continue # if doesn't exist can't really do anything else
