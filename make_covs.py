@@ -4,9 +4,7 @@ import os
 from datetime import datetime
 import pickle
 import hashlib
-from glob import glob
 from typing import Callable
-import fnmatch
 from RascalC.raw_covariance_matrices import cat_raw_covariance_matrices, collect_raw_covariance_matrices
 from RascalC.post_process.legendre import post_process_legendre
 from RascalC.post_process.legendre_mix_jackknife import post_process_legendre_mix_jackknife
@@ -31,6 +29,7 @@ reg_comb = "GCcomb"
 tracers = ['LRG'] * 4 + ['ELG_LOPnotqso'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
 sms = [15] * 8 + [30]
+ns_randoms = [8] * 4 + [10] * 3 + [1, 4]
 
 skip_r_bins = 5
 skip_l = 0
@@ -102,8 +101,7 @@ def sha256sum(filename: str, buffer_size: int = 128*1024) -> str: # from https:/
     return h.hexdigest()
 
 # Make steps for making covs
-for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
-    nrandoms = 1 if tracer.startswith("BGS") else 4 # 1 random for BGS only
+for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
     tlabels = [tracer]
     reg_results, reg_pycorr_names = [], []
     if jackknife: reg_results_jack = []
@@ -161,16 +159,6 @@ for tracer, (z_min, z_max), sm in zip(tracers, zs, sms):
             # Individual cov file depends on RascalC results
             my_make(cov_name_jack, [results_name_jack], lambda: export_cov_legendre(results_name_jack, max_l, cov_name_jack))
             # Recipe: run convert cov
-
-            # Here is a special case where the goal name could change (with shot-noise rescaling), so let us delete alternative versions from the directory and the hash dictionary if any
-            # Change of filename does not break the general make logic – the same jack results file must yield the same shot-noise rescaling anyway
-            cov_name_jack_pattern = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled*.txt"
-            # Filenames
-            for fname in glob(cov_name_jack_pattern): # all existing files matching the pattern
-                if not os.path.samefile(fname, cov_name_jack): os.remove(fname) # if not our result file, delete it
-            # Hash dictionary keys (goal names) - could be independent
-            for key in fnmatch.filter(hash_dict.keys(), cov_name_jack_pattern): # all hash dictionary keys matching the pattern
-                if key != cov_name_jack: hash_dict.pop(key) # if not our goal name, remove the key (and its value)
 
     if len(reg_pycorr_names) == len(regs): # if we have pycorr files for all regions
         if len(reg_results) == len(regs): # if we have RascalC results for all regions
