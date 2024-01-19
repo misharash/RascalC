@@ -171,7 +171,7 @@ for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
         # Mock post-processing
         if mocks:
             # Make the mock sample covariance matrix
-            mock_cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_sample.txt"
+            mock_cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_cov_sample.txt"
             my_make(mock_cov_name, this_reg_pycorr_filenames, lambda: sample_cov_multipoles_from_pycorr_files([this_reg_pycorr_filenames], mock_cov_name, max_l = max_l, r_step = r_step, r_max = rmax))
 
             results_name_mocks = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_Mocks_n%d_l%d.npz' % (nbin, max_l))
