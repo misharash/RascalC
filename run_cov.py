@@ -82,9 +82,9 @@ rectype = "IFFT_recsym" # reconstruction type
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # known cases where more loops are needed consistently
-if id in (4, 8): maxloops *= 2
+if id in (4,): maxloops *= 2
 elif id in (1, 3, 15): maxloops *= 3
-elif id in (2, 14): maxloops *= 4
+elif id in (2, 8, 14): maxloops *= 4
 elif id in (0,): maxloops *= 6
 elif id in (17,): maxloops //= 2 # QSO NGC converge well and take rather long time
 
