@@ -3,6 +3,7 @@
 #include "correlation_function.h"
 #include "cell_utilities.h"
 #include "legendre_utilities.h"
+#include <algorithm>
 
 #ifndef INTEGRALS_LEGENDRE_H
 #define INTEGRALS_LEGENDRE_H
@@ -94,16 +95,11 @@ public:
     inline int get_radial_bin(Float r){
         // Computes radial bin
 
-        int which_bin = -1; // default if outside bins
-        for(int i=0;i<nbin;i++){
-            if((r>r_low[i])&&(r<r_high[i])){
-                which_bin=i;
-                break;
-            }
-            if((i==nbin-1)&&(r>r_high[i])){
-                which_bin=nbin; // if above top bin
-            }
-        }
+        Float* r_higher = std::upper_bound(r_high, r_high + nbin, r); // binary search for r_high element higher than r
+        int which_bin = r_higher - r_high; // bin index is pointer difference; will be nbin if value not found, i.e. if we are above top bin
+        if (which_bin < nbin) // safety check unless we are above top bin already
+            if (r < r_low[which_bin]) // r < r_high[which_bin] is guaranteed above so only need to check that r >= r_low[which_bin]
+                which_bin = -1; // if not then no bin fits the bill
         return which_bin;
         }
 
@@ -188,11 +184,7 @@ public:
             cleanup_l(pi.pos,pk.pos,rik_mag,rik_mu); // define angles/length
             xi_ik_tmp = cf13->xi(rik_mag, rik_mu);
 
-            if(rik_mag<1e-4){
-              printf("Particle separation of %.2e Mpc/h found between random particle files %d and %d. This is unusually small and will cause errors.\n",rik_mag,I2,I3);
-              printf("Are the random particle files independent? The code will now exit.");
-              exit(1);
-            }
+            if (rik_mag < 1e-4) fprintf(stderr, "Particle separation of %.2e Mpc/h found between random particle files %d and %d. This is unusually small but should not cause errors. Still, may be worth checking the random files.\n", rik_mag, I1, I3);
 
             tmp_weight = wij[i]*pk.w; // product of weights, w_iw_jw_k
 
