@@ -42,7 +42,7 @@ assert not (make_randoms and not periodic), "Non-periodic random generation not 
 assert not (jackknife and legendre_orig), "Jackknife and original Legendre modes are incompatible"
 
 ndata = [None] * ntracers # number of data points for each tracer; set None to make sure it is overwritten before any usage and see an error otherwise
-count_ndata = 1 # whether to count data galaxies if can't load useful info from pycorr
+count_ndata = 0 # whether to count data galaxies if can't load useful info from pycorr
 
 rmin = 0 # minimum output cov radius in Mpc/h
 rmax = 200 # maximum output cov radius in Mpc/h
@@ -77,7 +77,6 @@ suffixes_corr = suffixes_corr_all[:ncorr] # indices to use
 tracer1_corr, tracer2_corr = tracer1_corr_all[:ncorr], tracer2_corr_all[:ncorr]
 
 version_label = "v1"
-rectype = "IFFT_recsym" # reconstruction type
 
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
 reg = "NGC" if id%2 else "SGC" # region for filenames
@@ -90,12 +89,10 @@ elif id in (17,): maxloops //= 2 # QSO NGC converge well and take rather long ti
 id //= 2 # extracted all needed info from parity, move on
 tracers = ['LRG'] * 4 + ['ELG_LOP'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
-sms = [15] * 8 + [30]
 ns_randoms = [8] * 4 + [10] * 3 + [1, 4] # BGS missing but presumed 1 random
 # need 2 * 9 = 18 jobs in this array
 
 tlabels = [tracers[id]] # tracer labels for filenames
-sm = sms[id] # smoothing scale in Mpc/h
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = ns_randoms[id]
 
@@ -127,7 +124,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = 20
-    pycorr_filenames = [[check_path(input_dir + f"mock{i+1}/recon_sm{sm}_{rectype}/xi/smu/allcounts_{corlabel}_{reg}_z{z_min}-{z_max}_default_FKP_lin_nran{nrandoms}_njack{njack}_split{split_above}.npy") for i in range(1000)] for corlabel in tlabels]
+    pycorr_filenames = [[check_path(input_dir + f"mock{i+1}/xi/smu/allcounts_{corlabel}_{reg}_z{z_min}-{z_max}_default_FKP_lin_nran{nrandoms}_njack{njack}_split{split_above}.npy") for i in range(1000)] for corlabel in tlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -143,15 +140,15 @@ if convert_to_xyz:
 
 # File names and directories
 if jackknife or count_ndata:
-    data_ref_filenames = [check_path(input_dir + f"mock1/recon_sm{sm}_{rectype}/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents
+    data_ref_filenames = [check_path(input_dir + f"merged/{tlabel}_{reg}_clustering.dat.fits") for tlabel in tlabels] # only for jackknife reference or ndata backup, has to have rdz contents; number of points in this file may be larger than needed so better not to enable data counting
     assert len(data_ref_filenames) == ntracers, "Need reference data for all tracers"
-input_filenames = [[check_path(input_dir + f"mock1/recon_sm{sm}_{rectype}/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
+input_filenames = [[check_path(input_dir + f"merged/{tlabel}_{reg}_{i}_clustering.ran.fits") for i in range(nrandoms)] for tlabel in tlabels] # random filenames
 assert len(input_filenames) == ntracers, "Need randoms for all tracers"
 nfiles = [len(input_filenames_group) for input_filenames_group in input_filenames]
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = prevent_override(os.path.join(f"recon_sm{sm}_{rectype}", "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}")) # output file directory
+outdir = prevent_override("_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}") # output file directory
 tmpdir = os.path.join("tmpdirs", outdir) # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(outdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(outdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
