@@ -85,7 +85,7 @@ reg = "NGC" if id%2 else "SGC" # region for filenames
 tlabels = ['LRG', 'ELG_LOPnotqso'] # tracer labels for filenames
 corlabels = [tlabels[0], "_".join(tlabels), tlabels[1]]
 assert len(tlabels) == ntracers, "Need label for each tracer"
-nrandoms = 5
+nrandoms = 4
 
 rectype = "IFTrecsym" # reconstruction type
 sm = 15 # smoothing scale
