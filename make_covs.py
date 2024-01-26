@@ -25,7 +25,6 @@ if jackknife: mbin = 100
 mocks = 1
 
 version_label = "v1"
-rectype = "IFFT_recsym" # reconstruction type
 
 input_dir = f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/EZmock/desipipe/{version_label}/ffa/2pt/"
 
@@ -34,7 +33,6 @@ reg_comb = "GCcomb"
 
 tracers = ['LRG'] * 4 + ['ELG_LOP'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
-sms = [15] * 8 + [30]
 ns_randoms = [8] * 4 + [10] * 3 + [1, 4] # BGS missing but presumed 1 random
 
 skip_r_bins = 5
@@ -111,12 +109,12 @@ def sha256sum(filename: str, buffer_size: int = 128*1024) -> str: # from https:/
     return h.hexdigest()
 
 # Make steps for making covs
-for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
+for tracer, (z_min, z_max), nrandoms in zip(tracers, zs, ns_randoms):
     tlabels = [tracer]
     reg_results, reg_pycorr_names = [], []
     if jackknife or mocks: reg_results_rescaled = []
     for reg in regs:
-        outdir = os.path.join(f"recon_sm{sm}_{rectype}", "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}") # output file directory
+        outdir = "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}" # output file directory
         if not os.path.isdir(outdir): continue # if doesn't exist can't really do anything else
         
         raw_name = os.path.join(outdir, f"Raw_Covariance_Matrices_n{nbin}_l{max_l}.npz")
@@ -133,8 +131,8 @@ for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
 
         results_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
-        cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
-        this_reg_pycorr_filenames = [input_dir + f"mock{i+1}/recon_sm{sm}_{rectype}/xi/smu/allcounts_{tracer}_{reg}_z{z_min}-{z_max}_default_FKP_lin_nran{nrandoms}_njack{njack}_split{split_above}.npy" for i in range(1000)]
+        cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
+        this_reg_pycorr_filenames = [input_dir + f"mock{i+1}/xi/smu/allcounts_{tracer}_{reg}_z{z_min}-{z_max}_default_FKP_lin_nran{nrandoms}_njack{njack}_split{split_above}.npy" for i in range(1000)]
         reg_pycorr_names.append(this_reg_pycorr_filenames[0])
 
         def make_gaussian_cov():
@@ -151,7 +149,7 @@ for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
         # Recipe: export cov
 
         if jackknife or mocks:
-            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt"
+            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt"
 
         # Jackknife post-processing
         if jackknife:
@@ -175,7 +173,7 @@ for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
         # Mock post-processing
         if mocks:
             # Make the mock sample covariance matrix
-            mock_cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_cov_sample.txt"
+            mock_cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_cov_sample.txt"
             my_make(mock_cov_name, this_reg_pycorr_filenames, lambda: sample_cov_multipoles_from_pycorr_files([this_reg_pycorr_filenames], mock_cov_name, max_l = max_l, r_step = r_step, r_max = rmax))
 
             results_name_mocks = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_Mocks_n%d_l%d.npz' % (nbin, max_l))
@@ -198,7 +196,7 @@ for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
         if len(reg_results) == len(regs): # if we have RascalC results for all regions
             # Combined Gaussian cov
 
-            cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
+            cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
 
             # Comb cov depends on the region RascalC results
             my_make(cov_name, reg_results, lambda: combine_covs_legendre(*reg_results, *reg_pycorr_names, cov_name, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
@@ -206,7 +204,7 @@ for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
 
         if (jackknife or mocks) and len(reg_results_rescaled) == len(regs): # if jackknife and we have RascalC jack results for all regions
             # Combined rescaled cov
-            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
+            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
 
             # Comb cov depends on the region RascalC results
             my_make(cov_name_rescaled, reg_results_rescaled, lambda: combine_covs_legendre(*reg_results_rescaled, *reg_pycorr_names, cov_name_rescaled, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
