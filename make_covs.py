@@ -171,7 +171,7 @@ for tlabels, (z_min, z_max), these_alphas_ext in zip(tracers, zs, alphas_ext):
 
         if len(reg_results_rescaled) == len(regs): # if we have RascalC rescaled results for all regions
             # Combined rescaled cov
-            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
+            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
 
             # Comb cov depends on the region RascalC results
             my_make(cov_name_rescaled, reg_results_rescaled, lambda: combine_covs_legendre_multi(*reg_results_rescaled, *reg_pycorr_names, cov_name_rescaled, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
