@@ -21,12 +21,15 @@ if jackknife: mbin = 100
 
 version_label = "v0.6"
 
+rectype = "IFTrecsym" # reconstruction type
+sm = 15 # smoothing scale
+
 regs = ('SGC', 'NGC') # regions for filenames
 reg_comb = "GCcomb"
 
 tracers = [['LRG', 'ELG_LOPnotqso']]
 zs = [[0.8, 1.1]]
-alphas_ext = [[[0.97, 0.83], [0.87, 0.81]]] # from single-tracer jackknives, external to these runs. 
+alphas_ext = [[[0.98, 0.84], [0.90, 0.77]]] # from single-tracer jackknives, external to these runs. 
 
 skip_r_bins = 5
 skip_l = 0
@@ -103,7 +106,7 @@ for tlabels, (z_min, z_max), these_alphas_ext in zip(tracers, zs, alphas_ext):
     reg_results, reg_pycorr_names = [], []
     reg_results_rescaled = []
     for reg, alphas in zip(regs, these_alphas_ext):
-        outdir = "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}" # output file directory
+        outdir = os.path.join(f"recon_sm{sm}", "_".join(tlabels + [rectype, reg]) + f"_z{z_min}-{z_max}") # output file directory
         if not os.path.isdir(outdir): continue # if doesn't exist can't really do anything else
         
         raw_name = os.path.join(outdir, f"Raw_Covariance_Matrices_n{nbin}_l{max_l}.npz")
@@ -120,8 +123,8 @@ for tlabels, (z_min, z_max), these_alphas_ext in zip(tracers, zs, alphas_ext):
 
         results_name = os.path.join(outdir, 'Rescaled_Multi_Field_Covariance_Matrices_Legendre_n%d_l%d.npz' % (nbin, max_l))
         reg_results.append(results_name)
-        cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
-        reg_pycorr_names.append([f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Overlap/Y1/FOR_MISHA/{version_label}/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}.npy" for corlabel in corlabels])
+        cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt"
+        reg_pycorr_names.append([f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Overlap/Y1/FOR_MISHA/{version_label}/recon_sm{sm}/allcounts_{corlabel}_{rectype}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}.npy" for corlabel in corlabels])
 
         def make_gaussian_cov():
             results = post_process_legendre_multi(outdir, nbin, max_l, outdir, skip_r_bins = skip_r_bins, skip_l = skip_l, print_function = print_and_log)
@@ -151,7 +154,7 @@ for tlabels, (z_min, z_max), these_alphas_ext in zip(tracers, zs, alphas_ext):
             # Also perform convergence check (optional but nice)
 
             # Load shot-noise rescaling and make name
-            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt"
+            cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt"
             # Individual cov file depends on RascalC results
             my_make(cov_name_rescaled, [results_name_rescaled], lambda: export_cov_legendre_multi(results_name_rescaled, max_l, cov_name_rescaled))
             # Recipe: run convert cov
@@ -160,7 +163,7 @@ for tlabels, (z_min, z_max), these_alphas_ext in zip(tracers, zs, alphas_ext):
         if len(reg_results) == len(regs): # if we have RascalC results for all regions
             # Combined Gaussian cov
 
-            cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
+            cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
 
             # Comb cov depends on the region RascalC results
             my_make(cov_name, reg_results, lambda: combine_covs_legendre_multi(*reg_results, *reg_pycorr_names, cov_name, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
