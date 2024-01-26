@@ -86,6 +86,9 @@ tlabels = ['LRG+ELG_LOPnotqso'] # tracer labels for filenames
 assert len(tlabels) == ntracers, "Need label for each tracer"
 nrandoms = 4
 
+rectype = "IFTrecsym" # reconstruction type
+sm = 15 # smoothing scale
+
 assert maxloops % loopspersample == 0, "Group size need to divide the number of loops"
 # no_subsamples_per_file = maxloops // loopspersample
 
@@ -114,7 +117,7 @@ if convert_cf:
     # first index is correlation function index
     counts_factor = 0 if normalize_weights else nrandoms if not cat_randoms else 1 # 0 is a special value for normalized counts; use number of randoms if they are not concatenated, otherwise 1
     split_above = np.inf
-    pycorr_filenames = [[check_path(input_dir + f"FOR_MISHA/{version_label}/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}.npy")] for corlabel in tlabels]
+    pycorr_filenames = [[check_path(f"/global/cfs/cdirs/desi/users/dvalcin/EZMOCKS/Overlap/Y1/FOR_MISHA/{version_label}/recon_sm{sm}/allcounts_{corlabel}_{rectype}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}.npy")] for corlabel in tlabels]
     assert len(pycorr_filenames) == ncorr, "Expected pycorr file(s) for each correlation"
 smoothen_cf = 0
 if smoothen_cf:
@@ -138,7 +141,7 @@ nfiles = [len(input_filenames_group) for input_filenames_group in input_filename
 if not cat_randoms or make_randoms:
     for i in range(1, ntracers):
         assert nfiles[i] == nfiles[0], "Need to have the same number of files for all tracers"
-outdir = prevent_override("_".join(tlabels) + "_" + reg + f"_z{z_min}-{z_max}") # output file directory
+outdir = prevent_override(f"recon_sm{sm}/" + "_".join(tlabels + [rectype, reg]) + f"_z{z_min}-{z_max}") # output file directory
 tmpdir = os.path.join("tmpdirs", outdir) # directory to write intermediate files, mainly data processing steps
 cornames = [os.path.join(outdir, f"xi/xi_n{nbin_cf}_m{mbin_cf}_{index}.dat") for index in indices_corr]
 binned_pair_names = [os.path.join(outdir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{nbin}_m{mbin}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
