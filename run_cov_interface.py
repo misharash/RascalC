@@ -153,4 +153,4 @@ results = run_cov(mode = mode, max_l = max_l, boxsize = periodic_boxsize,
 
 # Convergence check
 from RascalC.convergence_check_extra import convergence_check_extra
-convergence_check_extra(results)
+convergence_check_extra(results, print_function = print)
