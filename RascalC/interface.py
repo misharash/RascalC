@@ -3,6 +3,7 @@
 import pycorr
 import numpy as np
 import os
+from datetime import datetime
 from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
 from .write_binning_file import write_binning_file
 from .pycorr_utils.jack import get_jack_xi_weights_counts_from_pycorr
@@ -144,6 +145,7 @@ def run_cov(mode: str,
     nthread : integer
         Number of hyperthreads to use.
         Can not utilize more threads than ``n_loops``.
+        IMPORTANT: AVOID multi-threading in the Python process calling this function (e.g. at NERSC this would mean not setting `OMP_*` and other `*_THREADS` environment variables; the code should be able to set them by itself). Otherwise the code may run effectively single-threaded. If you need multi-threaded calculations, run them separately or spawn sub-processes.
     
     N2 : integer
         Number of secondary points to sample per each primary random point.
@@ -161,7 +163,9 @@ def run_cov(mode: str,
         Number of integration loops.
         For optimal balancing and minimal idle time, should be a few times (at least twice) ``nthread`` and exactly divisible by it.
         The runtime roughly scales as the number of quads per the number of threads, O(N_randoms * N2 * N3 * N4 * n_loops / nthread).
-        For reference, on NERSC Perlmutter CPU node the code processed about 5 millions (5e6) quads per second per hyperthread (a node has 256 of them) as of October 2023. (In Legendre projected mode, which is probably the slowest, with N2=5, N3=10, N4=20.)
+        For reference, on NERSC Perlmutter CPU node the code processed about 5 millions (5e6) quads per second per (hyper)thread (a node has 256 of them) as of October 2023. (In Legendre projected mode, which is probably the slowest, with N2=5, N3=10, N4=20.)
+        In single-tracer mode, the number of quads is ``N_randoms * N2 * N3 * N4 * n_loops``.
+        In two-tracer mode, the number of quads is ``(5 * N_randoms1 + 2 * N_randoms2) * N2 * N3 * N4 * n_loops``.
 
     loops_per_sample : integer
         Number of loops to merge into one output sample.
@@ -173,7 +177,7 @@ def run_cov(mode: str,
         Moderate disk space required (up to a few hundred megabytes), but increases with covariance matrix size and number of samples (see above).
 
     tmp_dir : string
-        Directory for temporary files.
+        Directory for temporary files. Contents can be deleted after the code has run, but this will not be done automatically.
         More disk space required - needs to store all the input arrays in the current implementation.
 
     skip_s_bins : int
@@ -201,8 +205,9 @@ def run_cov(mode: str,
     Returns
     -------
     post_processing_results : dict[str, np.ndarray[float]]
-        Post-processing results as a dictionary with string keys and Numpy array values. All this information is also saved in a *.npz file in the output directory.
+        Post-processing results as a dictionary with string keys and Numpy array values. All this information is also saved in a Rescaled_Covariance_Matrices*.npz file in the output directory.
         Selected common keys are: "full_theory_covariance" for the final covariance matrix and "shot_noise_rescaling" for the shot-noise rescaling value(s).
+        There will also be a Raw_Covariance_Matices*.npz file in the output directory (as long as the C++ code has run without errors), which can be post-processed separately in a different way.
     """
 
     if mode not in ("s_mu", "legendre_accumulated", "legendre_projected"): raise ValueError("Given mode not supported")
@@ -278,6 +283,14 @@ def run_cov(mode: str,
     def print_and_log(s: object) -> None:
         print(s)
         print_log(s)
+    
+    print_and_log(f"Mode: {mode}")
+    print_and_log(f"Periodic box: {periodic}")
+    if periodic: print_and_log(f"Box side: {boxsize}")
+    print_and_log(f"Jackknife: {jackknife}")
+    print_and_log(f"Number of tracers: {1 + two_tracers}")
+    print_and_log(f"Normalizing weights and weighted counts: {normalize_wcounts}")
+    print_and_log(datetime.now())
 
     counts_factor = None if normalize_wcounts else 1
     ndata = (no_data_galaxies1, no_data_galaxies2)[:ntracers]
@@ -306,6 +319,7 @@ def run_cov(mode: str,
             ndata[tracer1] = pycorr_allcounts.D1D2.size1
 
     if any(not tracer_ndata for tracer_ndata in ndata): raise ValueError("Not given and not recovered all the necessary normalization factors (no_data_galaxies1/2)")
+    print_and_log(f"Number(s) of data galaxies: {ndata}")
     
     # write the xi file(s); need to set the 2PCF binning (even if only technical) and decide whether to rescale the 2PCF in the C++ code
     all_xi = (xi_table_11, xi_table_12, xi_table_22)
@@ -360,9 +374,9 @@ def run_cov(mode: str,
         np.savetxt(input_filename, output_array)
 
     # write the binning files
-    binfile = os.path.join(tmp_dir, "radial_binning_cov.csv")
+    binfile = os.path.join(out_dir, "radial_binning_cov.csv")
     write_binning_file(binfile, s_edges)
-    binfile_cf = os.path.join(tmp_dir, "radial_binning_corr.csv")
+    binfile_cf = os.path.join(out_dir, "radial_binning_corr.csv")
     write_binning_file(binfile_cf, xi_s_edges)
 
     # Select the executable name
@@ -372,7 +386,8 @@ def run_cov(mode: str,
     exec_path = os.path.join(os.path.realpath(os.path.dirname(__file__)), exec_name)
 
     # form the command line
-    command = f"{exec_path} -output {out_dir} -boxsize {boxsize} -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_loops}" # here are universally acceptable parameters
+    command = "env OMP_PROC_BIND=spread OMP_PLACES=threads" # set OMP environment variables, should not be set before
+    command += f"{exec_path} -output {out_dir} -boxsize {boxsize} -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_loops}" # here are universally acceptable parameters
     command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
     command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
     command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
@@ -390,6 +405,8 @@ def run_cov(mode: str,
 
     # compute the correction function if original Legendre
     if legendre_orig: # need correction function
+        print_and_log(datetime.now())
+        print_and_log(f"Computing the correction function")
         if ntracers == 1:
             compute_correction_function(input_filenames[0], binfile, out_dir, periodic, binned_pair_names[0], print_and_log)
         elif ntracers == 2:
@@ -397,6 +414,7 @@ def run_cov(mode: str,
         command += "".join([f" -phi_file{suffixes_corr[c]} {os.path.join(out_dir, phi_names[c])}" for c in range(ncorr)])
     
     # run the main code
+    print_and_log(datetime.now())
     print_and_log(f"Launching the C++ code with command: {command}")
     status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {command} 2>&1 | tee -a {logfile}'")
     # tee prints what it gets to stdout AND saves to file
@@ -405,8 +423,11 @@ def run_cov(mode: str,
     # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
     exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
     if exit_code: raise RuntimeError(f"The C++ code terminated with an error: exit code {exit_code}")
+    print_and_log("The C++ code finished succesfully")
 
     # post-processing
+    print_and_log(datetime.now())
+    print_and_log("Starting post-processing")
     if two_tracers:
         if legendre:
             from .post_process.legendre_multi import post_process_legendre_multi
@@ -432,4 +453,6 @@ def run_cov(mode: str,
             from .post_process.default import post_process_default
             results = post_process_default(out_dir, n_r_bins, n_mu_bins, out_dir, shot_noise_rescaling1, skip_s_bins, print_function = print_and_log)
 
+    print_and_log("Finished post-processing")
+    print_and_log(datetime.now())
     return results
