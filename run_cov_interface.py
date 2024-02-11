@@ -2,9 +2,8 @@
 import sys, os
 import numpy as np
 from astropy.table import Table, vstack
-from astropy.coordinates import SkyCoord
-import astropy.units as u
 from pycorr import TwoPointCorrelationFunction, KMeansSubsampler
+from pycorr.utils import sky_to_cartesian
 from LSS.tabulated_cosmo import TabulatedDESI
 from RascalC.pycorr_utils.utils import fix_bad_bins_pycorr
 from RascalC.interface import run_cov
@@ -140,8 +139,7 @@ for t in range(len(tlabels)):
         randoms_samples[t] = subsampler.label(positions = [random_catalog["RA"], random_catalog["DEC"], random_catalog["Z"]], position_type = 'rdd')
     # convert to comoving Cartesian coordinates
     comoving_dist = cosmology.comoving_radial_distance(random_catalog["Z"])
-    coordinates = SkyCoord(ra = random_catalog["RA"] * u.deg, dec = random_catalog["DEC"] * u.deg, distance = comoving_dist)
-    randoms_positions[t] = np.column_stack([coordinates.x, coordinates.y, coordinates.z])
+    randoms_positions[t] = np.column_stack(sky_to_cartesian([random_catalog["RA"], random_catalog["DEC"], comoving_dist], degree = True))
 
 # Run the main code and post-processing
 results = run_cov(mode = mode, max_l = max_l, boxsize = periodic_boxsize,
