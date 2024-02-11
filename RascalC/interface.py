@@ -313,7 +313,7 @@ def run_cov(mode: str,
             if not np.allclose(np.sum(jack_RR_counts, axis=0), RR_counts.ravel()): raise ValueError("Total counts mismatch")
             ## Write to files using numpy functions
             write_xi_file(xi_jack_names[c], pycorr_allcounts.sepavg(axis = 0), pycorr_allcounts.sepavg(axis = 1), xi_jack)
-            jack_numbers = np.array(xi.realizations).reshape(-1, 1) # column of jackknife numbers, may be useless but needed for format compatibility
+            jack_numbers = pycorr_allcounts.realizations # column of jackknife numbers, may be useless but needed for format compatibility
             np.savetxt(jackknife_weights_names[c], np.column_stack((jack_numbers, jack_weights)))
             np.savetxt(jackknife_pairs_names[c], np.column_stack((jack_numbers, jack_RR_counts))) # not really needed for the C++ code or processing but let it be
         # fill ndata if not given
