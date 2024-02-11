@@ -227,7 +227,7 @@ def run_cov(mode: str,
         if n_mu_bins is None: raise TypeError("Number of µ bins for the covariance matrix must be provided in s_mu mode")
 
     # Set some other flags
-    periodic = boxsize is not None
+    periodic = bool(boxsize) # False for None (default) and 0
     two_tracers = randoms_positions2 is not None
 
     if two_tracers: # check that everything is set accordingly
@@ -390,7 +390,7 @@ def run_cov(mode: str,
 
     # form the command line
     command = "env OMP_PROC_BIND=spread OMP_PLACES=threads " # set OMP environment variables, should not be set before
-    command += f"{exec_path} -output {out_dir} -boxsize {boxsize} -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_loops}" # here are universally acceptable parameters
+    command += f"{exec_path} -output {out_dir} -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_loops}" # here are universally acceptable parameters
     command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
     command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
     command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
@@ -401,8 +401,8 @@ def run_cov(mode: str,
         command += f" -mu_bin_legendre_file {mu_bin_legendre_file}"
     if not legendre_orig: # provide binned pair counts files and number of mu bin
         command += "".join([f" -RRbin{suffixes_corr[c]} {binned_pair_names[c]}" for c in range(ncorr)]) + f" -mbin {n_mu_bins}"
-    if periodic: # append periodic flag
-        command += " -perbox"
+    if periodic: # append periodic flag and box size
+        command += f" -perbox -boxsize {boxsize}"
     if jackknife: # provide jackknife weight files for all correlations
         command += "".join([f" -jackknife{suffixes_corr[c]} {jackknife_weights_names[c]}" for c in range(ncorr)])
 
