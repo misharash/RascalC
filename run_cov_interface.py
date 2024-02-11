@@ -96,7 +96,7 @@ input_dir = f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/EZm
 
 # Filenames for saved pycorr counts
 split_above = 20
-pycorr_filenames = [[f"/pscratch/sd/m/mrash/Y1-EZmock-{version_label}-ffa/mock{mock_id}/recon_sm{sm}_{rectype}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split20"] for corlabel in corlabels]
+pycorr_filenames = [[f"/pscratch/sd/m/mrash/Y1-EZmock-{version_label}-ffa/mock{mock_id}/recon_sm{sm}_{rectype}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split20.npy"] for corlabel in corlabels]
 
 # Filenames for randoms and galaxy catalogs
 random_filenames = [[input_dir + f"recon_sm{sm}_{rectype}/{tlabel}_{reg}_{i}_clustering.ran.fits" for i in range(nrandoms)] for tlabel in tlabels]
