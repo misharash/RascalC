@@ -259,7 +259,7 @@ def run_cov(mode: str,
                 raise ValueError("The sets of jackkknife labels of the two tracers must be the same")
 
     # set the technical filenames
-    input_filenames = [os.path.join(tmp_dir, str(t) + ".txt") for t in ntracers]
+    input_filenames = [os.path.join(tmp_dir, str(t) + ".txt") for t in range(ntracers)]
     cornames = [os.path.join(out_dir, f"xi/xi_{index}.dat") for index in indices_corr]
     binned_pair_names = [os.path.join(out_dir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{n_r_bins}_m{n_mu_bins}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
     if jackknife:
