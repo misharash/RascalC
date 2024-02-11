@@ -397,7 +397,7 @@ def run_cov(mode: str,
     if legendre: # only provide max multipole l for now
         command += f" -max_l {max_l}"
     if legendre_mix: # generate and provide factors filename
-        mu_bin_legendre_file = write_mu_bin_legendre_factors(n_mu_bins, max_l, out_dir)
+        mu_bin_legendre_file = write_mu_bin_legendre_factors(n_mu_bins, max_l, os.path.join(out_dir, "weights"))
         command += f" -mu_bin_legendre_file {mu_bin_legendre_file}"
     if not legendre_orig: # provide binned pair counts files and number of mu bin
         command += "".join([f" -RRbin{suffixes_corr[c]} {binned_pair_names[c]}" for c in range(ncorr)]) + f" -mbin {n_mu_bins}"
