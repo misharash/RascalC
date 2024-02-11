@@ -369,6 +369,7 @@ def run_cov(mode: str,
         nrandoms = len(randoms_positions[t])
         if randoms_weights[t].ndim != 1: raise ValueError(f"Weights of randoms {t+1} not contained in a 1D array")
         if len(randoms_weights[t]) != nrandoms: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
+        if normalize_wcounts: randoms_weights[t] /= np.sum(randoms_weights[t])
         output_array = np.column_stack((randoms_positions[t], randoms_weights[t]))
         if jackknife:
             if randoms_samples[t].ndim != 1: raise ValueError(f"Weights of sample labels {t+1} not contained in a 1D array")
