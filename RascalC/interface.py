@@ -272,6 +272,9 @@ def run_cov(mode: str,
     # make sure the dirs exist
     os.makedirs(out_dir, exist_ok = True)
     os.makedirs(tmp_dir, exist_ok = True)
+    os.makedirs(os.path.join(out_dir, "xi"), exist_ok = True)
+    os.makedirs(os.path.join(out_dir, "weights"), exist_ok = True)
+    if jackknife: os.makedirs(os.path.join(out_dir, "xi_jack"), exist_ok = True)
     
     # Create a log file in output directory
     logfilename = "log.txt"
