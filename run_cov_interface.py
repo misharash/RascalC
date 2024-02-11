@@ -28,7 +28,7 @@ def read_catalog(filename: str, z_min: float = -np.inf, z_max: float = np.inf, F
 mode = "legendre_projected"
 max_l = 4 # maximum (even) multipole index
 
-njack = 0 # turns the jackknife off
+njack = 60 # turns the jackknife off
 
 periodic_boxsize = None # aperiodic
 
@@ -58,6 +58,10 @@ version_label = "v1"
 rectype = "IFFT_recsym" # reconstruction type
 
 id = int(sys.argv[1]) # SLURM_JOB_ID to decide what this one has to do
+
+mock_id = 1 + id // 2 # mock number, starting from 1, IDs should start from 0
+id = 4 + id % 2 # this is now tracer, redshift bin and region index; corresponds to LRG z0.8-1.1 SGC/NGC
+
 reg = "NGC" if id%2 else "SGC" # region for filenames
 # known cases where more loops are needed consistently
 if id in (4,): n_loops *= 2
@@ -69,7 +73,7 @@ id //= 2 # extracted all needed info from parity, move on
 tracers = ['LRG'] * 4 + ['ELG_LOP'] * 3 + ['BGS_BRIGHT-21.5', 'QSO']
 zs = [[0.4, 0.6], [0.6, 0.8], [0.8, 1.1], [0.4, 1.1], [0.8, 1.1], [1.1, 1.6], [0.8, 1.6], [0.1, 0.4], [0.8, 2.1]]
 sms = [15] * 8 + [30]
-ns_randoms = [8] * 4 + [10] * 3 + [1, 4] # BGS missing but presumed 1 random
+ns_randoms = [4] * 7 + [1, 4] # BGS missing but presumed 1 random; others 4
 # need 2 * 9 = 18 jobs in this array
 
 tlabels = [tracers[id]] # tracer labels for filenames
@@ -88,15 +92,15 @@ corlabels = [tlabels[0]]
 if len(tlabels) == 2: corlabels += ["_".join(tlabels), tlabels[1]] # cross-correlation comes between the auto-correlatons
 
 # Common part of the path to avoid repetitions
-input_dir = f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/EZmock/desipipe/{version_label}/ffa/2pt/"
+input_dir = f"/global/cfs/cdirs/desi/survey/catalogs/Y1/mocks/SecondGenMocks/EZmock/desipipe/{version_label}/ffa/2pt/mock{mock_id}/"
 
 # Filenames for saved pycorr counts
 split_above = 20
-pycorr_filenames = [[input_dir + f"mock{i+1}/recon_sm{sm}_{rectype}/xi/smu/allcounts_{corlabel}_{reg}_z{z_min}-{z_max}_default_FKP_lin_nran{nrandoms}_njack{njack}_split{split_above}.npy" for i in range(1000)] for corlabel in corlabels]
+pycorr_filenames = [[f"/pscratch/sd/m/mrash/Y1-EZmock-{version_label}-ffa/mock{mock_id}/recon_sm{sm}_{rectype}/xi/smu/allcounts_{corlabel}_{reg}_{z_min}_{z_max}_default_FKP_lin_njack{njack}_nran{nrandoms}_split20"] for corlabel in corlabels]
 
 # Filenames for randoms and galaxy catalogs
-random_filenames = [[input_dir + f"mock1/recon_sm{sm}_{rectype}/{tlabel}_{reg}_{i}_clustering.ran.fits" for i in range(nrandoms)] for tlabel in tlabels]
-if njack: data_ref_filenames = [input_dir + f"mock1/recon_sm{sm}_{rectype}/{tlabel}_{reg}_clustering.dat.fits" for tlabel in tlabels] # only for jackknife reference, could be used for determining the number of galaxies but not in this case
+random_filenames = [[input_dir + f"recon_sm{sm}_{rectype}/{tlabel}_{reg}_{i}_clustering.ran.fits" for i in range(nrandoms)] for tlabel in tlabels]
+if njack: data_ref_filenames = [input_dir + f"recon_sm{sm}_{rectype}/{tlabel}_{reg}_clustering.dat.fits" for tlabel in tlabels] # only for jackknife reference, could be used for determining the number of galaxies but not in this case
 
 # Load pycorr counts
 pycorr_allcounts = [0] * len(pycorr_filenames)
