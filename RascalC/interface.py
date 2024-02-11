@@ -361,7 +361,7 @@ def run_cov(mode: str,
     
     # write the randoms file(s)
     randoms_positions = (randoms_positions1, randoms_positions2)
-    randoms_weights = (randoms_weights1, randoms_weights2)
+    randoms_weights = [randoms_weights1, randoms_weights2]
     randoms_samples = (randoms_samples1, randoms_samples2)
     for t, input_filename in enumerate(input_filenames):
         if randoms_positions[t].ndim != 2: raise ValueError(f"Positions of randoms {t+1} not contained in a 2D array")
