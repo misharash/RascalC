@@ -267,7 +267,7 @@ def run_cov(mode: str,
         xi_jack_names = [os.path.join(out_dir, f"xi_jack/xi_jack_n{n_r_bins}_m{n_mu_bins}_j{njack}_{index}.dat") for index in indices_corr]
         jackknife_pairs_names = [os.path.join(out_dir, f"weights/jackknife_pair_counts_n{n_r_bins}_m{n_mu_bins}_j{njack}_{index}.dat") for index in indices_corr]
     if legendre_orig:
-        phi_names = [f"BinCorrectionFactor_n{n_r_bins}_" + ("periodic" if periodic else f'm{n_mu_bins}') + f"_{index}.txt" for index in indices_corr]
+        phi_names = [os.path.join(out_dir, f"BinCorrectionFactor_n{n_r_bins}_" + ("periodic" if periodic else f'm{n_mu_bins}') + f"_{index}.txt") for index in indices_corr]
     
     # make sure the dirs exist
     os.makedirs(out_dir, exist_ok = True)
@@ -414,7 +414,7 @@ def run_cov(mode: str,
             compute_correction_function(input_filenames[0], binfile, out_dir, periodic, binned_pair_names[0], print_and_log)
         elif ntracers == 2:
             compute_correction_function_multi(*input_filenames, binfile, out_dir, periodic, *binned_pair_names, print_function = print_and_log)
-        command += "".join([f" -phi_file{suffixes_corr[c]} {os.path.join(out_dir, phi_names[c])}" for c in range(ncorr)])
+        command += "".join([f" -phi_file{suffixes_corr[c]} {phi_names[c]}" for c in range(ncorr)])
     
     # run the main code
     print_and_log(datetime.now())
