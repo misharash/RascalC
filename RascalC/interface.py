@@ -310,7 +310,7 @@ def run_cov(mode: str,
         np.savetxt(binned_pair_names[c], RR_counts.reshape(-1, 1)) # the file needs to have 1 column
         if jackknife:
             xi_jack, jack_weights, jack_RR_counts = get_jack_xi_weights_counts_from_pycorr(pycorr_allcounts, counts_factor)
-            if not np.allclose(np.sum(jack_RR_counts, axis=0), RR_counts): raise ValueError("Total counts mismatch")
+            if not np.allclose(np.sum(jack_RR_counts, axis=0), RR_counts.ravel()): raise ValueError("Total counts mismatch")
             ## Write to files using numpy functions
             write_xi_file(xi_jack_names[c], pycorr_allcounts.sepavg(axis = 0), pycorr_allcounts.sepavg(axis = 1), xi_jack)
             jack_numbers = np.array(xi.realizations).reshape(-1, 1) # column of jackknife numbers, may be useless but needed for format compatibility
