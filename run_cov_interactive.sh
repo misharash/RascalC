@@ -1,0 +1,2 @@
+#!/bin/bash
+srun -N 1 -C cpu -t 0:15:00 -J RascalC-Y1-EZmocks-recon-single-test --qos interactive bash "source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main && python -u run_cov_interface.py 0"
