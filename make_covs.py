@@ -180,7 +180,7 @@ for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
             # Mock post-processing
             if mocks:
                 # Make the mock sample covariance matrix
-                mock_cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_cov_sample.txt"
+                mock_cov_name = "cov_txt/xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_cov_sample.txt"
                 my_make(mock_cov_name, this_reg_pycorr_filenames, lambda: sample_cov_multipoles_from_pycorr_files([this_reg_pycorr_filenames], mock_cov_name, max_l = max_l, r_step = r_step, r_max = rmax))
 
                 results_name_mocks = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Legendre_Mocks_n%d_l%d.npz' % (nbin, max_l))
@@ -203,7 +203,7 @@ for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
             if len(reg_results) == len(regs): # if we have RascalC results for all regions
                 # Combined Gaussian cov
 
-                cov_name = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
+                cov_name = f"cov_txt/mock{mock_id}/xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_Gaussian.txt" # combined cov name
 
                 # Comb cov depends on the region RascalC results
                 my_make(cov_name, reg_results, lambda: combine_covs_legendre(*reg_results, *reg_pycorr_names, cov_name, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
@@ -211,7 +211,7 @@ for tracer, (z_min, z_max), sm, nrandoms in zip(tracers, zs, sms, ns_randoms):
 
             if (jackknife or mocks) and len(reg_results_rescaled) == len(regs): # if jackknife and we have RascalC jack results for all regions
                 # Combined rescaled cov
-                cov_name_rescaled = "xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
+                cov_name_rescaled = f"cov_txt/mock{mock_id}/xi" + xilabel + "_" + "_".join(tlabels + [rectype, f"sm{sm}", reg_comb]) + f"_{z_min}_{z_max}_default_FKP_lin{r_step}_s{rmin_real}-{rmax}_cov_RascalC_rescaled.txt" # combined cov name
 
                 # Comb cov depends on the region RascalC results
                 my_make(cov_name_rescaled, reg_results_rescaled, lambda: combine_covs_legendre(*reg_results_rescaled, *reg_pycorr_names, cov_name_rescaled, max_l, r_step = r_step, skip_r_bins = skip_r_bins, print_function = print_and_log))
