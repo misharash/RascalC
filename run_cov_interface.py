@@ -7,6 +7,7 @@ from pycorr.utils import sky_to_cartesian
 from LSS.tabulated_cosmo import TabulatedDESI
 from RascalC.pycorr_utils.utils import fix_bad_bins_pycorr
 from RascalC.interface import run_cov
+from RascalC.convergence_check_extra import convergence_check_extra
 
 def prevent_override(filename: str, max_num: int = 10) -> str: # append _{number} to filename to prevent override
     for i in range(max_num+1):
@@ -153,6 +154,5 @@ results = run_cov(mode = mode, max_l = max_l, boxsize = periodic_boxsize,
                   out_dir = outdir, tmp_dir = tmpdir,
                   skip_s_bins = skip_nbin_post, skip_l = skip_l_post)
 
-# Convergence check
-from RascalC.convergence_check_extra import convergence_check_extra
+# Additional convergence check
 convergence_check_extra(results, print_function = print)
