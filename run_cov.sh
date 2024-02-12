@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --job-name=RascalC-Y1-EZmocks-recon-single
-#SBATCH --array=1-19 # 10 mocks, SGC and NGC, except the first one which has been run SGC
+#SBATCH --array=4,19 # those which converged worse
 
 # load cosmodesi environment
 source /global/common/software/desi/users/adematti/cosmodesi_environment.sh main
