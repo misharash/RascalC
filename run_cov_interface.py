@@ -83,8 +83,9 @@ z_min, z_max = zs[id] # for redshift cut and filenames
 
 # Output and temporary directories
 
-outdir = prevent_override(os.path.join(f"mock{mock_id}/recon_sm{sm}_{rectype}", "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}")) # output file directory
-tmpdir = os.path.join("tmpdirs", outdir) # directory to write intermediate files, kept in a different subdirectory for easy deletion
+outdir_base = os.path.join(f"mock{mock_id}/recon_sm{sm}_{rectype}", "_".join(tlabels + [reg]) + f"_z{z_min}-{z_max}")
+outdir = prevent_override(os.path.join("outdirs", outdir_base)) # output file directory
+tmpdir = os.path.join("tmpdirs", outdir_base) # directory to write intermediate files, kept in a different subdirectory for easy deletion, almost no need to worry about not overwriting there
 
 # Form correlation function labels
 assert len(tlabels) in (1, 2), "Only 1 and 2 tracers are supported"
