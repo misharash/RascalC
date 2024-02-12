@@ -80,7 +80,10 @@ def my_make(goal: str, deps: list[str], recipe: Callable, force: bool = False, v
     if need_make:
         print_and_log(f"Making {goal} from {deps}")
         try:
-            os.makedirs(os.path.dirname(goal), exist_ok = True) # make sure the directory exists
+            # make sure the directory exists
+            goal_dir = os.path.dirname(goal)
+            if goal_dir: os.makedirs(goal_dir, exist_ok = True) # creating empty directory throws an error
+            # now can actually run
             recipe()
         except Exception as e:
             print_and_log(f"{goal} not built: {e}")
