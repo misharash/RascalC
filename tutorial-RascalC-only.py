@@ -79,16 +79,19 @@ periodic_boxsize = None # not a periodic box
 
 
 # Runtime and convergence parameters
-n_threads = 10
+import sys
+n_threads = int(sys.argv[1])
+assert n_threads in (128, 256)
+
 N2 = 10 # number of secondary points sampled per primary random point
 N3 = 20 # number of tertiary points sampled per each secondary
 N4 = 40 # number of quaternary points sampled per each tertiary
-n_loops = 80 # must be divisible by n_threads
-loops_per_sample = 5 # must divide n_loops
+n_loops = 1024 # must be divisible by n_threads
+loops_per_sample = 64 # must divide n_loops
 
 
 # In the next cell we set the radial/separation binning of the covariance matrix by rebinning the counts. Here we leave the original number of angular bins – the covariance will be project into only a few (even) multipoles using all of them.
-ds_cov = 4
+ds_cov = 5
 s_min_cov = 20
 s_max_cov = 200
 allcounts_rebinned_cov = allcounts[s_min_cov:s_max_cov:ds_cov]
@@ -116,4 +119,5 @@ results = run_cov(mode = mode, max_l = max_l, boxsize = periodic_boxsize,
                   position_type = "rdd",
                   randoms_positions1 = get_rdd_positions(randoms_subset), randoms_weights1 = randoms_subset["WEIGHT"], randoms_samples1 = randoms_subset["JACK"],
                   normalize_wcounts = True,
-                  out_dir = outdir, tmp_dir = tmpdir)
+                  out_dir = outdir, tmp_dir = tmpdir,
+                  seed = 42)
