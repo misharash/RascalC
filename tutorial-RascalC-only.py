@@ -105,8 +105,8 @@ allcounts_rebinned_xi = allcounts[::ds_xi, ::allcounts.wrap().shape[1] // n_mu_x
 
 
 # Output and temporary directories
-outdir = "out"
-tmpdir = "tmp"
+outdir = f"out/{n_threads}"
+tmpdir = f"tmp/{n_threads}"
 
 
 # ### The main covariance computation with `RascalC` interface
