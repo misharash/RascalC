@@ -40,8 +40,8 @@ randoms_subset = randoms[np.random.choice(len(randoms), x_randoms * len(galaxies
 
 # First, we choose whether to use full randoms or a smaller subset for pair counting.
 # The latter is faster but a bit less precise.
-# randoms_for_counts = randoms
-randoms_for_counts = randoms_subset
+randoms_for_counts = randoms
+# randoms_for_counts = randoms_subset
 
 
 # We continue by splitting the randoms into parts of roughly the same size as data.
@@ -81,11 +81,11 @@ periodic_boxsize = None # not a periodic box
 # Runtime and convergence parameters
 import sys
 n_threads = int(sys.argv[1])
-assert n_threads in (128, 256)
+assert n_threads in (64, 128, 256)
 
-N2 = 10 # number of secondary points sampled per primary random point
-N3 = 20 # number of tertiary points sampled per each secondary
-N4 = 40 # number of quaternary points sampled per each tertiary
+N2 = 5 # number of secondary points sampled per primary random point
+N3 = 10 # number of tertiary points sampled per each secondary
+N4 = 20 # number of quaternary points sampled per each tertiary
 n_loops = 1024 # must be divisible by n_threads
 loops_per_sample = 64 # must divide n_loops
 
