@@ -62,8 +62,8 @@ for i_random in range(n_splits): random_parts[i_random]["WEIGHT"] /= np.sum(rand
 # Import libraries and select settings
 from pycorr import TwoPointCorrelationFunction
 
-
-counts_filename = f"allcounts_mock_galaxy_DR12_CMASS_N_QPM_0001_lin_njack{n_jack}_nran{n_splits}_split{0}.npy" # filename to save counts
+split_above = 20
+counts_filename = f"allcounts_mock_galaxy_DR12_CMASS_N_QPM_0001_lin_njack{n_jack}_nran{n_splits}_split{split_above}.npy" # filename to save counts
 
 
 # Finally, we should load the saved counts in the original process. You can continue from this step if you computed the counts before.
