@@ -131,6 +131,10 @@ int main(int argc, char *argv[]) {
             char *filename;
             if (index == 0) filename = par.fname;
             else filename = par.fname2;
+#ifdef BINARY_INPUT
+            if (index == 0) all_np[index] = par.np_read;
+            else all_np[index] = par.np2_read;
+#endif
 #ifdef JACKKNIFE
             all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index]);
 #else

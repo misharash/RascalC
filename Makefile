@@ -12,6 +12,7 @@ CXXFLAGS	+= -DOPENMP -DLEGENDRE_MIX -DJACKKNIFE -DPRINTPERCENTS
 # without either of the two Legendre flags above, the covariance is computed in s,µ bins
 #-DJACKKNIFE # use this to compute (r,mu)-space 2PCF covariances and jackknife covariances. Incompatible with -DLEGENDRE but works with -DLEGENDRE_MIX
 #-DTHREE_PCF # use this to compute 3PCF autocovariances
+#-DBINARY_INPUT # use this to pass particles through a file in binary format (can be FIFO for further efficiency)
 #-DPRINTPERCENTS # use this to print percentage of progress in each loop. This can be a lot of output
 
 LFLAGS	= $(shell pkg-config --libs gsl) # common part

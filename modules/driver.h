@@ -36,13 +36,19 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
     // This will read particles from a file, space-separated x,y,z,w,JK for weight w, (jackknife region JK)
     // Particle positions will be rescaled by the variable 'rescale'.
     // For example, if rescale==boxsize, then inputting the unit cube will cover the periodic volume
-    char line[1000];
-    int j=0,n=0;
+    int j = 0, n = *np;
     FILE *fp;
+#ifndef BINARY_INPUT
+    char line[1000];
     int stat;
+#endif
     double tmp[5];
 
+#ifdef BINARY_INPUT
+    fp = fopen(filename, "rb");
+#else
     fp = fopen(filename, "r");
+#endif
     if (fp==NULL) {
         fprintf(stderr,"File %s not found\n", filename); abort();
     }
@@ -53,7 +59,8 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
     int tmp_filled_JK[tmp_n_JK];
     for(int ii=0;ii<tmp_n_JK;ii++) tmp_filled_JK[ii]=JK->filled_JKs[ii];
 #endif
-    
+
+#ifndef BINARY_INPUT
     // Count lines to construct the correct size
     while (fgets(line,1000,fp)!=NULL&&(uint)n<nmax) {
         if (line[0]=='#') continue;
@@ -63,11 +70,22 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
     rewind(fp);
     
     *np = n;
+#endif
     Particle *p = (Particle *)malloc(sizeof(Particle)*n);
     printf("# Found %d particles from %s\n", n, filename);
     printf("# Rescaling input positions by factor %f\n", rescale);
     
-    while (fgets(line,1000,fp)!=NULL&&j<n) {
+    for (j = 0; j < n; j++) {
+#ifdef BINARY_INPUT
+        if (fread(tmp, sizeof(double), 4, fp) != 4) {
+        	fprintf(stderr, "Particle %d expected but not found\n", j); // Not enough data in file
+        	abort();
+        }
+#else
+        if (fgets(line,1000,fp) == NULL) {
+        	fprintf(stderr, "Particle %d expected but not found\n", j); // Not enough particles
+        	abort();
+        }
         if (line[0]=='#') continue;
         if (line[0]=='\n') continue;
         stat=sscanf(line, "%lf %lf %lf %lf %lf", tmp, tmp+1, tmp+2, tmp+3, tmp+4);
@@ -76,15 +94,27 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
         	fprintf(stderr,"Particle %d has bad format\n", j); // Not enough coordinates
         	abort();
         }
+#endif
 
         p[j].pos.x = tmp[0]*rescale;
         p[j].pos.y = tmp[1]*rescale;
         p[j].pos.z = tmp[2]*rescale;
         p[j].rand_class = rand()%2;
         
-        // Get the weights from line 4 if present, else fill with +1/-1 depending on the value of rstart
+        // Only with text files: get the weights from line 4 if present, else fill with +1/-1 depending on the value of rstart
         // For grid_covariance rstart is typically not used
+        // Binary files must supply weights
+#ifdef BINARY_INPUT
+        p[j].w = tmp[3];
+#endif
 #ifdef JACKKNIFE
+#ifdef BINARY_INPUT
+        if (fread(tmp + 4, sizeof(double), 1, fp) != 1) { // read jackknife number
+        	fprintf(stderr, "Particle %d expected but not found\n", j); // Not enough data in file
+        	abort();
+        }
+        int tmp_JK = tmp[4];
+#else
         if(stat!=5)
 		   if(rstart>0&&j>=rstart)
 			   p[j].w = -1.;
@@ -94,8 +124,10 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
 		   if(rstart>0&&j>=rstart)
 			   p[j].w = -tmp[stat-2]; //read in weights
 		   else
-			   p[j].w = tmp[stat-2]; 
+			   p[j].w = tmp[stat-2];
+        }
         int tmp_JK = tmp[stat-1]; // read in JK region
+#endif
 		
 		// Collapse jacknife indices to only include filled JKs:
 		p[j].JK=-1;
@@ -105,6 +137,7 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
         }
         assert(p[j].JK!=-1); // ensure we find jackknife index		    
 #else
+#ifndef BINARY_INPUT
         if((stat!=4)&&(stat!=5))
             if(rstart>0&&j>=rstart)
                 p[j].w = -1.;
@@ -115,10 +148,9 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
                     p[j].w = -tmp[3]; // read in weights
                 else
                     p[j].w = tmp[3];
-#endif                
             }
-      	
-		j++;
+#endif
+#endif
     }
     fclose(fp);
     printf("# Done reading the particles\n");

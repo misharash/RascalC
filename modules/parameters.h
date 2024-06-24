@@ -217,6 +217,10 @@ public:
 	// Will be number of particles in a random distribution, but gets overwritten if reading from a file.
 	int np = 3000000; // NB: This is only used for grid creation so we don't need a separate variable for the second set of randoms
 
+#ifdef BINARY_INPUT
+    int np_read = 0, np2_read = 0;
+#endif
+
 	// The index from which on to invert the sign of the weights
 	int rstart = 0;
 
@@ -327,6 +331,10 @@ public:
 			np = tmp;
 			make_random=1;
 		    }
+#ifdef BINARY_INPUT
+        else if (!strcmp(argv[i],"-np_read")) np_read = atoi(argv[++i]);
+        else if (!strcmp(argv[i],"-np2_read")) np2_read = atoi(argv[++i]);
+#endif
 		else if (!strcmp(argv[i],"-seed")) { random_seed = false; sscanf(argv[++i], "%lu", &seed); }
 		else if (!strcmp(argv[i],"-def")) { fname = NULL; }
 		else {
@@ -516,7 +524,16 @@ public:
         }
 #endif
 
-
+#ifdef BINARY_INPUT
+        if (np_read <= 0) {
+            printf("\nIn the binary FIFO input mode the number of particles to read (np_read) must be supplied and positive. Exiting.\n\n");
+            exit(1);
+        }
+        if (multi_tracers && (np2_read <= 0)) {
+            printf("\nIn the binary FIFO input mode the number of particles of 2nd kind to read (np2_read) must be supplied and positive. Exiting.\n\n");
+            exit(1);
+        }
+#endif
 
 	    create_directory();
 
@@ -640,6 +657,10 @@ private:
 	    fprintf(stderr, "   -invert: Multiply all the weights by -1.\n");
 	    fprintf(stderr, "   -balance: Rescale the negative weights so that the total weight is zero.\n");
         fprintf(stderr, "   -np <np>: Ignore any file and use np random perioidic points instead.\n");
+#ifdef BINARY_INPUT
+        fprintf(stderr, "   -np_read <np_read>: Number of particles (of the 1st kind) to read from the binary FIFO input file.\n");
+        fprintf(stderr, "   -np2_read <np2_read>: Number of particles of the 2nd kind to read from the binary FIFO input file.\n");
+#endif
         fprintf(stderr, "   -rs <rstart>:  If inverting particle weights, this sets the index from which to start weight inversion. Default 0\n");
         fprintf(stderr, "   -seed <seed>:  If given, allows to reproduce the results with the same settings, except the number of threads.\n");
         fprintf(stderr, "      Individual subsamples may differ because they are accumulated/written in order of loop completion which may depend on external factors at runtime, but the final integrals should be the same.\n");
