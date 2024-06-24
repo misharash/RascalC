@@ -3,6 +3,8 @@
 import pycorr
 import numpy as np
 import os
+import signal
+from subprocess import Popen
 from datetime import datetime
 from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
 from .write_binning_file import write_binning_file
@@ -386,19 +388,19 @@ def run_cov(mode: str,
     randoms_weights = [randoms_weights1, randoms_weights2]
     randoms_samples = (randoms_samples1, randoms_samples2)
     randoms_numbers = [0, 0]
+    randoms_properties = [None, None]
     for t, input_filename in enumerate(input_filenames):
-        randoms_properties = pycorr.twopoint_counter._format_positions(randoms_positions[t], mode = "smu", position_type = position_type, dtype = np.float64) # list of x, y, z coordinate arrays; weights (and jackknife region numbers if any) will be appended
-        randoms_numbers[t] = len(randoms_properties[0])
+        randoms_properties[t] = pycorr.twopoint_counter._format_positions(randoms_positions[t], mode = "smu", position_type = position_type, dtype = np.float64) # list of x, y, z coordinate arrays; weights (and jackknife region numbers if any) will be appended
+        randoms_numbers[t] = len(randoms_properties[t][0])
         if randoms_weights[t].ndim != 1: raise ValueError(f"Weights of randoms {t+1} not contained in a 1D array")
         if len(randoms_weights[t]) != randoms_numbers[t]: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
         if normalize_wcounts: randoms_weights[t] /= np.sum(randoms_weights[t])
-        randoms_properties.append(randoms_weights[t])
+        randoms_properties[t].append(randoms_weights[t])
         if jackknife:
             if randoms_samples[t].ndim != 1: raise ValueError(f"Weights of sample labels {t+1} not contained in a 1D array")
             if len(randoms_samples[t]) != randoms_numbers[t]: raise ValueError(f"Number of sample labels for randoms {t+1} mismatches the number of positions")
-            randoms_properties.append(randoms_samples[t])
+            randoms_properties[t].append(randoms_samples[t])
         os.mkfifo(input_filename)
-        np.column_stack(randoms_properties).tofile(input_filename) # write array in binary format to the FIFO (named pipe)
 
     # write the binning files
     binfile = os.path.join(out_dir, "radial_binning_cov.csv")
@@ -449,12 +451,23 @@ def run_cov(mode: str,
     # run the main code
     print_and_log(datetime.now())
     print_and_log(f"Launching the C++ code with command: {command}")
-    status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {command} 2>&1 | tee -a {logfile}'")
+    main_code_wrapper_process = Popen(["bash", "-c", f"set -o pipefail; stdbuf -oL -eL {command} 2>&1 | tee -a {logfile}"])
     # tee prints what it gets to stdout AND saves to file
     # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
     # without pipefail, the exit_code would be of tee, not reflecting main command failures
     # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
-    exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
+
+    # pass the random particles through the FIFO using a fork process because it will block
+    child_pid = os.fork()
+    if child_pid == 0: # in the forked process
+        for t, input_filename in enumerate(input_filenames):
+            with open(input_filename, "wb") as f:
+                f.write(np.column_stack(randoms_properties[t]).tobytes())
+        os._exit(0) # terminate the forked process after passing all the data
+
+    # wait for the main code termination
+    exit_code = main_code_wrapper_process.wait()
+    os.kill(child_pid, signal.SIGKILL) # kill the child process
     if exit_code: raise RuntimeError(f"The C++ code terminated with an error: exit code {exit_code}")
     print_and_log("The C++ code finished succesfully")
 
