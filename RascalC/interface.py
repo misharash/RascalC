@@ -3,6 +3,7 @@
 import pycorr
 import numpy as np
 import os
+from tempfile import mkdtemp
 import signal
 from subprocess import Popen
 from datetime import datetime
@@ -25,7 +26,7 @@ tracer2_corr = (0, 1, 1)
 
 def run_cov(mode: str,
             nthread: int, N2: int, N3: int, N4: int, n_loops: int, loops_per_sample: int,
-            out_dir: str, tmp_dir: str,
+            out_dir: str,
             randoms_positions1: np.ndarray[float], randoms_weights1: np.ndarray[float],
             pycorr_allcounts_11: pycorr.twopoint_estimator.BaseTwoPointEstimator,
             xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]],
@@ -189,11 +190,6 @@ def run_cov(mode: str,
         Moderate disk space required (up to a few hundred megabytes), but increases with covariance matrix size and number of samples (see above).
         Avoid ".." in this path because it makes os.makedirs() "confused".
 
-    tmp_dir : string
-        Directory for temporary files. Contents can be deleted after the code has run, but this will not be done automatically.
-        More disk space required - needs to store all the input arrays in the current implementation.
-        Avoid ".." in this path because it makes os.makedirs() "confused".
-
     skip_s_bins : int
         (Optional) number of lowest separations bins to skip at the post-processing stage. Those tend to converge worse and probably will not be precise due to the limitations of the formalism. Default 0 (no skipping).
 
@@ -281,8 +277,11 @@ def run_cov(mode: str,
             if not np.array_equal(jack_region_numbers, np.unique(randoms_samples2)): # comparison is good because unique results are sorted
                 raise ValueError("The sets of jackkknife labels of the two tracers must be the same")
 
-    # set the technical filenames
+    # set the temporary filenames
+    tmp_dir = mkdtemp(prefix = "RascalC-lib")
     input_filenames = [os.path.join(tmp_dir, str(t) + ".bin") for t in range(ntracers)]
+
+    # set the technical filenames
     cornames = [os.path.join(out_dir, f"xi/xi_{index}.dat") for index in indices_corr]
     binned_pair_names = [os.path.join(out_dir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{n_r_bins}_m{n_mu_bins}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
     if jackknife:
@@ -467,7 +466,13 @@ def run_cov(mode: str,
 
     # wait for the main code termination
     exit_code = main_code_wrapper_process.wait()
+
+    # clean up
     os.kill(child_pid, signal.SIGKILL) # kill the child process
+    for input_filename in input_filenames: os.remove(input_filename) # delete the files
+    os.rmdir(tmp_dir) # delete the temporary directory – should be empty
+
+    # validate the C++ code run status
     if exit_code: raise RuntimeError(f"The C++ code terminated with an error: exit code {exit_code}")
     print_and_log("The C++ code finished succesfully")
 
