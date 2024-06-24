@@ -280,7 +280,7 @@ def run_cov(mode: str,
                 raise ValueError("The sets of jackkknife labels of the two tracers must be the same")
 
     # set the technical filenames
-    input_filenames = [os.path.join(tmp_dir, str(t) + ".txt") for t in range(ntracers)]
+    input_filenames = [os.path.join(tmp_dir, str(t) + ".bin") for t in range(ntracers)]
     cornames = [os.path.join(out_dir, f"xi/xi_{index}.dat") for index in indices_corr]
     binned_pair_names = [os.path.join(out_dir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{n_r_bins}_m{n_mu_bins}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
     if jackknife:
@@ -385,18 +385,20 @@ def run_cov(mode: str,
     randoms_positions = [randoms_positions1, randoms_positions2]
     randoms_weights = [randoms_weights1, randoms_weights2]
     randoms_samples = (randoms_samples1, randoms_samples2)
+    randoms_numbers = [0, 0]
     for t, input_filename in enumerate(input_filenames):
         randoms_properties = pycorr.twopoint_counter._format_positions(randoms_positions[t], mode = "smu", position_type = position_type, dtype = np.float64) # list of x, y, z coordinate arrays; weights (and jackknife region numbers if any) will be appended
-        nrandoms = len(randoms_properties[0])
+        randoms_numbers[t] = len(randoms_properties[0])
         if randoms_weights[t].ndim != 1: raise ValueError(f"Weights of randoms {t+1} not contained in a 1D array")
-        if len(randoms_weights[t]) != nrandoms: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
+        if len(randoms_weights[t]) != randoms_numbers[t]: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
         if normalize_wcounts: randoms_weights[t] /= np.sum(randoms_weights[t])
         randoms_properties.append(randoms_weights[t])
         if jackknife:
             if randoms_samples[t].ndim != 1: raise ValueError(f"Weights of sample labels {t+1} not contained in a 1D array")
-            if len(randoms_samples[t]) != nrandoms: raise ValueError(f"Number of sample labels for randoms {t+1} mismatches the number of positions")
+            if len(randoms_samples[t]) != randoms_numbers[t]: raise ValueError(f"Number of sample labels for randoms {t+1} mismatches the number of positions")
             randoms_properties.append(randoms_samples[t])
-        np.savetxt(input_filename, np.column_stack(randoms_properties))
+        os.mkfifo(input_filename)
+        np.column_stack(randoms_properties).tofile(input_filename) # write array in binary format to the FIFO (named pipe)
 
     # write the binning files
     binfile = os.path.join(out_dir, "radial_binning_cov.csv")
@@ -414,6 +416,7 @@ def run_cov(mode: str,
     command = "env OMP_PROC_BIND=spread OMP_PLACES=threads " # set OMP environment variables, should not be set before
     command += f"{exec_path} -output {out_dir}/ -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_loops}" # here are universally acceptable parameters
     command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
+    command += "".join([f" -np{suffixes_tracer[t]}_read {randoms_numbers[t]}" for t in range(ntracers)]) # provide number of randoms
     command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
     command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
     if legendre: # only provide max multipole l for now
