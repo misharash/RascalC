@@ -12,6 +12,7 @@ from .pycorr_utils.input_xi import get_input_xi_from_pycorr
 from .mu_bin_legendre_factors import write_mu_bin_legendre_factors
 from .correction_function import compute_correction_function, compute_correction_function_multi
 from .convergence_check_extra import convergence_check_extra
+from .utils import rmdir_if_exists_and_empty
 
 
 suffixes_tracer_all = ("", "2") # all supported tracer suffixes
@@ -387,6 +388,7 @@ def run_cov(mode: str,
     randoms_samples = (randoms_samples1, randoms_samples2)
     for t, input_filename in enumerate(input_filenames):
         randoms_properties = pycorr.twopoint_counter._format_positions(randoms_positions[t], mode = "smu", position_type = position_type, dtype = np.float64) # list of x, y, z coordinate arrays; weights (and jackknife region numbers if any) will be appended
+        if legendre_orig: randoms_positions[t] = np.array(randoms_properties) # save the formatted positions as an array for correction function computation
         nrandoms = len(randoms_properties[0])
         if randoms_weights[t].ndim != 1: raise ValueError(f"Weights of randoms {t+1} not contained in a 1D array")
         if len(randoms_weights[t]) != nrandoms: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
@@ -397,6 +399,7 @@ def run_cov(mode: str,
             if len(randoms_samples[t]) != nrandoms: raise ValueError(f"Number of sample labels for randoms {t+1} mismatches the number of positions")
             randoms_properties.append(randoms_samples[t])
         np.savetxt(input_filename, np.column_stack(randoms_properties))
+        randoms_properties = None
 
     # write the binning files
     binfile = os.path.join(out_dir, "radial_binning_cov.csv")
@@ -433,9 +436,9 @@ def run_cov(mode: str,
         print_and_log(datetime.now())
         print_and_log(f"Computing the correction function")
         if ntracers == 1:
-            compute_correction_function(input_filenames[0], binfile, out_dir, periodic, binned_pair_names[0], print_and_log)
+            compute_correction_function(randoms_positions[0], randoms_weights[0], binfile, out_dir, periodic, binned_pair_names[0], print_and_log)
         elif ntracers == 2:
-            compute_correction_function_multi(*input_filenames, binfile, out_dir, periodic, *binned_pair_names, print_function = print_and_log)
+            compute_correction_function_multi(randoms_positions[0], randoms_weights[0], randoms_positions[1], randoms_weights[1], binfile, out_dir, periodic, *binned_pair_names, print_function = print_and_log)
         command += "".join([f" -phi_file{suffixes_corr[c]} {phi_names[c]}" for c in range(ncorr)])
 
     # deal with the seed
@@ -451,6 +454,12 @@ def run_cov(mode: str,
     # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
     # without pipefail, the exit_code would be of tee, not reflecting main command failures
     # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
+
+    # clean up
+    for input_filename in input_filenames: os.remove(input_filename) # delete the larger (temporary) input files
+    rmdir_if_exists_and_empty(tmp_dir) # safely remove the temporary directory
+
+    # check the run status
     exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
     if exit_code: raise RuntimeError(f"The C++ code terminated with an error: exit code {exit_code}")
     print_and_log("The C++ code finished succesfully")
