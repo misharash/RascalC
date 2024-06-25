@@ -1,9 +1,9 @@
 ## MAKEFILE FOR RascalC. This compiles the grid_covariance.cpp file into the ./cov exececutable.
 
 CC = gcc
-CFLAGS = -O3 -Wall -MMD
+CFLAGS = -O3 -Wall -MMD -fPIC
 CXX = g++
-CXXFLAGS	= -O3 -Wall -MMD -std=c++11 -ffast-math $(shell pkg-config --cflags gsl)
+CXXFLAGS	= -O3 -Wall -MMD -std=c++11 -fPIC $(shell pkg-config --cflags gsl)
 CXXFLAGS	+= -DOPENMP
 #-DOPENMP  # use this to run multi-threaded with OPENMP
 #-DPERIODIC # use this to enable periodic behavior
@@ -14,7 +14,7 @@ CXXFLAGS	+= -DOPENMP
 #-DTHREE_PCF # use this to compute 3PCF autocovariances
 #-DPRINTPERCENTS # use this to print percentage of progress in each loop. This can be a lot of output
 
-LFLAGS	= $(shell pkg-config --libs gsl) # common part
+LFLAGS	= $(shell pkg-config --libs gsl) -shared # common part
 
 # Known OS-specific choices
 ifeq ($(shell uname -s),Darwin)
@@ -59,7 +59,7 @@ endef
 $(foreach variant,$(VARIANTS_INT),$(eval $(call add_verbose_variant,$(variant))))
 
 OBJDIR	= obj
-EXECDIR	= bin
+EXECDIR	= lib
 
 VAR_SRC_BASE	= grid_covariance
 VAR_SRC	= ../$(VAR_SRC_BASE).cpp
@@ -73,7 +73,7 @@ ALL_OBJS	= $(COMMON_OBJS)
 define make_targets
 OBJ_$(1)	= $$(VAR_OBJ_BASE).$(1).o
 ALL_OBJS	+= $$(OBJ_$(1))
-EXEC_$(1)	= $$(EXEC_BASE).$(1)
+EXEC_$(1)	= $$(EXEC_BASE).$(1).dll
 ALL_EXECS	+= $$(EXEC_$(1))
 
 $$(OBJ_$(1)): $$(VAR_SRC)

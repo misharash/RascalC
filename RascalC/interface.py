@@ -3,6 +3,8 @@
 import pycorr
 import numpy as np
 import os
+import ctypes
+import shlex
 from datetime import datetime
 from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
 from .write_binning_file import write_binning_file
@@ -13,6 +15,17 @@ from .mu_bin_legendre_factors import write_mu_bin_legendre_factors
 from .correction_function import compute_correction_function, compute_correction_function_multi
 from .convergence_check_extra import convergence_check_extra
 from .utils import rmdir_if_exists_and_empty
+
+
+def ctypes_run_rascalc(commandline: str):
+    os.sync() # force all files to be written before C++ code tries to read them
+    args = shlex.split(commandline)
+    rascalc_lib = ctypes.cdll.LoadLibrary(args[0])
+    c_argc = ctypes.c_int(len(args))
+    args_c = [ctypes.cast(ctypes.create_string_buffer(arg.encode()), ctypes.c_char_p) for arg in args]
+    args_c.append(ctypes.c_char_p(None)) # the standard requires that argv[argc] = NULL
+    c_argv = (ctypes.c_char_p * len(args_c))(*args_c)
+    return int(rascalc_lib.main(c_argc, c_argv))
 
 
 suffixes_tracer_all = ("", "2") # all supported tracer suffixes
@@ -408,7 +421,7 @@ def run_cov(mode: str,
     write_binning_file(binfile_cf, xi_s_edges)
 
     # Select the executable name
-    exec_name = "bin/cov." + mode + "_jackknife" * jackknife + "_periodic" * periodic + "_verbose" * verbose
+    exec_name = "lib/cov." + mode + "_jackknife" * jackknife + "_periodic" * periodic + "_verbose" * verbose + ".dll"
     # the above must be true relative to the script location
     # below we should make it absolute, i.e. right regardless of the working directory
     exec_path = os.path.join(os.path.realpath(os.path.dirname(__file__)), exec_name)
@@ -449,18 +462,13 @@ def run_cov(mode: str,
     # run the main code
     print_and_log(datetime.now())
     print_and_log(f"Launching the C++ code with command: {command}")
-    status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {command} 2>&1 | tee -a {logfile}'")
-    # tee prints what it gets to stdout AND saves to file
-    # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
-    # without pipefail, the exit_code would be of tee, not reflecting main command failures
-    # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
+    exit_code = ctypes_run_rascalc(command)
 
     # clean up
     for input_filename in input_filenames: os.remove(input_filename) # delete the larger (temporary) input files
     rmdir_if_exists_and_empty(tmp_dir) # safely remove the temporary directory
 
     # check the run status
-    exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
     if exit_code: raise RuntimeError(f"The C++ code terminated with an error: exit code {exit_code}")
     print_and_log("The C++ code finished succesfully")
 
