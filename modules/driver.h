@@ -28,16 +28,26 @@ Particle *make_particles(Float3 rect_boxsize, int np, int index) {
     return p;
 }
 
+#ifdef LIBRARY
 #ifdef JACKKNIFE
-Particle *read_particles(Float rescale, int *np, const char *filename, const int rstart, uint64 nmax, const JK_weights *JK) {
+Particle *read_particles(Float rescale, int *np, const double *input_data, const int rstart, uint64 nmax, const JK_weights *JK)
 #else
-Particle *read_particles(Float rescale, int *np, const char *filename, const int rstart, uint64 nmax) {
+Particle *read_particles(Float rescale, int *np, const double *input_data, const int rstart, uint64 nmax)
 #endif
+#else
+#ifdef JACKKNIFE
+Particle *read_particles(Float rescale, int *np, const char *filename, const int rstart, uint64 nmax, const JK_weights *JK)
+#else
+Particle *read_particles(Float rescale, int *np, const char *filename, const int rstart, uint64 nmax)
+#endif
+#endif
+{
+    int j=0,n=0;
+#ifndef LIBRARY
     // This will read particles from a file, space-separated x,y,z,w,JK for weight w, (jackknife region JK)
     // Particle positions will be rescaled by the variable 'rescale'.
     // For example, if rescale==boxsize, then inputting the unit cube will cover the periodic volume
     char line[1000];
-    int j=0,n=0;
     FILE *fp;
     int stat;
     double tmp[5];
@@ -46,6 +56,7 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
     if (fp==NULL) {
         fprintf(stderr,"File %s not found\n", filename); abort();
     }
+#endif
 
 #ifdef JACKKNIFE
     // Store filled jackknives in local memory to avoid file corruption
@@ -53,7 +64,8 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
     int tmp_filled_JK[tmp_n_JK];
     for(int ii=0;ii<tmp_n_JK;ii++) tmp_filled_JK[ii]=JK->filled_JKs[ii];
 #endif
-    
+
+#ifndef LIBRARY
     // Count lines to construct the correct size
     while (fgets(line,1000,fp)!=NULL&&(uint)n<nmax) {
         if (line[0]=='#') continue;
@@ -63,11 +75,21 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
     rewind(fp);
     
     *np = n;
-    Particle *p = (Particle *)malloc(sizeof(Particle)*n);
     printf("# Found %d particles from %s\n", n, filename);
+#else
+    n = *np;
+    printf("# Loading %d particles from memory\n", n);
+#endif
+    Particle *p = (Particle *)malloc(sizeof(Particle)*n);
     printf("# Rescaling input positions by factor %f\n", rescale);
-    
-    while (fgets(line,1000,fp)!=NULL&&j<n) {
+
+#ifdef LIBRARY
+    while (j < n)
+#else
+    while (fgets(line, 1000, fp) != NULL && j < n)
+#endif
+    {
+#ifndef LIBRARY
         if (line[0]=='#') continue;
         if (line[0]=='\n') continue;
         stat=sscanf(line, "%lf %lf %lf %lf %lf", tmp, tmp+1, tmp+2, tmp+3, tmp+4);
@@ -80,11 +102,19 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
         p[j].pos.x = tmp[0]*rescale;
         p[j].pos.y = tmp[1]*rescale;
         p[j].pos.z = tmp[2]*rescale;
+#endif
         p[j].rand_class = rand()%2;
         
         // Get the weights from line 4 if present, else fill with +1/-1 depending on the value of rstart
         // For grid_covariance rstart is typically not used
 #ifdef JACKKNIFE
+#ifdef LIBRARY
+        p[j].pos.x = input_data[5 * j];
+        p[j].pos.y = input_data[5 * j + 1];
+        p[j].pos.z = input_data[5 * j + 2];
+        p[j].w = input_data[5 * j + 3];
+        int tmp_JK = input_data[5 * j + 4];
+#else
         if(stat!=5)
 		   if(rstart>0&&j>=rstart)
 			   p[j].w = -1.;
@@ -94,8 +124,10 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
 		   if(rstart>0&&j>=rstart)
 			   p[j].w = -tmp[stat-2]; //read in weights
 		   else
-			   p[j].w = tmp[stat-2]; 
+			   p[j].w = tmp[stat-2];
+        }
         int tmp_JK = tmp[stat-1]; // read in JK region
+#endif
 		
 		// Collapse jacknife indices to only include filled JKs:
 		p[j].JK=-1;
@@ -104,6 +136,12 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
             if (tmp_filled_JK[x]==tmp_JK) p[j].JK=x;
         }
         assert(p[j].JK!=-1); // ensure we find jackknife index		    
+#else
+#ifdef LIBRARY
+        p[j].pos.x = input_data[4 * j];
+        p[j].pos.y = input_data[4 * j + 1];
+        p[j].pos.z = input_data[4 * j + 2];
+        p[j].w = input_data[4 * j + 3];
 #else
         if((stat!=4)&&(stat!=5))
             if(rstart>0&&j>=rstart)
@@ -115,13 +153,16 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
                     p[j].w = -tmp[3]; // read in weights
                 else
                     p[j].w = tmp[3];
-#endif                
             }
+#endif
+#endif
       	
 		j++;
     }
+#ifndef LIBRARY
     fclose(fp);
     printf("# Done reading the particles\n");
+#endif
     
     return p;
 }

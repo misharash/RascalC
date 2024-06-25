@@ -14,10 +14,9 @@ from .pycorr_utils.input_xi import get_input_xi_from_pycorr
 from .mu_bin_legendre_factors import write_mu_bin_legendre_factors
 from .correction_function import compute_correction_function, compute_correction_function_multi
 from .convergence_check_extra import convergence_check_extra
-from .utils import rmdir_if_exists_and_empty
 
 
-def ctypes_run_rascalc(commandline: str):
+def ctypes_run_rascalc(commandline: str, randoms_properties: list[np.ndarray[float]]):
     os.sync() # force all files to be written before C++ code tries to read them
     args = shlex.split(commandline)
     rascalc_lib = ctypes.cdll.LoadLibrary(args[0])
@@ -25,7 +24,10 @@ def ctypes_run_rascalc(commandline: str):
     args_c = [ctypes.cast(ctypes.create_string_buffer(arg.encode()), ctypes.c_char_p) for arg in args]
     args_c.append(ctypes.c_char_p(None)) # the standard requires that argv[argc] = NULL
     c_argv = (ctypes.c_char_p * len(args_c))(*args_c)
-    return int(rascalc_lib.main(c_argc, c_argv))
+    # deal with randoms properties
+    nrandoms = [ctypes.c_int(len(_) if _ else 0) for _ in randoms_properties]
+    randoms_data = [_.ctypes.data_as(ctypes.POINTER(ctypes.c_double)) if _ else None for _ in randoms_properties]
+    return int(rascalc_lib.run(c_argc, c_argv, nrandoms[0], randoms_data[0], nrandoms[1], randoms_data[1]))
 
 
 suffixes_tracer_all = ("", "2") # all supported tracer suffixes
@@ -37,7 +39,7 @@ tracer2_corr = (0, 1, 1)
 
 def run_cov(mode: str,
             nthread: int, N2: int, N3: int, N4: int, n_loops: int, loops_per_sample: int,
-            out_dir: str, tmp_dir: str,
+            out_dir: str,
             randoms_positions1: np.ndarray[float], randoms_weights1: np.ndarray[float],
             pycorr_allcounts_11: pycorr.twopoint_estimator.BaseTwoPointEstimator,
             xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]],
@@ -201,11 +203,6 @@ def run_cov(mode: str,
         Moderate disk space required (up to a few hundred megabytes), but increases with covariance matrix size and number of samples (see above).
         Avoid ".." in this path because it makes os.makedirs() "confused".
 
-    tmp_dir : string
-        Directory for temporary files. Contents can be deleted after the code has run, but this will not be done automatically.
-        More disk space required - needs to store all the input arrays in the current implementation.
-        Avoid ".." in this path because it makes os.makedirs() "confused".
-
     skip_s_bins : int
         (Optional) number of lowest separations bins to skip at the post-processing stage. Those tend to converge worse and probably will not be precise due to the limitations of the formalism. Default 0 (no skipping).
 
@@ -294,7 +291,7 @@ def run_cov(mode: str,
                 raise ValueError("The sets of jackkknife labels of the two tracers must be the same")
 
     # set the technical filenames
-    input_filenames = [os.path.join(tmp_dir, str(t) + ".txt") for t in range(ntracers)]
+    input_filenames = ["memory" for t in range(ntracers)]
     cornames = [os.path.join(out_dir, f"xi/xi_{index}.dat") for index in indices_corr]
     binned_pair_names = [os.path.join(out_dir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{n_r_bins}_m{n_mu_bins}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
     if jackknife:
@@ -306,7 +303,6 @@ def run_cov(mode: str,
     
     # make sure the dirs exist
     os.makedirs(out_dir, exist_ok = True)
-    os.makedirs(tmp_dir, exist_ok = True)
     os.makedirs(os.path.join(out_dir, "xi"), exist_ok = True)
     os.makedirs(os.path.join(out_dir, "weights"), exist_ok = True)
     if jackknife: os.makedirs(os.path.join(out_dir, "xi_jack"), exist_ok = True)
@@ -399,20 +395,21 @@ def run_cov(mode: str,
     randoms_positions = [randoms_positions1, randoms_positions2]
     randoms_weights = [randoms_weights1, randoms_weights2]
     randoms_samples = (randoms_samples1, randoms_samples2)
-    for t, input_filename in enumerate(input_filenames):
-        randoms_properties = pycorr.twopoint_counter._format_positions(randoms_positions[t], mode = "smu", position_type = position_type, dtype = np.float64) # list of x, y, z coordinate arrays; weights (and jackknife region numbers if any) will be appended
-        if legendre_orig: randoms_positions[t] = np.array(randoms_properties) # save the formatted positions as an array for correction function computation
-        nrandoms = len(randoms_properties[0])
+    randoms_properties = [None] * 2
+    for t in range(ntracers):
+        randoms_properties_tmp = pycorr.twopoint_counter._format_positions(randoms_positions[t], mode = "smu", position_type = position_type, dtype = np.float64) # list of x, y, z coordinate arrays; weights (and jackknife region numbers if any) will be appended
+        nrandoms = len(randoms_properties_tmp[0])
         if randoms_weights[t].ndim != 1: raise ValueError(f"Weights of randoms {t+1} not contained in a 1D array")
         if len(randoms_weights[t]) != nrandoms: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
         if normalize_wcounts: randoms_weights[t] /= np.sum(randoms_weights[t])
-        randoms_properties.append(randoms_weights[t])
+        randoms_properties_tmp.append(randoms_weights[t])
         if jackknife:
             if randoms_samples[t].ndim != 1: raise ValueError(f"Weights of sample labels {t+1} not contained in a 1D array")
             if len(randoms_samples[t]) != nrandoms: raise ValueError(f"Number of sample labels for randoms {t+1} mismatches the number of positions")
-            randoms_properties.append(randoms_samples[t])
-        np.savetxt(input_filename, np.column_stack(randoms_properties))
-        randoms_properties = None
+            randoms_properties_tmp.append(randoms_samples[t])
+        randoms_properties[t] = np.column_stack(randoms_properties_tmp)
+        randoms_properties_tmp = None
+    randoms_positions, randoms_weights, randoms_samples = None, None, None
 
     # write the binning files
     binfile = os.path.join(out_dir, "radial_binning_cov.csv")
@@ -449,9 +446,9 @@ def run_cov(mode: str,
         print_and_log(datetime.now())
         print_and_log(f"Computing the correction function")
         if ntracers == 1:
-            compute_correction_function(randoms_positions[0], randoms_weights[0], binfile, out_dir, periodic, binned_pair_names[0], print_and_log)
+            compute_correction_function(randoms_properties[0][:3], randoms_properties[0][3], binfile, out_dir, periodic, binned_pair_names[0], print_and_log)
         elif ntracers == 2:
-            compute_correction_function_multi(randoms_positions[0], randoms_weights[0], randoms_positions[1], randoms_weights[1], binfile, out_dir, periodic, *binned_pair_names, print_function = print_and_log)
+            compute_correction_function_multi(randoms_properties[0][:3], randoms_properties[0][3], randoms_properties[1][:3], randoms_properties[1][3], binfile, out_dir, periodic, *binned_pair_names, print_function = print_and_log)
         command += "".join([f" -phi_file{suffixes_corr[c]} {phi_names[c]}" for c in range(ncorr)])
 
     # deal with the seed
@@ -462,11 +459,7 @@ def run_cov(mode: str,
     # run the main code
     print_and_log(datetime.now())
     print_and_log(f"Launching the C++ code with command: {command}")
-    exit_code = ctypes_run_rascalc(command)
-
-    # clean up
-    for input_filename in input_filenames: os.remove(input_filename) # delete the larger (temporary) input files
-    rmdir_if_exists_and_empty(tmp_dir) # safely remove the temporary directory
+    exit_code = ctypes_run_rascalc(command, randoms_properties)
 
     # check the run status
     if exit_code: raise RuntimeError(f"The C++ code terminated with an error: exit code {exit_code}")

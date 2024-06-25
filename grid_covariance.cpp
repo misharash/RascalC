@@ -80,8 +80,12 @@ STimer TotalTime;
 
 // ================================ main() =============================
 
-
-int main(int argc, char *argv[]) {
+#ifndef LIBRARY
+int main(int argc, char *argv[])
+#else
+int run(int argc, char *argv[], int nparticles, double* particle_data, int nparticles2, double* particle_data2)
+#endif
+{
 
 	Parameters par=Parameters(argc,argv);
 
@@ -128,13 +132,19 @@ int main(int argc, char *argv[]) {
     for (int index = 0; index < no_fields; index++) {
         Float3 shift;
         if (!par.make_random) {
-            char *filename;
-            if (index == 0) filename = par.fname;
-            else filename = par.fname2;
-#ifdef JACKKNIFE
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index]);
+#ifdef LIBRARY
+            double *particle_source;
+            if (index == 0) {particle_source = particle_data; all_np[index] = nparticles;}
+            else {particle_source = particle_data2; all_np[index] = nparticles2;}
 #else
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax);
+            char *particle_source;
+            if (index == 0) particle_source = par.fname;
+            else particle_source = par.fname2;
+#endif
+#ifdef JACKKNIFE
+            all_particles[index] = read_particles(par.rescale, &all_np[index], particle_source, par.rstart, par.nmax, &all_weights[index]);
+#else
+            all_particles[index] = read_particles(par.rescale, &all_np[index], particle_source, par.rstart, par.nmax);
 #endif
             assert(all_np[index] > 0);
         }
