@@ -75,7 +75,7 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
     printf("# Found %d particles from %s\n", n, filename);
     printf("# Rescaling input positions by factor %f\n", rescale);
     
-    for (j = 0; j < n; j++) {
+    for (j = 0; j < n;) {
 #ifdef BINARY_INPUT
         if (fread(tmp, sizeof(double), 4, fp) != 4) {
         	fprintf(stderr, "Particle %d expected but not found\n", j); // Not enough data in file
@@ -151,6 +151,7 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
             }
 #endif
 #endif
+        j++;
     }
     fclose(fp);
     printf("# Done reading the particles\n");
