@@ -457,21 +457,31 @@ def run_cov(mode: str,
     # without pipefail, the exit_code would be of tee, not reflecting main command failures
     # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
 
-    # pass the random particles through the FIFO using a fork process because it will block
-    child_pid = os.fork()
-    if child_pid == 0: # in the forked process
-        for t, input_filename in enumerate(input_filenames):
-            with open(input_filename, "wb") as f:
-                f.write(np.column_stack(randoms_properties[t]).tobytes())
-        os._exit(0) # terminate the forked process after passing all the data
+    fifo_writing_child_pid = None
 
-    # wait for the main code termination
-    exit_code = main_code_wrapper_process.wait()
+    def clean_up():
+        "Cleanup function, should also be launched on error and interruption"
+        if fifo_writing_child_pid: os.kill(fifo_writing_child_pid, signal.SIGKILL) # kill the child process for writing to the FIFO if this process is the parent and it has been created
+        if main_code_wrapper_process.poll() is None: main_code_wrapper_process.kill() # kill the process for the main code if it has not terminated
+        for input_filename in input_filenames: os.remove(input_filename) # delete the files
+        os.rmdir(tmp_dir) # delete the temporary directory – should be empty
 
-    # clean up
-    os.kill(child_pid, signal.SIGKILL) # kill the child process
-    for input_filename in input_filenames: os.remove(input_filename) # delete the files
-    os.rmdir(tmp_dir) # delete the temporary directory – should be empty
+    try: # risky parts dealing with subprocesses, they may remain hanging
+        # pass the random particles through the FIFO using a fork process because it will block
+        fifo_writing_child_pid = os.fork()
+        if fifo_writing_child_pid == 0: # in the forked process
+            for t, input_filename in enumerate(input_filenames):
+                with open(input_filename, "wb") as f:
+                    f.write(np.column_stack(randoms_properties[t]).tobytes())
+            os._exit(0) # terminate the forked process after passing all the data
+
+        # wait for the main code termination
+        exit_code = main_code_wrapper_process.wait()
+    except (KeyboardInterrupt, Exception) as e:
+        clean_up()
+        raise e # throw the exception back
+
+    clean_up()
 
     # validate the C++ code run status
     if exit_code: raise RuntimeError(f"The C++ code terminated with an error: exit code {exit_code}")
