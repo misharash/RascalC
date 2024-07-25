@@ -12,6 +12,7 @@ from .pycorr_utils.input_xi import get_input_xi_from_pycorr
 from .mu_bin_legendre_factors import write_mu_bin_legendre_factors
 from .correction_function import compute_correction_function, compute_correction_function_multi
 from .convergence_check_extra import convergence_check_extra
+from .utils import rmdir_if_exists_and_empty
 
 
 suffixes_tracer_all = ("", "2") # all supported tracer suffixes
@@ -26,11 +27,11 @@ def run_cov(mode: str,
             out_dir: str, tmp_dir: str,
             randoms_positions1: np.ndarray[float], randoms_weights1: np.ndarray[float],
             pycorr_allcounts_11: pycorr.twopoint_estimator.BaseTwoPointEstimator,
-            xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]],
+            xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]],
             position_type: str = "pos",
-            xi_table_12: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | None = None,
-            xi_table_22: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | None = None,
-            xi_cut_s: float = 250,
+            xi_table_12: None | pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]] = None,
+            xi_table_22: None | pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]] = None,
+            xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
             pycorr_allcounts_12: pycorr.twopoint_estimator.BaseTwoPointEstimator | None = None, pycorr_allcounts_22: pycorr.twopoint_estimator.BaseTwoPointEstimator | None = None,
             normalize_wcounts: bool = True,
             no_data_galaxies1: float | None = None, no_data_galaxies2: float | None = None,
@@ -50,12 +51,12 @@ def run_cov(mode: str,
     mode : string
         Choice of binning setup, one of:
 
-            - "s_mu": compute covariance of the correlation function in s, µ bins. Only linear µ binning between 0 and 1 supported.
-            - "legendre_projected": compute covariance of the correlation function Legendre multipoles in separation (s) bins projected from µ bins (only linear µ binning supported between 0 and 1). Procedure matches ``pycorr``. Works with jackknives, may be less efficient in periodic geometry.
-            - "legendre_accumulated": compute covariance of the correlation function Legendre multipoles in separation (s) bins accumulated directly, without first doing µ-binned counts. Incompatible with jackknives.
+            - ``"s_mu"``: compute covariance of the correlation function in s, µ bins. Only linear µ binning between 0 and 1 supported.
+            - ``"legendre_projected"``: compute covariance of the correlation function Legendre multipoles in separation (s) bins projected from µ bins (only linear µ binning supported between 0 and 1). Procedure matches ``pycorr``. Works with jackknives, may be less efficient in periodic geometry.
+            - ``"legendre_accumulated"``: compute covariance of the correlation function Legendre multipoles in separation (s) bins accumulated directly, without first doing µ-binned counts. Incompatible with jackknives.
     
     max_l : integer
-        Max Legendre multipole index (required in both "legendre" ``mode``s).
+        Max Legendre multipole index (required in both Legendre ``mode``\s).
         Has to be even.
     
     boxsize : None or float
@@ -66,30 +67,30 @@ def run_cov(mode: str,
     position_type : string, default="pos"
         Type of input positions, one of:
 
-            - "rdd": RA, Dec in degrees, distance
+            - "rdd": RA, Dec (both in degrees), distance; shape (3, N)
             - "xyz": Cartesian positions, shape (3, N)
             - "pos": Cartesian positions, shape (N, 3).
     
     randoms_positions1 : array of floats, shaped according to `position_type`
-        Cartesian coordinates of random points for the first tracer.
+        Coordinates of random points for the first tracer.
     
     randoms_weights1 : array of floats of length N_randoms
         Weights of random points for the first tracer.
     
-    randoms_samples1 : None or array of floats of length N_randoms
-        (Optional) jackknife region numbers for random points for the first tracer.
-        If given and not None, enables the jackknife functionality (tuning of shot-noise rescaling on jackknife correlation function estimates).
-        The jackknife assignment must match the jackknife counts in ``pycorr_allcounts_11`` (and ``pycorr_allcounts_12`` in multi-tracer mode).
+    randoms_samples1 : None or array of integers of length N_randoms
+        Jackknife region numbers for random points for the first tracer.
+        If given (and not None), enables the jackknife functionality (tuning of shot-noise rescaling on jackknife correlation function estimates).
+        The jackknife assignment must match the jackknife counts in ``pycorr_allcounts_11`` (and ``pycorr_allcounts_12`` with multi-tracer functionality enabled).
 
     randoms_positions2 : None or array of floats, shaped according to `position_type`
-        (Optional) cartesian coordinates of random points for the second tracer.
+        (Optional) coordinates of random points for the second tracer.
         If given and not None, enables the multi-tracer functionality (full two-tracer covariance estimation).
     
     randoms_weights2 : None or array of floats of length N_randoms2
-        Weights of random points for the second tracer (required for multi-tracer functionality).
+        (Optional) weights of random points for the second tracer (required for multi-tracer functionality).
     
-    randoms_samples2 : None or array of floats of length N_randoms2
-        Jackknife region numbers for the second tracer (required for multi-tracer + jackknife functionality, although this combination has not been used yet).
+    randoms_samples2 : None or array of integers of length N_randoms2
+        (Optional) jackknife region numbers for the second tracer (required for multi-tracer + jackknife functionality, although this combination has not been used yet).
         The jackknife assignment must match the jackknife counts in ``pycorr_allcounts_12`` and ``pycorr_allcounts_22``.
 
     pycorr_allcounts_11 : ``pycorr.TwoPointEstimator``
@@ -133,10 +134,13 @@ def run_cov(mode: str,
         Important: if the given correlation function is an average in s, µ bins, the separation bin edges need to be provided (and the µ bins are assumed to be linear) for rescaling procedure which ensures that the interpolation results averaged over s, µ bins returns the given correlation function. In case of ``pycorr.TwoPointEstimator``, the edges will be recovered automatically. Unwrapped estimators (µ from -1 to 1) are preferred, because symmetry allows to fix some issues.
         In the sequence format:
 
-            - s_values must be a 1D array of reference separation (s) values for the table of length N;
-            - mu_values must be a 1D array of reference µ values (covering the range from 0 to 1) for the table of length M;
+            - s_values must be a 1D array of reference separation (s) values for the table, of length N;
+            - mu_values must be a 1D array of reference µ values (covering the range from 0 to 1) for the table, of length M;
             - xi_values must be an array of correlation function values at those s, µ values of shape (N, M);
             - s_edges, if given, must be a 1D array of separation bin edges of length N+1. The bins must come close to zero separation (say start at ``s <= 0.01``).
+        
+        The sequence containing 3 elements should be used for theoretical models evaluated at a grid of s, mu values.
+        The 4-element format should be used for bin-averaged estimates.
 
     xi_table_12 : None or the same format as ``xi_table_11``
         Table of the two tracer's cross-correlation function in separation (s) and µ bins.
@@ -149,13 +153,17 @@ def run_cov(mode: str,
         Required for multi-tracer functionality.
     
     xi_cut_s : float
-        (Optional) separation value beyond which the correlation function is assumed to be zero for the covariance matrix integrals.
+        (Optional) separation value beyond which the correlation function is assumed to be zero for the covariance matrix integrals. Default: 250.
         Between the maximum separation from ``xi_table``s and ``xi_cut_s``, the correlation function is extrapolated as :math:`\propto s^{-4}`.
+    
+    xi_refinement_iterations : integer
+        (Optional) number of iterations in the correlation function refinement procedure for interpolation inside the code, ensuring that the bin-averaged interpolated values match the binned correlation function estimates. Default: 10.
+        Important: the refinement procedure is disabled completely regardless of this setting if the ``xi_table``\s are sequences of 3 elements, since they are presumed to be a theoretical model evaluated at a grid of s, mu values and not bin averages.
 
     nthread : integer
         Number of hyperthreads to use.
         Can not utilize more threads than ``n_loops``.
-        IMPORTANT: AVOID multi-threading in the Python process calling this function (e.g. at NERSC this would mean not setting `OMP_*` and other `*_THREADS` environment variables; the code should be able to set them by itself). Otherwise the code may run effectively single-threaded. If you need multi-threaded calculations, run them separately or spawn sub-processes.
+        IMPORTANT: AVOID multi-threading in the Python process calling this function (e.g. at NERSC this would mean not setting `OMP_*` and other `*_THREADS` environment variables; the code should be able to set them by itself). Otherwise the code may run effectively single-threaded. If you need other multi-threaded calculations, run them separately or spawn sub-processes.
     
     N2 : integer
         Number of secondary points to sample per each primary random point.
@@ -185,15 +193,17 @@ def run_cov(mode: str,
     out_dir : string
         Directory for important outputs.
         Moderate disk space required (up to a few hundred megabytes), but increases with covariance matrix size and number of samples (see above).
+        Avoid ".." in this path because it makes os.makedirs() "confused".
 
     tmp_dir : string
         Directory for temporary files. Contents can be deleted after the code has run, but this will not be done automatically.
         More disk space required - needs to store all the input arrays in the current implementation.
+        Avoid ".." in this path because it makes os.makedirs() "confused".
 
-    skip_s_bins : int
+    skip_s_bins : integer
         (Optional) number of lowest separations bins to skip at the post-processing stage. Those tend to converge worse and probably will not be precise due to the limitations of the formalism. Default 0 (no skipping).
 
-    skip_l : int
+    skip_l : integer
         (Only for the Legendre modes; optional) number of highest (even) multipoles to skip at the post-processing stage. Those tend to converge worse. Default 0 (no skipping).
 
     shot_noise_rescaling1 : float
@@ -204,13 +214,13 @@ def run_cov(mode: str,
         (Optional) shot-noise rescaling value for the second tracer if known beforehand. Default 1 (no rescaling).
         Will be ignored in jackknife mode - then shot-noise rescaling is optimized on the auto-covariance.
 
-    sampling_grid_size : int
+    sampling_grid_size : integer
         (Optional) first guess for the sampling grid size.
         The code should be able to find a suitable number automatically.
 
     coordinate_scaling : float
         (Optional) scaling factor for all the Cartesian coordinates. Default 1 (no rescaling).
-        This option is supported by the C++ code, but its use cases are unclear.
+        This option is supported by the C++ code, but its use cases are not very clear.
 
     seed : integer or None
         (Optional) If given as an integer, allows to reproduce the results with the same settings, except the number of threads.
@@ -224,9 +234,9 @@ def run_cov(mode: str,
     Returns
     -------
     post_processing_results : dict[str, np.ndarray[float]]
-        Post-processing results as a dictionary with string keys and Numpy array values. All this information is also saved in a Rescaled_Covariance_Matrices*.npz file in the output directory.
-        Selected common keys are: "full_theory_covariance" for the final covariance matrix and "shot_noise_rescaling" for the shot-noise rescaling value(s).
-        There will also be a Raw_Covariance_Matices*.npz file in the output directory (as long as the C++ code has run without errors), which can be post-processed separately in a different way.
+        Post-processing results as a dictionary with string keys and Numpy array values. All this information is also saved in a ``Rescaled_Covariance_Matrices*.npz`` file in the output directory.
+        Selected common keys are: ``"full_theory_covariance"`` for the final covariance matrix and ``"shot_noise_rescaling"`` for the shot-noise rescaling value(s).
+        There will also be a ``Raw_Covariance_Matices*.npz`` file in the output directory (as long as the C++ code has run without errors), which can be post-processed separately in a different way.
     """
 
     if mode not in ("s_mu", "legendre_accumulated", "legendre_projected"): raise ValueError("Given mode not supported")
@@ -348,36 +358,41 @@ def run_cov(mode: str,
     all_xi = (xi_table_11, xi_table_12, xi_table_22)
     xi_s_edges = None
     xi_n_mu_bins = None
-    rescale_xi = False
+    refine_xi = False
     for c, xi in enumerate(all_xi[:ncorr]):
+        if c > 0:
+            if type(xi) != type(all_xi[0]): raise TypeError(f"xi_table_{indices_corr[c]} must have the same type as xi_table_11")
+            if len(xi) != len(all_xi[0]): raise ValueError(f"xi_table_{indices_corr[c]} must have the same structure as xi_table_11")
         if isinstance(xi, pycorr.twopoint_estimator.BaseTwoPointEstimator):
+            refine_xi = True
             if xi.edges[1][0] < 0:
                 xi = fix_bad_bins_pycorr(xi)
                 print_and_log(f"Wrapping xi_table_{indices_corr[c]} to µ>=0")
                 xi = xi.wrap()
-            if c == 0: xi_n_mu_bins = xi.shape[1]
+            if c == 0:
+                xi_n_mu_bins = xi.shape[1]
+                xi_s_edges = xi.edges[0]
+            elif not np.allclose(xi_s_edges, xi.edges[0]): raise ValueError("Different binning for different correlation functions not supported")
             if not np.allclose(xi.edges[1], np.linspace(0, 1, xi_n_mu_bins + 1)): raise ValueError(f"xi_table_{indices_corr[c]} µ binning is not consistent with linear between 0 and 1 (after wrapping)")
             write_xi_file(cornames[c], xi.sepavg(axis = 0), xi.sepavg(axis = 1), get_input_xi_from_pycorr(xi))
-            if xi_s_edges is None: xi_s_edges = xi.edges[0]
-            elif not np.allclose(xi_s_edges, xi.edges[0]): raise ValueError("Different binning for different correlation functions not supported")
-            rescale_xi = True
         elif isinstance(xi, tuple) or isinstance(xi, list):
             if len(xi) == 4: # the last element is the edges
-                if xi_s_edges is None: xi_s_edges = xi[-1]
+                refine_xi = True
+                if c == 0: xi_s_edges = xi[-1]
                 elif not np.allclose(xi_s_edges, xi[-1]): raise ValueError("Different binning for different correlation functions not supported")
-                rescale_xi = True
                 xi = xi[:-1]
-            if len(xi) != 3: raise ValueError(f"xi_table {indices_corr[c]} must have 3 or 4 elements if a tuple")
+            if len(xi) != 3: raise ValueError(f"xi_table {indices_corr[c]} must have 3 or 4 elements if a tuple/list")
             r_vals, mu_vals, xi_vals = xi
             if len(xi_vals) != len(r_vals): raise ValueError(f"xi_values {indices_corr[c]} must have the same number of rows as r_values")
             if len(xi_vals[0]) != len(mu_vals): raise ValueError(f"xi_values {indices_corr[c]} must have the same number of columns as mu_values")
-            if c == 0: xi_n_mu_bins = len(mu_vals)
+            if c == 0:
+                xi_n_mu_bins = len(mu_vals)
+                if not refine_xi:
+                    xi_s_edges = (r_vals[:-1] + r_vals[1:]) / 2 # middle values as midpoints of r_vals to be safe
+                    xi_s_edges = [1e-4] + xi_s_edges + [2 * r_vals[-1] - xi_s_edges[-1]] # set the lowest edge near 0 and the highest beyond the last point of r_vals
             write_xi_file(cornames[c], r_vals, mu_vals, xi_vals)
-            if not rescale_xi:
-                xi_s_edges = (r_vals[:-1] + r_vals[1:]) / 2 # middle values as midpoints of r_vals to be safe
-                xi_s_edges = [1e-4] + xi_s_edges + [2 * r_vals[-1] - xi_s_edges[-1]] # set the lowest edge near 0 and the highest beyond the last point of r_vals
-        else: raise TypeError(f"Xi table {indices_corr[c]} must be either a pycorr.TwoPointEstimator or a tuple")
-    xi_refinement_loops = 10 * rescale_xi # set number of xi refinement loops; 0 if rescale_xi = False would mean no rescaling as desired
+        else: raise TypeError(f"Xi table {indices_corr[c]} must be either a pycorr.TwoPointEstimator or a tuple/list")
+    xi_refinement_iterations *= refine_xi # True is 1; False is 0 => 0 iterations => no refinement
     
     # write the randoms file(s)
     randoms_positions = [randoms_positions1, randoms_positions2]
@@ -385,6 +400,7 @@ def run_cov(mode: str,
     randoms_samples = (randoms_samples1, randoms_samples2)
     for t, input_filename in enumerate(input_filenames):
         randoms_properties = pycorr.twopoint_counter._format_positions(randoms_positions[t], mode = "smu", position_type = position_type, dtype = np.float64) # list of x, y, z coordinate arrays; weights (and jackknife region numbers if any) will be appended
+        if legendre_orig: randoms_positions[t] = np.array(randoms_properties) # save the formatted positions as an array for correction function computation
         nrandoms = len(randoms_properties[0])
         if randoms_weights[t].ndim != 1: raise ValueError(f"Weights of randoms {t+1} not contained in a 1D array")
         if len(randoms_weights[t]) != nrandoms: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
@@ -395,6 +411,7 @@ def run_cov(mode: str,
             if len(randoms_samples[t]) != nrandoms: raise ValueError(f"Number of sample labels for randoms {t+1} mismatches the number of positions")
             randoms_properties.append(randoms_samples[t])
         np.savetxt(input_filename, np.column_stack(randoms_properties))
+        randoms_properties = None
 
     # write the binning files
     binfile = os.path.join(out_dir, "radial_binning_cov.csv")
@@ -410,7 +427,7 @@ def run_cov(mode: str,
 
     # form the command line
     command = "env OMP_PROC_BIND=spread OMP_PLACES=threads " # set OMP environment variables, should not be set before
-    command += f"{exec_path} -output {out_dir}/ -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_loops}" # here are universally acceptable parameters
+    command += f"{exec_path} -output {out_dir}/ -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_iterations}" # here are universally acceptable parameters
     command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
     command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
     command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
@@ -431,13 +448,14 @@ def run_cov(mode: str,
         print_and_log(datetime.now())
         print_and_log(f"Computing the correction function")
         if ntracers == 1:
-            compute_correction_function(input_filenames[0], binfile, out_dir, periodic, binned_pair_names[0], print_and_log)
+            compute_correction_function(randoms_positions[0], randoms_weights[0], binfile, out_dir, periodic, binned_pair_names[0], print_and_log)
         elif ntracers == 2:
-            compute_correction_function_multi(*input_filenames, binfile, out_dir, periodic, *binned_pair_names, print_function = print_and_log)
+            compute_correction_function_multi(randoms_positions[0], randoms_weights[0], randoms_positions[1], randoms_weights[1], binfile, out_dir, periodic, *binned_pair_names, print_function = print_and_log)
         command += "".join([f" -phi_file{suffixes_corr[c]} {phi_names[c]}" for c in range(ncorr)])
 
     # deal with the seed
     if seed is not None: # need to pass to the C++ code and make sure it can be received properly
+        if not isinstance(seed, int): raise TypeError("Seed must be int or None")
         seed &= 2**32 - 1 # this bitwise AND truncates the seed into a 32-bit unsigned (positive) integer (definitely a subset of unsigned long)
         command += f" -seed {seed}"
     
@@ -449,6 +467,12 @@ def run_cov(mode: str,
     # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
     # without pipefail, the exit_code would be of tee, not reflecting main command failures
     # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
+
+    # clean up
+    for input_filename in input_filenames: os.remove(input_filename) # delete the larger (temporary) input files
+    rmdir_if_exists_and_empty(tmp_dir) # safely remove the temporary directory
+
+    # check the run status
     exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
     if exit_code: raise RuntimeError(f"The C++ code terminated with an error: exit code {exit_code}")
     print_and_log("The C++ code finished succesfully")
@@ -458,27 +482,27 @@ def run_cov(mode: str,
     print_and_log("Starting post-processing")
     if two_tracers:
         if legendre:
-            from .post_process.legendre_multi import post_process_legendre_multi
+            from .post_process import post_process_legendre_multi
             results = post_process_legendre_multi(out_dir, n_r_bins, max_l, out_dir, shot_noise_rescaling1, shot_noise_rescaling2, skip_s_bins, skip_l, print_function = print_and_log)
         elif jackknife:
-            from .post_process.jackknife_multi import post_process_jackknife_multi
+            from .post_process import post_process_jackknife_multi
             results = post_process_jackknife_multi(*xi_jack_names, os.path.dirname(jackknife_weights_names[0]), out_dir, n_mu_bins, out_dir, skip_s_bins, print_function = print_and_log)
         else: # default
-            from .post_process.default_multi import post_process_default_multi
+            from .post_process import post_process_default_multi
             results = post_process_default_multi(out_dir, n_r_bins, n_mu_bins, out_dir, shot_noise_rescaling1, shot_noise_rescaling2, skip_s_bins, print_function = print_and_log)
     else:
         if legendre:
             if jackknife:
-                from .post_process.legendre_mix_jackknife import post_process_legendre_mix_jackknife
+                from .post_process import post_process_legendre_mix_jackknife
                 results = post_process_legendre_mix_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), out_dir, n_mu_bins, max_l, out_dir, skip_s_bins, skip_l, print_function = print_and_log)
             else:
-                from .post_process.legendre import post_process_legendre
+                from .post_process import post_process_legendre
                 results = post_process_legendre(out_dir, n_r_bins, max_l, out_dir, shot_noise_rescaling1, skip_s_bins, skip_l, print_function = print_and_log)
         elif jackknife:
-            from .post_process.jackknife import post_process_jackknife
+            from .post_process import post_process_jackknife
             results = post_process_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), out_dir, n_mu_bins, out_dir, skip_s_bins, print_function = print_and_log)
         else: # default
-            from .post_process.default import post_process_default
+            from .post_process import post_process_default
             results = post_process_default(out_dir, n_r_bins, n_mu_bins, out_dir, shot_noise_rescaling1, skip_s_bins, print_function = print_and_log)
 
     print_and_log("Finished post-processing")
