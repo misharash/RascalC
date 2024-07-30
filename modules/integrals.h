@@ -16,7 +16,7 @@
 class Integrals{
 private:
     CorrelationFunction *cf12, *cf13, *cf24;
-    int nbin, mbin, no_bins, size2;
+    int nbin, mbin, no_bins, size2, no_bins_r_mu;
     Float rmin,rmax,mumin,mumax,dmu; //Ranges in r and mu
     Float *r_high, *r_low; // Max and min of each radial bin
 #ifndef LEGENDRE_MIX
@@ -27,10 +27,8 @@ private:
 #ifdef JACKKNIFE
     int n_jack;
     Float *c2j, *c3j, *c4j; // Arrays to accumulate jackknife integrals
-#ifndef LEGENDRE_MIX
     Float *EEaA1, *EEaA2; // Array to accumulate the two-independent xi-weighted pair counts
     Float *RRaA1, *RRaA2; // Array to accumulate the two-independent pair count estimates
-#endif
     Float *product_weights12_12, *product_weights12_23, *product_weights12_34; // arrays to get products of jackknife weights to avoid recomputation
 #endif
 #ifdef LEGENDRE_MIX
@@ -78,6 +76,7 @@ public:
         no_bins = mbin * nbin; // number of bins for covariance
         size2 = no_bins; // 2-pt matrices are diagonal, store as 1-dimensional
         #endif
+        no_bins_r_mu = mbin * nbin; // number of bins for disconnected term parts
         out_file = par->out_file; // output directory
 
         int ec=0;
@@ -97,12 +96,10 @@ public:
         ec+=posix_memalign((void **) &c3j, PAGE, sizeof(double)*no_bins*no_bins);
         ec+=posix_memalign((void **) &c4j, PAGE, sizeof(double)*no_bins*no_bins);
 
-#ifndef LEGENDRE_MIX
-        ec+=posix_memalign((void **) &EEaA1, PAGE, sizeof(double)*no_bins*n_jack);
-        ec+=posix_memalign((void **) &EEaA2, PAGE, sizeof(double)*no_bins*n_jack);
-        ec+=posix_memalign((void **) &RRaA1, PAGE, sizeof(double)*no_bins*n_jack);
-        ec+=posix_memalign((void **) &RRaA2, PAGE, sizeof(double)*no_bins*n_jack);
-#endif
+        ec+=posix_memalign((void **) &EEaA1, PAGE, sizeof(double)*no_bins_r_mu*n_jack);
+        ec+=posix_memalign((void **) &EEaA2, PAGE, sizeof(double)*no_bins_r_mu*n_jack);
+        ec+=posix_memalign((void **) &RRaA1, PAGE, sizeof(double)*no_bins_r_mu*n_jack);
+        ec+=posix_memalign((void **) &RRaA2, PAGE, sizeof(double)*no_bins_r_mu*n_jack);
 #endif
 
         assert(ec==0);
@@ -138,12 +135,10 @@ public:
         free(c2j);
         free(c3j);
         free(c4j);
-#ifndef LEGENDRE_MIX
         free(EEaA1);
         free(EEaA2);
         free(RRaA1);
         free(RRaA2);
-#endif
 #endif
     }
 
@@ -168,8 +163,8 @@ public:
             c4j[j]=0;
 #endif
         }
-#if (defined JACKKNIFE && !defined LEGENDRE_MIX)
-        for (int j = 0; j < no_bins*n_jack; j++) {
+#ifdef JACKKNIFE
+        for (int j = 0; j < no_bins_r_mu*n_jack; j++) {
             EEaA1[j] = 0;
             EEaA2[j] = 0;
             RRaA1[j] = 0;
@@ -201,9 +196,7 @@ public:
         int tmp_bin;
 #ifdef JACKKNIFE
         Float c2vj,JK_weight;
-#ifndef LEGENDRE_MIX
         int jk_bin_i, jk_bin_j;
-#endif
 #endif
         for(int i=0;i<pln;i++){ // Iterate over particle in pi_list
                 if((prim_ids[i]==pj_id)&&(I1==I2)){
@@ -215,7 +208,7 @@ public:
                 cleanup_l(pi.pos,pj.pos,rij_mag,rij_mu); // define |r_ij| and ang(r_ij)
                 tmp_bin = getbin(rij_mag, rij_mu); // define i-j s,mu bin
 
-                if ((tmp_bin<  0) || (tmp_bin >= mbin*nbin)){
+                if ((tmp_bin<  0) || (tmp_bin >= no_bins_r_mu)){
                     wij[i]=-1;
                     continue;
                 }
@@ -266,11 +259,14 @@ public:
 #ifdef JACKKNIFE
                 c2vj = c2v*JK_weight;
                 c2j[tmp_bin]+=c2vj;
+#endif
+#endif
+#ifdef JACKKNIFE
                 // Now add EEaA bin counts:
                 // If both in random set-0
                 if ((pi.rand_class==0)&&(pj.rand_class==0)){
-                    jk_bin_i = int(pi.JK)*no_bins+tmp_bin; // EEaA bin for i particle
-                    jk_bin_j = int(pj.JK)*no_bins+tmp_bin; // EEaA bin for j particle
+                    jk_bin_i = int(pi.JK)*no_bins_r_mu+tmp_bin; // EEaA bin for i particle
+                    jk_bin_j = int(pj.JK)*no_bins_r_mu+tmp_bin; // EEaA bin for j particle
                     EEaA1[jk_bin_i]+=tmp_weight/prob1*tmp_xi/2.; // add half contribution to each jackknife
                     EEaA1[jk_bin_j]+=tmp_weight/prob1*tmp_xi/2.;
                     RRaA1[jk_bin_i]+=tmp_weight/prob1/2;
@@ -278,14 +274,13 @@ public:
                 }
                 // If both in random set-1
                 if((pi.rand_class==1)&&(pj.rand_class==1)){
-                    jk_bin_i = int(pi.JK)*no_bins+tmp_bin; // EEaA bin for i particle
-                    jk_bin_j = int(pj.JK)*no_bins+tmp_bin; // EEaA bin for j particle
+                    jk_bin_i = int(pi.JK)*no_bins_r_mu+tmp_bin; // EEaA bin for i particle
+                    jk_bin_j = int(pj.JK)*no_bins_r_mu+tmp_bin; // EEaA bin for j particle
                     EEaA2[jk_bin_i]+=tmp_weight/prob2*tmp_xi/2; // add half contribution to each jackknife
                     EEaA2[jk_bin_j]+=tmp_weight/prob2*tmp_xi/2;
                     RRaA2[jk_bin_i]+=tmp_weight/prob2/2;
                     RRaA2[jk_bin_j]+=tmp_weight/prob2/2;
                 }
-#endif
 #endif
         }
     }
@@ -511,14 +506,12 @@ public:
 #endif
             }
         }
-#if (defined JACKKNIFE && !defined LEGENDRE_MIX)
-        for(int i=0;i<n_jack;i++){
-            for (int j = 0 ; j < no_bins; j++) {
-                EEaA1[i*no_bins+j]+=ints->EEaA1[i*no_bins+j];
-                EEaA2[i*no_bins+j]+=ints->EEaA2[i*no_bins+j];
-                RRaA1[i*no_bins+j]+=ints->RRaA1[i*no_bins+j];
-                RRaA2[i*no_bins+j]+=ints->RRaA2[i*no_bins+j];
-            }
+#ifdef JACKKNIFE
+        for (int j = 0 ; j < no_bins_r_mu * n_jack; j++) {
+            EEaA1[j] += ints->EEaA1[j];
+            EEaA2[j] += ints->EEaA2[j];
+            RRaA1[j] += ints->RRaA1[j];
+            RRaA2[j] += ints->RRaA2[j];
         }
 #endif
     }
@@ -600,16 +593,14 @@ public:
         double corrf2 = norm1*norm2; // correction factor for densities of random points
         double corrf3 = corrf2*norm3;
         double corrf4 = corrf3*norm4;;
-#if (defined JACKKNIFE && !defined LEGENDRE_MIX)
-        for (int i = 0; i < n_jack; i++) {
-            for (int j = 0; j < no_bins; j++) {
-                // We get 1/4 of total pair counts in each EE bin
-                EEaA1[i*no_bins+j] /= (n_pairs*0.25);
-                EEaA2[i*no_bins+j] /= (n_pairs*0.25);
-                // removed correction factor for EEaA since in jackknife post-processing no correction factor is applied to RR
-                RRaA1[i*no_bins+j] /= (n_pairs*corrf2*0.25);
-                RRaA2[i*no_bins+j] /= (n_pairs*corrf2*0.25);
-            }
+#ifdef JACKKNIFE
+        for (int j = 0; j < no_bins_r_mu * n_jack; j++) {
+            // We get 1/4 of total pair counts in each EE bin
+            EEaA1[j] /= (n_pairs*0.25);
+            EEaA2[j] /= (n_pairs*0.25);
+            // removed correction factor for EEaA since in jackknife post-processing no correction factor is applied to RR
+            RRaA1[j] /= (n_pairs*corrf2*0.25);
+            RRaA2[j] /= (n_pairs*corrf2*0.25);
         }
 #endif
         for (int i = 0; i < size2; i++) {
@@ -787,19 +778,30 @@ public:
         FILE * C2File = fopen(c2name.c_str(), "w"); // for c2 part of integral
         FILE * C3File = fopen(c3name.c_str(), "w"); // for c3 part of integral
         FILE * C4File = fopen(c4name.c_str(), "w"); // for c4 part of integral
-#ifndef LEGENDRE_MIX
-        std::string RR1name = string_format("%sCovMatricesJack/RR1_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1,I2,suffix);
-        std::string RR2name = string_format("%sCovMatricesJack/RR2_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1,I2,suffix);
-        std::string EE1name = string_format("%sCovMatricesJack/EE1_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1,I2,suffix);
-        std::string EE2name = string_format("%sCovMatricesJack/EE2_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1,I2,suffix);
+
+#ifdef LEGENDRE_MIX
+        std::string RR1name = string_format("%sCovMatricesJack/RR1_n%d_l%d_%d%d_%s.txt", out_file, nbin, max_l, I1, I2, suffix);
+        std::string RR2name = string_format("%sCovMatricesJack/RR2_n%d_l%d_%d%d_%s.txt", out_file, nbin, max_l, I1, I2, suffix);
+        std::string EE1name = string_format("%sCovMatricesJack/EE1_n%d_l%d_%d%d_%s.txt", out_file, nbin, max_l, I1, I2, suffix);
+        std::string EE2name = string_format("%sCovMatricesJack/EE2_n%d_l%d_%d%d_%s.txt", out_file, nbin, max_l, I1, I2, suffix);
+        // in fact, mbin is more relevant to the saved disconnected term parts than max_l, but it would be cumbersome to store the results in files with different suffixes
+#else
+        std::string RR1name = string_format("%sCovMatricesJack/RR1_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1, I2, suffix);
+        std::string RR2name = string_format("%sCovMatricesJack/RR2_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1, I2, suffix);
+        std::string EE1name = string_format("%sCovMatricesJack/EE1_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1, I2, suffix);
+        std::string EE2name = string_format("%sCovMatricesJack/EE2_n%d_m%d_%d%d_%s.txt", out_file, nbin, mbin, I1, I2, suffix);
+#endif
         FILE * EE1File = fopen(EE1name.c_str(), "w"); // for EE1 integral
         FILE * EE2File = fopen(EE2name.c_str(), "w"); // for EE2 integral
         FILE * RR1File = fopen(RR1name.c_str(), "w"); // for RR1 integral
         FILE * RR2File = fopen(RR2name.c_str(), "w"); // for RR2 integral
+
+#ifndef LEGENDRE_MIX
         for (int j = 0; j < no_bins; j++) {
             fprintf(C2File,"%le\n",c2j[j]);
         }
 #endif
+
         for (int i = 0; i < no_bins; i++) {
             for (int j = 0; j < no_bins; j++) {
                 fprintf(C3File, "%le\t", c3j[i*no_bins+j]);
@@ -814,20 +816,18 @@ public:
             fprintf(C2File,"\n");
 #endif
         }
-#ifndef LEGENDRE_MIX
         for (int i = 0; i < n_jack; i++){
-            for (int j = 0; j < no_bins; j++) {
-                fprintf(EE1File, "%le\t", EEaA1[i*no_bins+j]);
-                fprintf(EE2File, "%le\t", EEaA2[i*no_bins+j]);
-                fprintf(RR1File, "%le\t", RRaA1[i*no_bins+j]);
-                fprintf(RR2File, "%le\t", RRaA2[i*no_bins+j]);
+            for (int j = 0; j < no_bins_r_mu; j++) {
+                fprintf(EE1File, "%le\t", EEaA1[i*no_bins_r_mu+j]);
+                fprintf(EE2File, "%le\t", EEaA2[i*no_bins_r_mu+j]);
+                fprintf(RR1File, "%le\t", RRaA1[i*no_bins_r_mu+j]);
+                fprintf(RR2File, "%le\t", RRaA2[i*no_bins_r_mu+j]);
             }
             fprintf(EE1File,"\n");
             fprintf(EE2File,"\n");
             fprintf(RR1File,"\n");
             fprintf(RR2File,"\n");
         }
-#endif
 
         fflush(NULL);
 
@@ -835,12 +835,11 @@ public:
         fclose(C2File);
         fclose(C3File);
         fclose(C4File);
-#ifndef LEGENDRE_MIX
+
         fclose(EE1File);
         fclose(EE2File);
         fclose(RR1File);
         fclose(RR2File);
-#endif
     }
 #endif
 
