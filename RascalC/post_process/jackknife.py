@@ -30,11 +30,11 @@ def load_disconnected_term_single(input_data: dict[str], cov_filter: np.ndarray[
         return compute_disconnected_term(*disconnected_arrays)
     
     if full: # 2D arrays
-        cx = get_disconnected_term(disconnected_arrays)
+        cx = get_disconnected_term(disconnected_arrays) # apparently this returns a numpy matrix, which then can not be reshaped into a 4D array
     else: # 3D array, need to loop over subsample index
-        cx = np.array(list(map(get_disconnected_term, np.moveaxis(disconnected_arrays, 1, 0))))
+        cx = list(map(get_disconnected_term, np.moveaxis(disconnected_arrays, 1, 0)))
         # the first axis is the array type, the next is for the subsamples, which we move up front to loop over
-    return symmetrized(cx)
+    return symmetrized(np.array(cx))
 
 
 def post_process_jackknife(jackknife_file: str, weight_dir: str, file_root: str, m: int, outdir: str, skip_r_bins: int = 0, tracer: int = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function = print) -> dict[str]:
