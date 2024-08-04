@@ -9,7 +9,7 @@ from ..raw_covariance_matrices import load_raw_covariances_legendre, Iterable
 from .jackknife import load_disconnected_term_single
 
 
-def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, file_root: str, m: int, max_l: int, outdir: str, skip_r_bins: int = 0, skip_l: int = 0, tracer: int = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function = print) -> dict[str]:
+def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, file_root: str, m: int, max_l: int, outdir: str, skip_r_bins: int = 0, skip_l: int = 0, tracer: int = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, load_disconnected_term: bool = False, print_function = print) -> dict[str]:
     # Load jackknife xi estimates from data
     print_function("Loading correlation function jackknife estimates from %s" % jackknife_file)
     xi_jack = np.loadtxt(jackknife_file, skiprows = 2)
@@ -64,21 +64,22 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
     c2j, c3j, c4j = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = True)
 
     # Load the full disconnected term if present
-    disconnected_loaded = False
-    import traceback
-    try:
-        cov_filter_disconnected = cov_filter_smu(n, m, skip_r_bins)
-        RR_file = os.path.join(weight_dir, f'binned_pair_counts_n{n}_m{m}_j{n_jack}_{tracer}{tracer}.dat')
-        RR = np.loadtxt(RR_file)
-        cjd = load_disconnected_term_single(input_file, cov_filter_disconnected, RR, weights, tracer, full = True) # in s,mu bins
-        cjd = cjd.reshape(n - skip_r_bins, m, n - skip_r_bins, m) # make the array 4D with [r_bin, mu_bin] indices for rows and columns
-        cjd = np.einsum("imjn,mp,nq->ipjq", cjd, mu_bin_legendre_factors, mu_bin_legendre_factors) # use mu bin Legendre factors to project mu bins into Legendre multipoles, staying within the same radial bins. The indices are now [r_bin, ell] for rows and columns
-        cjd = cjd.reshape(n_bins, n_bins) # convert the array back into 2D covariance matrix
-        c4j += cjd # add to the 4-point term - unaffected by rescaling
-        disconnected_loaded = True
-    except Exception:
-        warn("Could not load the full jackknife disconnected term. This is not critical, but if you think it should have been computed, check the errors below:")
-        traceback.print_exc()
+    if load_disconnected_term:
+        disconnected_loaded = False
+        import traceback
+        try:
+            cov_filter_disconnected = cov_filter_smu(n, m, skip_r_bins)
+            RR_file = os.path.join(weight_dir, f'binned_pair_counts_n{n}_m{m}_j{n_jack}_{tracer}{tracer}.dat')
+            RR = np.loadtxt(RR_file)
+            cjd = load_disconnected_term_single(input_file, cov_filter_disconnected, RR, weights, tracer, full = True) # in s,mu bins
+            cjd = cjd.reshape(n - skip_r_bins, m, n - skip_r_bins, m) # make the array 4D with [r_bin, mu_bin] indices for rows and columns
+            cjd = np.einsum("imjn,mp,nq->ipjq", cjd, mu_bin_legendre_factors, mu_bin_legendre_factors) # use mu bin Legendre factors to project mu bins into Legendre multipoles, staying within the same radial bins. The indices are now [r_bin, ell] for rows and columns
+            cjd = cjd.reshape(n_bins, n_bins) # convert the array back into 2D covariance matrix
+            c4j += cjd # add to the 4-point term - unaffected by rescaling
+            disconnected_loaded = True
+        except Exception:
+            warn("Could not load the full jackknife disconnected term. This is not critical, but if you think it should have been computed, check the errors below:")
+            traceback.print_exc()
 
     # Check matrix convergence
     check_eigval_convergence(c2j, c4j, "Jackknife")
@@ -87,16 +88,17 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
     c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full = False, jack = True)
 
     # Load the partial disconnected terms if present
-    try:
-        csd = load_disconnected_term_single(input_file, cov_filter_disconnected, RR, weights, tracer, full = False) # in s,mu bins
-        csd = csd.reshape(len(c4s), n - skip_r_bins, m, n - skip_r_bins, m) # make the array 3D with [r_bin, mu_bin] indices for rows and columns, and subsample index in front
-        csd = np.einsum("kimjn,mp,nq->kipjq", csd, mu_bin_legendre_factors, mu_bin_legendre_factors) # use mu bin Legendre factors to project mu bins into Legendre multipoles, staying within the same radial bins. The indices are now [r_bin, ell] for rows and columns. Additionally, the very first index is for the subsample.
-        csd = csd.reshape(len(c4s), n_bins, n_bins) # convert back into an array of 2D covariance matrices, with subsample index in front
-        c4s += csd # add to the 4-point term - unaffected by rescaling
-    except Exception:
-        if disconnected_loaded: # only warn if succeeded previously
-            warn("Could not load the partial jackknife disconnected terms. This is not critical, but if you think they should have been computed, check the errors below:")
-            traceback.print_exc()
+    if load_disconnected_term:
+        try:
+            csd = load_disconnected_term_single(input_file, cov_filter_disconnected, RR, weights, tracer, full = False) # in s,mu bins
+            csd = csd.reshape(len(c4s), n - skip_r_bins, m, n - skip_r_bins, m) # make the array 3D with [r_bin, mu_bin] indices for rows and columns, and subsample index in front
+            csd = np.einsum("kimjn,mp,nq->kipjq", csd, mu_bin_legendre_factors, mu_bin_legendre_factors) # use mu bin Legendre factors to project mu bins into Legendre multipoles, staying within the same radial bins. The indices are now [r_bin, ell] for rows and columns. Additionally, the very first index is for the subsample.
+            csd = csd.reshape(len(c4s), n_bins, n_bins) # convert back into an array of 2D covariance matrices, with subsample index in front
+            c4s += csd # add to the 4-point term - unaffected by rescaling
+        except Exception:
+            if disconnected_loaded: # only warn if succeeded previously
+                warn("Could not load the partial jackknife disconnected terms. This is not critical, but if you think they should have been computed, check the errors below:")
+                traceback.print_exc()
 
     # Now optimize for shot-noise rescaling parameter alpha
     print_function("Optimizing for the shot-noise rescaling parameter")
