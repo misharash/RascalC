@@ -130,7 +130,6 @@
 
             // Define relevant random draw classes:
             RandomDraws *rd13 = which_rd(all_rd,I1,I3);
-            RandomDraws *rd24 = which_rd(all_rd,I2,I4);
 
 #ifdef POWER
             // Define relevant survey correction factor
@@ -255,11 +254,11 @@
 #ifdef OPENMP
 
 #if (defined LEGENDRE || defined POWER)
-    #pragma omp parallel firstprivate(seed_step,seed_shift,par,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outint,completed_loops,used_pairs_per_sample,used_triples_per_sample,used_quads_per_sample,TotalTime,LoopTimes,gsl_rng_default,rd13,rd24) reduction(+:cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(seed_step,seed_shift,par,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outint,completed_loops,used_pairs_per_sample,used_triples_per_sample,used_quads_per_sample,TotalTime,LoopTimes,gsl_rng_default,rd13) reduction(+:cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
 #elif defined JACKKNIFE
-    #pragma omp parallel firstprivate(seed_step,seed_shift,par,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outint,completed_loops,used_triples_per_sample,used_quads_per_sample,TotalTime,LoopTimes,gsl_rng_default,rd13,rd24,JK12,JK23,JK34,product_weights12_12,product_weights12_23,product_weights12_34) reduction(+:cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(seed_step,seed_shift,par,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outint,completed_loops,used_triples_per_sample,used_quads_per_sample,TotalTime,LoopTimes,gsl_rng_default,rd13,JK12,JK23,JK34,product_weights12_12,product_weights12_23,product_weights12_34) reduction(+:cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
 #else
-    #pragma omp parallel firstprivate(seed_step,seed_shift,par,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outint,completed_loops,used_triples_per_sample,used_quads_per_sample,TotalTime,LoopTimes,gsl_rng_default,rd13,rd24,JK12,JK23,JK34) reduction(+:cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(seed_step,seed_shift,par,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,outint,completed_loops,used_triples_per_sample,used_quads_per_sample,TotalTime,LoopTimes,gsl_rng_default,rd13,JK12,JK23,JK34) reduction(+:cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
 #endif
             { // start parallel loop
             // Decide which thread we are in
@@ -367,13 +366,13 @@
                     for (int n2=0; n2<par->N2; n2++){
                         cell_attempt2+=1; // new cell attempted
 
-                        // Draw second cell from i weighted by 1/r^2
+                        // Draw second cell relative to i (first) cell weighted by 1/r^2
                         delta2 = rd13->random_cubedraw(locrng, &p2); // can use any rd class here since drawing as 1/r^2
                         // p2 is the ratio of sampling to true pair distribution here
                         sec_id = prim_id + delta2;
                         cell_sep2 = grid2->cell_sep(delta2);
                         x = draw_particle(sec_id, particle_j, pid_j, cell_sep2, grid2, sln, locrng, sln1, sln2);
-                        if (x==1) continue; // skip failed draws
+                        if (x) continue; // skip failed draws (nonzero return code)
 
                         used_cell2+=1; // new cell accepted
 
@@ -398,12 +397,12 @@
                         for (int n3=0; n3<par->N3; n3++){
                             cell_attempt3+=1; // new third cell attempted
 
-                            // Draw third cell from i weighted by xi(r)
+                            // Draw third cell relative to i (first) cell weighted by xi(r)
                             delta3 = rd13->random_xidraw(locrng, &p3); // use 1-3 random draw class here for xi_13
                             thi_id = prim_id + delta3;
                             cell_sep3 = grid3->cell_sep(delta3);
-                            x = draw_particle_without_class(thi_id,particle_k,pid_k,cell_sep3,grid3,tln,locrng); // draw from third grid
-                            if (x==1) continue; // skip failed draws
+                            x = draw_particle_without_class(thi_id, particle_k, pid_k, cell_sep3, grid3, tln, locrng); // draw from third grid
+                            if (x) continue; // skip failed draws (nonzero return code)
                             if ((pid_j==pid_k) && (I2==I3)) continue; // skip jk self-counts
 
                             used_cell3+=1; // new third cell used
@@ -423,10 +422,11 @@
                             for (int n4=0; n4<par->N4; n4++){
                                 cell_attempt4+=1; // new fourth cell attempted
 
-                                // Draw fourth cell from j cell weighted by xi_24(r)
-                                delta4 = rd24->random_xidraw(locrng,&p4);
-                                x = draw_particle_without_class(sec_id+delta4,particle_l,pid_l,cell_sep2+grid4->cell_sep(delta4),grid4,fln,locrng); // draw from 4th grid
-                                if (x==1) continue; // skip failed draws
+                                // Draw fourth cell relative to k (third) cell weighted by 1/r^2
+                                // Could also draw it relative to j (second) cell weighted by xi_24(r), but thia seems less efficient because the xi range is typically longer (par.xicutoff > par.rmax)
+                                delta4 = rd13->random_cubedraw(locrng, &p4); // can use any rd class here since drawing as 1/r^2
+                                x = draw_particle_without_class(thi_id + delta4, particle_l, pid_l, cell_sep3 + grid4->cell_sep(delta4), grid4, fln, locrng); // draw from 4th grid
+                                if (x) continue; // skip failed draws (nonzero return code)
                                 if (((pid_l==pid_j) && (I4==I2)) || ((pid_l==pid_k) && (I4==I3))) continue; // skip jl and kl self-counts
 
                                 used_cell4+=1; // new fourth cell used
