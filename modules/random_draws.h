@@ -69,7 +69,8 @@ public:
         // Define grid of nside up to the maximum xi cut-off scale (as a cubic grid)
         Float box_max = fmax(fmax(par->rect_boxsize.x,par->rect_boxsize.y),par->rect_boxsize.z);
         boxside=box_max/par->nside;
-        nside=2*ceil(par->xicutoff/boxside)+1;
+        nside=2*ceil(par->xicutoff/boxside)+1; // if we consider the central cell as 0, then any cell with any coordinate >ceil(xicutoff/boxside) in absolute value will have xi=0 everywhere inside it and thus no xi-based weight.
+		// also, the interparticle distance can't exceed xicutoff - see the maxsep reasoning below
 
 		// If precalculated grid has been saved, load it
 		if (par->loadname!=NULL&&(xin==NULL||np==0)){
@@ -129,7 +130,7 @@ public:
         // we need greater separations for the 3PCF since these are sometimes used as xi legs as well as radial legs
 		int maxsep = ceil(fmax(2*par->rmax,par->xicutoff)/boxside);
 #else
-        int maxsep = ceil(2*par->rmax/boxside);
+        int maxsep = ceil(par->rmax/boxside); // for 2PCF covariance, this is only used for the radial ("visible" separation) leg. the distance between particles in cells must fit in one of the bins, i.e. be less than rmax, otherwise the configuration does not contribute to covariance. given that, the max shift between cells along any coordinate is achieved when one particle is near the edge of the central cell (index 0). then the farthest cell a sphere of radius rmax intersects has index ceil(rmax/boxside) in absolute value, which we take as maxsep.
 #endif
 		nsidecube = 2 * maxsep + 1;
 		long nn=0;
