@@ -154,13 +154,11 @@ void compute_bounding_box(Particle **p, int* np, int no_fields, Float3 &rect_box
         // Probably using a cube of inputs, intended for a periodic box. Not surely, because the condition above is too simple and weak.
         // Known issue: the range condition is exactly true for an octant of a spherical shell bounded by xy, yz, zx planes, whereas this shape is obviously not a cube. May be worth developing an additional condition to exclude this case, but one might just bear with the warnings.
 #ifndef PERIODIC
-    	fprintf(stderr, "#\n# WARNING: input particles might be from a cubic periodic box but the code is not in the PERIODIC mode.\n#\n");
     	printf("#\n# WARNING: input particles might be from a cubic periodic box but the code is not in the PERIODIC mode.\n#\n");
 #endif
     } else {
         // Probably a non-periodic input (e.g. a real dataset)
 #ifdef PERIODIC
-    	fprintf(stderr, "#\n# WARNING: input particles might not fill a cube, and the code is in PERIODIC mode which does not support generic cuboid boxes!\n#\n");
     	printf("#\n# WARNING: input particles might not fill a cube, and the code is in PERIODIC mode which does not support generic cuboid boxes!\n#\n");
 #endif
     }
@@ -170,7 +168,6 @@ void compute_bounding_box(Particle **p, int* np, int no_fields, Float3 &rect_box
     // Periodic input, cubic box only
     if(biggest >= rect_boxsize.x) {
         printf("#\n# WARNING: Box periodicity is smaller than the coordinate range; particles will overlap on periodic wrapping!");
-        fprintf(stderr, "#\n# WARNING: Box periodicity is smaller than the coordinate range; particles will overlap on periodic wrapping!");
     }
     biggest = rect_boxsize.x; // just use the input boxsize
     // Set boxsize to be the biggest dimension which allows for periodic overlap
@@ -179,9 +176,10 @@ void compute_bounding_box(Particle **p, int* np, int no_fields, Float3 &rect_box
     printf("# Periodic box size is set to {%6.2f, %6.2f, %6.2f}\n", rect_boxsize.x, rect_boxsize.y, rect_boxsize.z);
 #else
     // Non-periodic input, generic cuboid box allowed
-    cellsize = biggest / nside; // compute the width of each cell
+    Float const safety_factor = 1. + 1. / 4096.; // the box size and accordingly the cell size will be multiplied by this to avoid out-of-bounds problems due to rounding errors. This was chosen as a neat binary number, and 1/4096 increase is roughly 2.4x10^-4, which is small but much larger than even single-precision machine epsilon (which is roughly 1.2x10^-7 due to 23 bits for fraction; 1 + 1/4096 differs from 1 in the 12th bit; double-precision numbers have 53 bits)
+    cellsize = safety_factor * biggest / nside; // compute the side of each cell
     // Now compute the size of the box in every dimension
-    rect_boxsize = ceil3(prange / cellsize) * cellsize; // to ensure we fit an integer number of cells in each direction
+    rect_boxsize = ceil3(safety_factor / cellsize * prange) * cellsize; // to ensure we fit an integer number of cells in each direction
     printf("# Setting non-periodic box size to {%6.2f, %6.2f, %6.2f}\n", rect_boxsize.x, rect_boxsize.y, rect_boxsize.z);
 #endif
 }

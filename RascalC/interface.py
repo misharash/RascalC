@@ -1,4 +1,9 @@
-"""Implements an interface to estimate the covariance of 2-point correlation function."""
+"""
+Python wrapper of ``RascalC``, heavily interfaced with ``pycorr`` `library for 2-point correlation function estimation <https://github.com/cosmodesi/pycorr>`_.
+Many of the arguments are intentionally similar to ``pycorr.TwoPointCorrelationFunction`` `high-level interface <https://py2pcf.readthedocs.io/en/latest/api/api.html#pycorr.correlation_function.TwoPointCorrelationFunction>`_.
+
+Please bear with the long description; you can pay less attention to settings labeled optional in the beginning.
+"""
 
 import pycorr
 import numpy as np
@@ -64,7 +69,7 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     boxsize : None or float
         Periodic box side (one number — so far, only cubic boxes are supported).
         All the coordinates need to be between 0 and ``boxsize``.
-        If None (default), assumed aperiodic.
+        If None (default) or 0, assumed aperiodic.
 
     position_type : string, default="pos"
         Type of input positions, one of:
@@ -236,6 +241,7 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     coordinate_scaling : float
         (Optional) scaling factor for all the Cartesian coordinates. Default 1 (no rescaling).
         This option is supported by the C++ code, but its use cases are not very clear.
+        Zero or negative value is reset to ``boxsize``, rescaling an unit cube to full periodicity.
 
     Returns
     -------
@@ -262,6 +268,8 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     # Set some other flags
     periodic = bool(boxsize) # False for None (default) and 0
     two_tracers = randoms_positions2 is not None
+
+    if periodic and boxsize < 0: raise ValueError("Periodic box size must be positive")
 
     if two_tracers: # check that everything is set accordingly
         if randoms_weights2 is None: raise TypeError("Second tracer weights must be provided in two-tracer mode")
@@ -292,7 +300,7 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
             if not np.array_equal(jack_region_numbers, np.unique(randoms_samples2)): # comparison is good because unique results are sorted
                 raise ValueError("The sets of jackkknife labels of the two tracers must be the same")
 
-    if (2 * (max(s_edges) + xi_cut_s) > boxsize):
+    if periodic and 2 * (max(s_edges) + xi_cut_s) > boxsize:
         warn("Some of the interparticle distances may not be correctly periodically wrapped because of the small box period, so some 4-point configurations may be missed in error. To avoid this, to keep the sum of s_max (maximum separation in the covariance bins) and the xi cutoff scale smaller than half of the box size.")
         # basically, rmax + xicutoff + rmax (particle separations 2-1, 1-3 and 3-4) is the max separation between particles 2 and 4 (in case of perfect alignment of the aforementioned ones) as the code sees it, and if it exceeds boxsize/2, this may not be the right wrapping for the true (minimal) distance
         # but if the true distance between particles 2 and 4 is larger than xicutoff, they should not contribute to the covariance integral and it does not matter (unless xicutoff > boxsize/2, but the final condition will exclude this possibility)
