@@ -125,7 +125,7 @@ public:
         Float tmp_weight, tmp_xi, rij_mag=0, rij_mu=0, c2v;
         Particle pi;
         int tmp_bin,out_bin,tmp_out_bin;
-        Float polynomials[max_legendre/2+1], tmp_phi_inv;
+        Float polynomials[max_no_multipoles], tmp_phi_inv;
 
         for(int i=0;i<pln;i++){ // Iterate over particle in pi_list
             if((prim_ids[i]==pj_id)&&(I1==I2)){
@@ -146,7 +146,7 @@ public:
             legendre_polynomials(rij_mu, max_legendre, polynomials);
             // Compute 1/Phi function
             tmp_phi_inv=0.;
-            for(int l_i=0;l_i<sc12->l_bins;l_i++) tmp_phi_inv+=polynomials[l_i]*sc12->inv_correction_function(l_i*2,rij_mu);
+            for(int l_i=0;l_i<sc12->l_bins;l_i++) tmp_phi_inv+=polynomials[l_i]*sc12->inv_correction_function(l_i*2,rij_mag);
 
             tmp_weight = pi.w*pj.w*pair_weight(rij_mag)/tmp_phi_inv;
 
@@ -179,7 +179,7 @@ public:
         // First define variables:
         Particle pi;
         Float tmp_phi_inv=0,tmp_kernel=0;
-        Float rik_mag, rik_mu, c3v, rjk_mag, rjk_mu, tmp_weight, xi_ik_tmp,polynomials_jk[max_legendre/2+1];
+        Float rik_mag, rik_mu, c3v, rjk_mag, rjk_mu, tmp_weight, xi_ik_tmp,polynomials_jk[max_no_multipoles];
         int tmp_bin=0, tmp_full_bin,out_bin;
 
         // Define jk distance and angle
@@ -195,7 +195,7 @@ public:
             legendre_polynomials(rjk_mu,max_legendre,polynomials_jk);
 
             // Compute 1/Phi_jk functions
-            for(int l_i=0;l_i<sc23->l_bins;l_i++) tmp_phi_inv+=polynomials_jk[l_i]*sc23->inv_correction_function(l_i*2,rjk_mu);
+            for(int l_i=0;l_i<sc23->l_bins;l_i++) tmp_phi_inv+=polynomials_jk[l_i]*sc23->inv_correction_function(l_i*2,rjk_mag);
 
             tmp_kernel = pj.w*pair_weight(rjk_mag)*4./(tmp_phi_inv*prob); // include symmetry factor
         }
@@ -243,7 +243,7 @@ public:
         Particle pi;
         Float rjl_mag, rjl_mu, rkl_mag, rkl_mu, c4v, xi_jl, tmp_weight;
         int tmp_bin, tmp_full_bin,out_bin;
-        Float polynomials_kl[max_legendre/2+1],tmp_phi_inv=0;
+        Float polynomials_kl[max_no_multipoles],tmp_phi_inv=0;
 
         cleanup_l(pl.pos,pk.pos,rkl_mag,rkl_mu);
         if(rkl_mag>R0) return; // if k-l separation too large
@@ -257,7 +257,7 @@ public:
         legendre_polynomials(rkl_mu, max_l, polynomials_kl);
 
         // Compute 1/Phi_kl function
-        for(int l_i=0;l_i<sc34->l_bins;l_i++) tmp_phi_inv+=polynomials_kl[l_i]*sc34->inv_correction_function(l_i*2,rkl_mu);
+        for(int l_i=0;l_i<sc34->l_bins;l_i++) tmp_phi_inv+=polynomials_kl[l_i]*sc34->inv_correction_function(l_i*2,rkl_mag);
 
         tmp_weight = pl.w*pair_weight(rkl_mag)/(tmp_phi_inv*prob)*2*xi_jl; // with xi_ik*xi_jl = xi_il*xi_jk symmetry factor
 
@@ -391,7 +391,7 @@ public:
     }
 
 
-    void save_integrals(char* suffix, bool save_all) {
+    void save_integrals(const char* suffix, bool save_all) {
     /* Print integral outputs to file.
         * In txt files {c2,c3,c4}_leg_n{nbin}_m{mbin}.txt there are lists of the outputs of c2,c3,c4 that are already normalized and multiplied by combinatoric factors. The n and m strings specify the number of n and m bins present.
         */
