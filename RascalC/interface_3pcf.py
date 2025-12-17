@@ -13,59 +13,45 @@ from typing import Iterable, Literal
 from warnings import warn
 from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
 from .write_binning_file import write_binning_file
-from .pycorr_utils.jack import get_jack_xi_weights_counts_from_pycorr
-from .pycorr_utils.counts import get_counts_from_pycorr
 from .pycorr_utils.input_xi import get_input_xi_from_pycorr
-from .pycorr_utils.sample_cov import sample_cov_from_pycorr_to_file
-from .pycorr_utils.sample_cov_multipoles import sample_cov_multipoles_from_pycorr_to_file
-from .mu_bin_legendre_factors import write_mu_bin_legendre_factors
-from .correction_function import compute_correction_function, compute_correction_function_multi
+from correction_function_3pcf import compute_3pcf_correction_function # not exactly sure
 from .convergence_check_extra import convergence_check_extra
 from .utils import rmdir_if_exists_and_empty, suffixes_tracer_all, indices_corr_all, suffixes_corr_all, tracer1_corr
-from .post_process import post_process_legendre_mocks_multi, post_process_legendre_mix_jackknife_multi, post_process_legendre_multi, post_process_default_mocks_multi, post_process_jackknife_multi, post_process_default_multi, post_process_legendre_mocks, post_process_legendre_mix_jackknife, post_process_legendre, post_process_default_mocks, post_process_jackknife, post_process_default
+from .post_process_3pcf import post_process_3pcf
 
 
-def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
-            nthread: int, N2: int, N3: int, N4: int, n_loops: int, loops_per_sample: int,
+def run_cov(mode: Literal["legendre_accumulated"],
+            s_edges: np.ndarray[float], max_l: int,
+            nthread: int, N2: int, N3: int, N4: int, N5: int, N6: int, n_loops: int, loops_per_sample: int,
             out_dir: str, tmp_dir: str,
             randoms_positions1: np.ndarray[float], randoms_weights1: np.ndarray[float],
-            pycorr_allcounts_11: pycorr.twopoint_estimator.BaseTwoPointEstimator,
             xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]],
+            no_data_galaxies1: float,
+            RRR_counts: np.ndarray[float] | None = None, # probably plug it from ENCORE/CADENZA when available and otherwise compute internally with triple_counts
             position_type: Literal["rdd", "xyz", "pos"] = "pos",
-            xi_table_12: None | pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]] = None,
-            xi_table_22: None | pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]] = None,
             xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
-            pycorr_allcounts_12: pycorr.twopoint_estimator.BaseTwoPointEstimator | None = None, pycorr_allcounts_22: pycorr.twopoint_estimator.BaseTwoPointEstimator | None = None,
             normalize_wcounts: bool = True,
-            no_data_galaxies1: float | None = None, no_data_galaxies2: float | None = None,
-            randoms_samples1: np.ndarray[int] | None = None,
-            randoms_positions2: np.ndarray[float] | None = None, randoms_weights2: np.ndarray[float] | None = None, randoms_samples2: np.ndarray[int] | None = None,
-            xi_11_samples: Iterable[pycorr.twopoint_estimator.BaseTwoPointEstimator] | None = None,
-            xi_12_samples: Iterable[pycorr.twopoint_estimator.BaseTwoPointEstimator] | None = None,
-            xi_22_samples: Iterable[pycorr.twopoint_estimator.BaseTwoPointEstimator] | None = None,
-            xi_sample_cov: np.ndarray[float] | None = None,
-            max_l: int | None = None,
             boxsize: float | None = None,
-            skip_s_bins: int | tuple[int, int] = 0, skip_l: int = 0,
-            shot_noise_rescaling1: float = 1, shot_noise_rescaling2: float = 1,
+            shot_noise_rescaling1: float = 1,
             sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
-            start_integral_index = None, last_integral_index = None,
             verbose: bool = False) -> dict[str, np.ndarray[float]]:
     r"""
-    Run the 2-point correlation function covariance integration.
+    Run the 3-point correlation function covariance integration.
+    Only supports single tracer in "accumulated" Legendre mode without jackknives.
 
     Parameters
     ----------
     mode : string
-        Choice of binning setup, one of:
+        Choice of binning setup, only one is supported now:
 
-            - ``"s_mu"``: compute covariance of the correlation function in separation (s), and angular (:math:`\mu`) bins. Only linear :math:`\mu` binning between 0 and 1 supported.
-            - ``"legendre_projected"``: compute covariance of the correlation function Legendre multipoles in separation (s) bins projected from :math:`\mu` bins (only linear :math:`\mu` binning supported between 0 and 1). Procedure matches ``pycorr``. Works with jackknives, may be less efficient in periodic geometry.
-            - ``"legendre_accumulated"``: compute covariance of the correlation function Legendre multipoles in separation (s) bins accumulated directly, without first doing :math:`\mu`-binned counts. Incompatible with jackknives.
+            - ``"legendre_accumulated"``: compute covariance of the 3-point correlation function Legendre multipoles in pairs separation (s) bins accumulated directly, without first doing :math:`\mu`-binned counts.
+    
+    s_edges : Numpy array of floats
+        Separation/radial bin edges.
     
     max_l : integer
-        Max Legendre multipole index (required in both Legendre ``mode``\s).
-        Has to be even.
+        Max Legendre multipole index (required in Legendre ``mode``\s).
+        Can be odd.
     
     boxsize : None or float
         Periodic box side (one number — so far, only cubic boxes are supported).
@@ -84,75 +70,6 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     
     randoms_weights1 : array of floats of length N_randoms
         Weights of random points for the first tracer.
-    
-    randoms_samples1 : None or array of integers of length N_randoms
-        Jackknife region numbers for random points for the first tracer.
-        If given (and not None), enables the jackknife functionality (tuning of shot-noise rescaling on jackknife correlation function estimates).
-        The jackknife assignment must match the jackknife counts in ``pycorr_allcounts_11`` (and ``pycorr_allcounts_12`` with multi-tracer functionality enabled).
-
-    randoms_positions2 : None or array of floats, shaped according to `position_type`
-        (Optional) coordinates of random points for the second tracer.
-        If given and not None, enables the multi-tracer functionality (full two-tracer covariance estimation).
-    
-    randoms_weights2 : None or array of floats of length N_randoms2
-        (Only for for multi-tracer functionality) weights of random points for the second tracer.
-    
-    randoms_samples2 : None or array of integers of length N_randoms2
-        (Only for multi-tracer + jackknife functionality, although this combination has not been used yet) jackknife region numbers for the second tracer.
-        The jackknife assignment must match the jackknife counts in ``pycorr_allcounts_12`` and ``pycorr_allcounts_22``.
-
-    pycorr_allcounts_11 : :class:`pycorr.TwoPointEstimator`
-        :class:`pycorr.TwoPointEstimator` with auto-counts for the first tracer.
-        Must be rebinned and/or cut to the separation (s) bins desired for the covariance.
-        Note that more bins result in slower convergence. A typical configuration has been 4 Mpc/h wide bins between 20 and 200 Mpc/h.
-        The counts will be wrapped to positive :math:`\mu`, so if the :math:`\mu` range in them is from -1 to 1, the number of :math:`\mu` bins must be even.
-        Providing unwrapped counts (:math:`\mu` from -1 to 1) is preferrable, because some issues can be fixed by assuming symmetry.
-
-            - In "s_mu" ``mode``, the covariance will be done for the given number of :math:`\mu` bins (after wrapping).
-            - In "legendre_projected" ``mode``, it will be assumed that Legendre multipoles are projected from the same number of :math:`\mu` bins as present in these counts. One might consider rebinning more coarsely for faster performance but less guaranteed accuracy (neither effect has been tested yet).
-            - In "legendre_accumulated" ``mode``, all the present :math:`\mu` bins (after wrapping) will be used to fit the survey correction functions.
-        
-        For jackknife functionality, ``pycorr_allcounts_11`` must contain jackknife RR counts and correlation function. The jackknife assigment must match ``randoms_samples1``.
-
-        **NB**: If ``pycorr_allcounts_11.D1D2.size1`` is zero, you need to provide ``no_data_galaxies1``.
-
-    pycorr_allcounts_12 : :class:`pycorr.TwoPointEstimator`
-        (Only for the multi-tracer functionality) :class:`pycorr.TwoPointEstimator` with cross-counts between the two tracers (order does not matter, because absolute value of :math:`\mu` will be taken).
-        Must have the same bin configuration as ``pycorr_allcounts_11``.
-        For jackknife functionality, must contain jackknife RR counts and correlation function. The jackknife assigment must match ``randoms_samples1`` and ``randoms_samples2``.
-        
-        If both ``pycorr_allcounts_11.D1D2.size1`` and ``pycorr_allcounts_12.D1D2.size1`` are set to zeros, you need to provide ``no_data_galaxies1``.
-
-    pycorr_allcounts_22 : :class:`pycorr.TwoPointEstimator`
-        (Only for the multi-tracer functionality) :class:`pycorr.TwoPointEstimator` with auto-counts for the second tracer.
-        Required for the multi-tracer functionality (full two-tracer covariance estimation).
-        Must have the same bin configuration as ``pycorr_allcounts_11``.
-        For jackknife functionality, must contain jackknife RR counts and correlation function. The jackknife assigment must match ``randoms_samples2``.
-
-        If ``pycorr_allcounts_22.D1D2.size1`` is zero, you need to provide ``no_data_galaxies2``.
-    
-    xi_11_samples: None, or list or tuple of ``pycorr.TwoPointEstimator``\s
-        (Optional) A set of ``pycorr.TwoPointEstimator``\s (typically from mocks) for the first tracer auto-correlation function to compute the sample covariance to use as reference in shot-noise rescaling optimization.
-        Each must have the same shape as ``pycorr_allcounts_11``.
-        With multi-tracer functionality, providing this requires also passing ``xi_22_samples`` with the same number of samples and binning.
-    
-    xi_22_samples: None, or list or tuple of ``pycorr.TwoPointEstimator``\s
-        (Optional, only for the multi-tracer functionality) A set of ``pycorr.TwoPointEstimator``\s (typically from mocks) for the second tracer auto-correlation function to compute the sample covariance to use as reference in shot-noise rescaling optimization.
-        With multi-tracer functionality, this is necessary if ``xi_11_samples`` are provided, and the binning and the number of samples must be the same.
-    
-    xi_12_samples: None, or list or tuple of ``pycorr.TwoPointEstimator``\s
-        (Optional, only for the multi-tracer functionality) A set of ``pycorr.TwoPointEstimator``\s (typically from mocks) for the cross-correlation function between the first and the second tracers to compute the sample covariance.
-        Must have the same binning and number of samples as ``xi_11_samples`` if provided.
-        Only auto-covariances of the auto-correlation functions are used in multi-tracer mock-based post-processing, so cross-correlation computations may be omitted if not needed for other reasons.
-    
-    xi_sample_cov: None, or a symmetric positive definite matrix
-        (Optional) The pre-computed sample covariance to use as reference in shot-noise rescaling optimization.
-        Overrides the ``xi_11_samples`` if both are provided.
-        Please ensure the right bin ordering if you use this option (because of this, it may be easier to use ``xi_11_samples`` instead).
-        In "s_mu" ``mode``, the top-level ordering/grouping is by separation/radial bins and then by angular/µ bins, i.e. the neighboring angular/µ bins (after wrapping!) in one separation/radial bin are next to each other.
-        In any of the Legendre ``mode``\s, the top-level ordering/grouping is by multipoles and then by separation/radial bins, i.e. the same multipole moments in neighboring radial bins are next to each other.
-        For multi-tracer, the topmost-level ordering must be by the correlation function: 11, 12, 22.
-        If you use the ``skip_s_bins`` option (and/or ``skip_l`` with Legendre binning), the requested bins will be removed from the sample covariance. I.e., the computed sample covariance must match the ``RascalC`` binning before those cuts.
 
     normalize_wcounts : boolean
         (Optional) whether to normalize the weights and weighted counts.
@@ -160,13 +77,12 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
         Example: if counts were computed with ``n_randoms`` roughly similar random chunks and only one is provided to RascalC here, the counts should be divided by ``n_random`` where ``s > split_above`` and by ``n_random ** 2`` where ``s < split_above``.
         If True (default), the weights will be normalized so that their sum is 1 and the counts will be normalized by their ``wnorm``, which gives a match with default ``pycorr`` normalization settings.
     
-    no_data_galaxies1 : None or float
-        (Optional) number of first tracer data (not random!) points for the covariance rescaling.
-        If None (default), the code will attempt to obtain it from ``pycorr_allcounts_11``.
+    no_data_galaxies1 : float
+        Number of first tracer data (not random!) points for the covariance rescaling.
     
-    no_data_galaxies2 : None or float
-        (Optional) number of second tracer data (not random!) points for the covariance rescaling.
-        If None (default), the code will attempt to obtain it from ``pycorr_allcounts_22``.
+    RRR_counts : Numpy array of floats, or None
+        (Optional) RRR (random triplet) counts in ENCORE format.
+        If not provided, triple counts will be estimated with importance sampling (expect longer runtime).
     
     xi_table_11 : :class:`pycorr.TwoPointEstimator`, or sequence (tuple or list) of 3 elements: ``(s_values, mu_values, xi_values)``, or sequence (tuple or list) of 4 elements: ``(s_values, mu_values, xi_values, s_edges)``
         Table of first tracer auto-correlation function in separation (s) and :math:`\mu` bins.
@@ -181,16 +97,6 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
         
         The sequence containing 3 elements should be used for theoretical models evaluated at a grid of s, mu values.
         The 4-element format should be used for bin-averaged estimates (unless they are in a :class:`pycorr.TwoPointEstimator`).
-
-    xi_table_12 : None or the same format as ``xi_table_11``
-        Table of the two tracer's cross-correlation function in separation (s) and :math:`\mu` bins.
-        The code will use it for interpolation in the covariance matrix integrals.
-        Required for multi-tracer functionality.
-
-    xi_table_22 : None or the same format as ``xi_table_11``
-        Table of second tracer auto-correlation function in separation (s) and :math:`\mu` bins.
-        The code will use it for interpolation in the covariance matrix integrals.
-        Required for multi-tracer functionality.
     
     xi_cut_s : float
         (Optional) separation value beyond which the correlation function is assumed to be zero for the covariance matrix integrals. Default: 250.
@@ -216,6 +122,14 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     
     N4 : integer
         Number of quaternary points to sample per each tertiary point.
+        Setting too low (below 5) is not recommended.
+    
+    N5 : integer
+        Number of quinary points to sample per each quaternary point.
+        Setting too low (below 5) is not recommended.
+    
+    N6 : integer
+        Number of senary points to sample per each quinary point.
         Setting too low (below 5) is not recommended.
 
     n_loops : integer
@@ -250,27 +164,12 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
 
     shot_noise_rescaling1 : float
         (Optional) shot-noise rescaling value for the first tracer if known beforehand. Default 1 (no rescaling).
-        Will be ignored in jackknife mode - then shot-noise rescaling is optimized on the auto-covariance.
-
-    shot_noise_rescaling2 : float
-        (Optional) shot-noise rescaling value for the second tracer if known beforehand. Default 1 (no rescaling).
-        Will be ignored in jackknife mode - then shot-noise rescaling is optimized on the auto-covariance.
 
     seed : integer or None
         (Optional) If given as an integer, sets the base RNG (random number generator) seed, allowing to reproduce the results with the same input data and settings (except the number of threads, which can be varied).
         Individual subsamples (and accordingly the intrinsic precision estimates and convergence test results) may differ (slightly) because they are accumulated/written in order of loop completion which may depend on external factors at runtime, but the final integrals should be the same.
         If None (default), the initialization will be random. The randomly generated seed value can be found afterwards in the log file and/or output after ``the base RNG seed is``, but using the same seed might not reproduce the runs without a preset seed using the code before commit fd2d2c41 (12 June 2025).
         Note that False in Python is equivalent to 0, which is a legitimate RNG seed, and therefore falls under the integer case, not like None. (True is equivalent to 1.)
-    
-    start_integral_index : integer (1 through 7) or None
-        (Optional) If given as an integer, chooses from which of 7 integrals (numbered 1 through 7) to start when using multi-tracer functionality.
-        This parameter is intended to help complete the timed-out multi-tracer runs by skipping the integrals computed in an unfinished run.
-        Using this setting will disable post-processing for safety, because not all integrals may be present in the output directory. Carefully merge the output directories with all the integrals (if applicable) and invoke the post-processing with :func:`RascalC.post_process_auto`.
-    
-    last_integral_index : integer (1 through 7) or None
-        (Optional) If given as an integer, chooses at which of 7 integrals (numbered 1 through 7) to stop when using multi-tracer functionality.
-        This parameter can be used to fit a multi-tracer run into a time limit if the full 7 integrals are expected to take longer.
-        Using this setting will disable post-processing for safety, because not all integrals may be present in the output directory. Carefully merge the output directories with all the integrals (if applicable) and invoke the post-processing with :func:`RascalC.post_process_auto`.
 
     sampling_grid_size : integer
         (Optional) first guess for the sampling grid size.
@@ -294,89 +193,39 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
         For convenience, in the output dictionary only, ``"filename"`` contains the exact name of this file, and ``"path"`` contains path to it (also obtainable by :func:`os.path.join`-ing ``out_dir`` with the filename)
     """
 
-    if mode not in ("s_mu", "legendre_accumulated", "legendre_projected"): raise ValueError("Given mode not supported")
+    if mode not in ("legendre_accumulated",): raise ValueError("Given mode not supported")
 
-    # Set mode flags
-    legendre_orig = (mode == "legendre_accumulated")
-    legendre_mix = (mode == "legendre_projected")
-    legendre = legendre_orig or legendre_mix
-    jackknife = randoms_samples1 is not None
-
-    if (legendre_orig and jackknife): raise ValueError("Direct accumulation Legendre mode is not compatible with jackknives")
-
-    if legendre:
-        if max_l is None: raise TypeError("Max ell must be provided in Legendre mode")
-        if max_l % 2 != 0: raise ValueError("Only even Legendre multipoles supported")
+    if not isinstance(max_l, int): raise TypeError("Max ell must be an integer")
+    if max_l < 0: raise ValueError("Max ell must not be negative")
 
     # Set some other flags
     periodic = bool(boxsize) # False for None (default) and 0
-    two_tracers = randoms_positions2 is not None
     
     if periodic and boxsize < 0: raise ValueError("Periodic box size must be positive")
-
-    # Determine mock post-processing
-    mocks_precomputed = xi_sample_cov is not None
-    mocks_from_samples = xi_11_samples is not None
-    mocks = mocks_precomputed or mocks_from_samples
-    if mocks_precomputed and mocks_from_samples: warn("Provided xi sample covariance overrides the provided xi samples")
-
-    if two_tracers: # check that everything is set accordingly
-        max_integrals = 7
-        if start_integral_index is not None:
-            if not isinstance(start_integral_index, int): raise TypeError("start_integral_index must be an integer")
-            if not (1 <= start_integral_index <= max_integrals): raise ValueError(f"start_integral_index must take a value between 1 and {max_integrals}")
-        if last_integral_index is not None:
-            if not isinstance(last_integral_index, int): raise TypeError("last_integral_index must be an integer")
-            if not (1 <= last_integral_index <= max_integrals): raise ValueError(f"last_integral_index must take a value between 1 and {max_integrals}")
-            if start_integral_index is not None and last_integral_index < start_integral_index: raise ValueError("last_integral_index must be greater or equal than start_integral_index")
-        if randoms_weights2 is None: raise TypeError("Second tracer weights must be provided in two-tracer mode")
-        if jackknife: # although this case has not been used so far
-            if randoms_samples2 is None: raise TypeError("Second tracer jackknife region numbers must be provided in two-tracer jackknife mode")
-        if pycorr_allcounts_12 is None: raise TypeError("Cross-counts must be provided in two-tracer mode")
-        if pycorr_allcounts_22 is None: raise TypeError("Second tracer auto-counts must be provided in two-tracer mode")
-        if xi_table_12 is None: raise TypeError("Cross-correlation function must be provided in two-tracer mode")
-        if xi_table_22 is None: raise TypeError("Second tracer auto-correlation function must be provided in two-tracer mode")
     
     if n_loops % loops_per_sample != 0: raise ValueError("The sample collapsing factor must divide the number of loops")
 
     if not isinstance(seed, (int, type(None))): raise TypeError("Seed must be an integer or None")
 
-    ntracers = 2 if two_tracers else 1
+    if no_data_galaxies1 <= 0: raise ValueError("Number of data galaxies (no_data_galaxies1) must be positive")
+
+    ntracers = 1
     ncorr = ntracers * (ntracers + 1) // 2
     suffixes_tracer = suffixes_tracer_all[:ntracers]
     indices_corr = indices_corr_all[:ncorr]
     suffixes_corr = suffixes_corr_all[:ncorr]
 
-    s_edges = pycorr_allcounts_11.edges[0]
     n_r_bins = len(s_edges) - 1
-    n_mu_bins = pycorr_allcounts_11.shape[1]
-    if pycorr_allcounts_11.edges[1][0] < 0: n_mu_bins //= 2 # will be wrapped
-    if jackknife:
-        jack_region_numbers = np.unique(randoms_samples1)
-        njack = len(jack_region_numbers)
-        if two_tracers:
-            if not np.array_equal(jack_region_numbers, np.unique(randoms_samples2)): # comparison is good because unique results are sorted
-                raise ValueError("The sets of jackkknife labels of the two tracers must be the same")
 
-    if periodic and 2 * (max(s_edges) + xi_cut_s) > boxsize:
-        warn("Some of the interparticle distances may not be correctly periodically wrapped because of the small box period, so some 4-point configurations may be missed in error. To avoid this, to keep the sum of s_max (maximum separation in the covariance bins) and the xi cutoff scale smaller than half of the box size.")
-        # basically, xicutoff + rmax + xicutoff (particle separations 3-1, 1-2 and 2-4) is the max separation between particles 3 and 4 (in case of perfect alignment of the aforementioned ones) as the code sees it, and if it exceeds boxsize/2, this may not be the right wrapping for the true (minimal) distance
-        # but if the true distance between particles 3 and 4 is larger than rmax, they should not contribute to the covariance integral and it does not matter (unless rmax > boxsize/2, but the final condition will exclude this possibility)
-        # for the true distance to become smaller than rmax given the wrapping is wrong, the "naive" separation should exceed boxsize - rmax
-        # thus the final condition for the issue is 2*(xicutoff + rmax) > boxsize (which is necessarily true if rmax > boxsize/2 as xicutoff > 0)
+    # this condition should be updated for 3PCF, but it is not top priority
+    # if periodic and 2 * (max(s_edges) + xi_cut_s) > boxsize:
+    #     warn("Some of the interparticle distances may not be correctly periodically wrapped because of the small box period, so some 6-point configurations may be missed in error. To avoid this, keep the sum of s_max (maximum separation in the covariance bins) and the xi cutoff scale smaller than half of the box size.")
 
     # set the technical filenames
     input_filenames = [os.path.join(tmp_dir, str(t) + ".txt") for t in range(ntracers)]
     cornames = [os.path.join(out_dir, f"xi/xi_{index}.dat") for index in indices_corr]
-    binned_pair_names = [os.path.join(out_dir, "weights/" + ("binned_pair" if jackknife else "RR") + f"_counts_n{n_r_bins}_m{n_mu_bins}" + (f"_j{njack}" if jackknife else "") + f"_{index}.dat") for index in indices_corr]
-    if jackknife:
-        jackknife_weights_names = [os.path.join(out_dir, f"weights/jackknife_weights_n{n_r_bins}_m{n_mu_bins}_j{njack}_{index}.dat") for index in indices_corr]
-        xi_jack_names = [os.path.join(out_dir, f"xi_jack/xi_jack_n{n_r_bins}_m{n_mu_bins}_j{njack}_{index}.dat") for index in indices_corr]
-        jackknife_pairs_names = [os.path.join(out_dir, f"weights/jackknife_pair_counts_n{n_r_bins}_m{n_mu_bins}_j{njack}_{index}.dat") for index in indices_corr]
-    if legendre_orig:
-        phi_names = [os.path.join(out_dir, f"BinCorrectionFactor_n{n_r_bins}_" + ("periodic" if periodic else f'm{n_mu_bins}') + f"_{index}.txt") for index in indices_corr]
-    if mocks:
-        mock_cov_name = os.path.join(out_dir, f"cov_sample_n{n_r_bins}_" + (f"l{max_l}" if legendre else f"m{n_mu_bins}") + ".txt")
+    # RRR_name = 
+    # inv_phi_name = # inverse correction function # [os.path.join(out_dir, f"BinCorrectionFactor_n{n_r_bins}_" + ("periodic" if periodic else f'm{n_mu_bins}') + f"_{index}.txt") for index in indices_corr]
     
     # make sure the dirs exist
     # os.makedirs() will become confused if the path elements to create include pardir (eg. “..” on UNIX systems).
@@ -385,7 +234,6 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     os.makedirs(out_dir_safe, exist_ok = True)
     os.makedirs(os.path.join(out_dir_safe, "xi"), exist_ok = True)
     os.makedirs(os.path.join(out_dir_safe, "weights"), exist_ok = True)
-    if jackknife: os.makedirs(os.path.join(out_dir_safe, "xi_jack"), exist_ok = True)
 
     # before creating the temporary directory, find which of its parent directories do not exist (yet), to remove them once they are not needed, but only if they are empty
     tmp_max_iterations = 100
@@ -414,47 +262,20 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     print_and_log(f"Mode: {mode}")
     print_and_log(f"Periodic box: {periodic}")
     if periodic: print_and_log(f"Box side: {boxsize}")
-    print_and_log(f"Jackknife: {jackknife}")
-    print_and_log(f"Tuning to (mock) sample covariance: {mocks}")
-    print_and_log(f"Number of tracers: {1 + two_tracers}")
     print_and_log(f"Normalizing weights and weighted counts: {normalize_wcounts}")
     print_and_log(datetime.now())
-    if mocks_precomputed and mocks_from_samples: print_and_log("WARNING: Provided xi sample covariance overrides the provided xi samples")
-    if jackknife and mocks: print_and_log("WARNING: Jackknife covariance terms will be computed, but the shot-noise calibration in post-processing will be based on the sample covariance. Use RascalC.post_process_auto() after the end of this computation for alternative post-processing.")
 
     counts_factor = None if normalize_wcounts else 1
-    ndata = [no_data_galaxies1, no_data_galaxies2][:ntracers]
 
-    # convert counts and jackknife xi if needed; loading ndata too whenever not given
-    pycorr_allcounts_all = (pycorr_allcounts_11, pycorr_allcounts_12, pycorr_allcounts_22)
-    for c, pycorr_allcounts in enumerate(pycorr_allcounts_all[:ncorr]):
-        if c and not np.allclose(pycorr_allcounts.edges[0], pycorr_allcounts_11.edges[0]): raise ValueError(f"pycorr_allcounts_{indices_corr[c]} separation/radial binning is not consistent with pycorr_allcounts_11")
-        if pycorr_allcounts.edges[1][0] < 0: # try to fix and wrap
-            pycorr_allcounts = fix_bad_bins_pycorr(pycorr_allcounts)
-            print_and_log(f"Wrapping pycorr_allcounts_{indices_corr[c]} to mu>=0")
-            pycorr_allcounts = pycorr_allcounts.wrap()
-        if len(pycorr_allcounts.edges[1]) != n_mu_bins + 1: raise ValueError(f"The number of angular/mu bins in pycorr_allcounts_{indices_corr[c]} is not consistent with the number determined from pycorr_allcounts_11")
-        if not np.allclose(pycorr_allcounts.edges[1], np.linspace(0, 1, n_mu_bins + 1)): raise ValueError(f"pycorr_allcounts_{indices_corr[c]} mu binning is not consistent with linear between 0 and 1 (after wrapping)")
-        RR_counts = get_counts_from_pycorr(pycorr_allcounts, counts_factor)
-        np.savetxt(binned_pair_names[c], RR_counts.reshape(-1, 1)) # the file needs to have 1 column
-        if jackknife:
-            xi_jack, jack_weights, jack_RR_counts = get_jack_xi_weights_counts_from_pycorr(pycorr_allcounts, counts_factor)
-            if not np.allclose(np.sum(jack_RR_counts, axis=0), RR_counts.ravel()): raise ValueError("Total counts mismatch")
-            ## Write to files using numpy functions
-            write_xi_file(xi_jack_names[c], pycorr_allcounts.sepavg(axis = 0), pycorr_allcounts.sepavg(axis = 1), xi_jack)
-            jack_numbers = pycorr_allcounts.realizations # column of jackknife numbers, may be useless but needed for format compatibility
-            if not np.array_equal(np.array(jack_region_numbers, dtype = int), np.sort(np.array(jack_numbers, dtype = int))): raise ValueError(f"The code requires integer jackknife numbers consistent between the randoms_samples1 and pycorr_allcounts_{indices_corr[c]}") # jack_region_numbers are the unique jackknife labels from the data (already sorted)
-            np.savetxt(jackknife_weights_names[c], np.column_stack((jack_numbers, jack_weights)))
-            np.savetxt(jackknife_pairs_names[c], np.column_stack((jack_numbers, jack_RR_counts))) # not really needed for the C++ code or processing but let it be
-        # fill ndata if not given
-        if not ndata[tracer1 := tracer1_corr[c]]:
-            ndata[tracer1] = pycorr_allcounts.D1D2.size1
+    # deal with RRR counts
+    # need to check normalize_wcounts logic
 
-    if any(not tracer_ndata for tracer_ndata in ndata): raise ValueError("Not given and not recovered all the necessary normalization factors (no_data_galaxies1/2)")
+    ndata = [no_data_galaxies1]
+
     print_and_log(f"Number(s) of data galaxies: {ndata}")
     
     # write the xi file(s); need to set the 2PCF binning (even if only technical) and decide whether to rescale the 2PCF in the C++ code
-    all_xi = (xi_table_11, xi_table_12, xi_table_22)
+    all_xi = (xi_table_11,)
     xi_s_edges = None
     xi_n_mu_bins = None
     refine_xi = False
@@ -492,52 +313,18 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
             write_xi_file(cornames[c], r_vals, mu_vals, xi_vals)
         else: raise TypeError(f"Xi table {indices_corr[c]} must be either a pycorr.TwoPointEstimator or a tuple/list")
     xi_refinement_iterations *= refine_xi # True is 1; False is 0 => 0 iterations => no refinement
-
-    # deal with the mock covariance
-    if mocks_precomputed:
-        np.savetxt(mock_cov_name, xi_sample_cov)
-    elif mocks_from_samples:
-        if len(xi_11_samples) <= 1: raise ValueError("Need more than 1 sample in xi_11_samples to compute the sample covariance")
-        if any(not np.allclose(xi_11_sample.edges[0], pycorr_allcounts_11.edges[0]) for xi_11_sample in xi_11_samples): raise ValueError(f"Found separation/radial binning in xi_11_samples inconsistent with pycorr_allcounts_11")
-        if any(not np.allclose(xi_11_sample.edges[1], np.linspace(0, 1, n_mu_bins + 1)) for xi_11_sample in xi_11_samples): raise ValueError(f"Found angular/µ binning in xi_11_samples inconsistent with pycorr_allcounts_11")
-        xi_samples_all = [xi_11_samples]
-        if two_tracers:
-            # check the required 22 samples
-            if xi_22_samples is None: raise TypeError("xi_22_samples must be provided for multi-tracer")
-            if len(xi_22_samples) != len(xi_11_samples): raise ValueError("xi_22_samples must contain the same number of samples as xi_11_samples")
-            if any(not np.allclose(xi_sample.edges, xi_11_samples[0].edges) for xi_sample in xi_22_samples): raise ValueError(f"xi_22_samples must have the same binning as xi_11_samples")
-            # check 12 samples which are not critical. if anything is wrong, substitute 11 samples as a placeholder
-            if xi_12_samples is None:
-                print_and_log("WARNING: xi_12_samples not provided. The shot-noise calibration should be fine, but do not use the sample covariance from the output folder directly.")
-                xi_12_samples = xi_11_samples
-            elif len(xi_12_samples) != len(xi_11_samples):
-                print_and_log("WARNING: xi_12_samples must contain the same number of samples as xi_11_samples, will replace them with a placeholder. The shot-noise calibration should be fine, but do not use the sample covariance from the output folder directly.")
-                xi_12_samples = xi_11_samples
-            elif any(not np.allclose(xi_sample.edges, xi_11_samples[0].edges) for xi_sample in xi_12_samples):
-                print_and_log(f"WARNING: xi_12_samples must have the same binning as xi_11_samples, will replace them with a placeholder. The shot-noise calibration should be fine, but do not use the sample covariance from the output folder directly.")
-                xi_12_samples = xi_11_samples
-            xi_samples_all += [xi_12_samples, xi_22_samples]
-        if legendre:
-            sample_cov_multipoles_from_pycorr_to_file(xi_samples_all, mock_cov_name, max_l=max_l)
-        else:
-            sample_cov_from_pycorr_to_file(xi_samples_all, mock_cov_name)
     
     # write the randoms file(s)
-    randoms_positions = [randoms_positions1, randoms_positions2]
-    randoms_weights = [randoms_weights1, randoms_weights2]
-    randoms_samples = (randoms_samples1, randoms_samples2)
+    randoms_positions = [randoms_positions1]
+    randoms_weights = [randoms_weights1]
     for t, input_filename in enumerate(input_filenames):
         randoms_properties = pycorr.twopoint_counter._format_positions(randoms_positions[t], mode = "smu", position_type = position_type, dtype = np.float64) # list of x, y, z coordinate arrays; weights (and jackknife region numbers if any) will be appended
-        if legendre_orig: randoms_positions[t] = np.array(randoms_properties) # save the formatted positions as an array for correction function computation
+        randoms_positions[t] = np.array(randoms_properties) # save the formatted positions as an array for correction function computation
         nrandoms = len(randoms_properties[0])
         if randoms_weights[t].ndim != 1: raise ValueError(f"Weights of randoms {t+1} not contained in a 1D array")
         if len(randoms_weights[t]) != nrandoms: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
         if normalize_wcounts: randoms_weights[t] /= np.sum(randoms_weights[t])
         randoms_properties.append(randoms_weights[t])
-        if jackknife:
-            if randoms_samples[t].ndim != 1: raise ValueError(f"Weights of sample labels {t+1} not contained in a 1D array")
-            if len(randoms_samples[t]) != nrandoms: raise ValueError(f"Number of sample labels for randoms {t+1} mismatches the number of positions")
-            randoms_properties.append(randoms_samples[t])
         np.savetxt(input_filename, np.column_stack(randoms_properties))
         randoms_properties = None
 
@@ -548,41 +335,22 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     write_binning_file(binfile_cf, xi_s_edges)
 
     # Select the executable name
-    exec_name = "bin/cov." + mode + "_jackknife" * jackknife + "_periodic" * periodic + "_verbose" * verbose
+    exec_name = "bin/cov.3pcf_" + mode + "_periodic" * periodic + "_verbose" * verbose
     # the above must be true relative to the script location
     # below we should make it absolute, i.e. right regardless of the working directory
     exec_path = os.path.join(os.path.realpath(os.path.dirname(__file__)), exec_name)
 
     # form the command line
     command = "env OMP_PROC_BIND=spread OMP_PLACES=threads " # set OMP environment variables, should not be set before
-    command += f"{exec_path} -output {out_dir}/ -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_iterations}" # here are universally acceptable parameters
+    command += f"{exec_path} -output {out_dir}/ -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -N5 {N5} -N6 {N6} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_iterations}" # here are universally acceptable parameters
     command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
     command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
     command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
-    if legendre: # only provide max multipole l for now
-        command += f" -max_l {max_l}"
-    if legendre_mix: # generate and provide factors filename
-        mu_bin_legendre_file = write_mu_bin_legendre_factors(n_mu_bins, max_l, os.path.join(out_dir, "weights"))
-        command += f" -mu_bin_legendre_file {mu_bin_legendre_file}"
-    if not legendre_orig: # provide binned pair counts files and number of mu bin
-        command += "".join([f" -RRbin{suffixes_corr[c]} {binned_pair_names[c]}" for c in range(ncorr)]) + f" -mbin {n_mu_bins}"
+    command += f" -max_l {max_l}"
     if periodic: # append periodic flag and box size
         command += f" -perbox -boxsize {boxsize}"
-    if jackknife: # provide jackknife weight files for all correlations
-        command += "".join([f" -jackknife{suffixes_corr[c]} {jackknife_weights_names[c]}" for c in range(ncorr)])
-    if two_tracers: # provide start/last_integral_index if given
-        if start_integral_index: command += f" -start_integral_index {start_integral_index}"
-        if last_integral_index: command += f" -last_integral_index {last_integral_index}"
 
-    # compute the correction function if original Legendre
-    if legendre_orig: # need correction function
-        print_and_log(datetime.now())
-        print_and_log(f"Computing the correction function")
-        if ntracers == 1:
-            compute_correction_function(randoms_positions[0], randoms_weights[0], binfile, out_dir, periodic, binned_pair_names[0], print_and_log)
-        elif ntracers == 2:
-            compute_correction_function_multi(randoms_positions[0], randoms_weights[0], randoms_positions[1], randoms_weights[1], binfile, out_dir, periodic, *binned_pair_names, print_function = print_and_log)
-        command += "".join([f" -phi_file{suffixes_corr[c]} {phi_names[c]}" for c in range(ncorr)])
+    # compute the (inverse) 3PCF correction function
 
     # deal with the seed
     if seed is not None: # need to pass to the C++ code and make sure it can be received properly. 0 (False) is not equivalent to None in this case
@@ -609,39 +377,12 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
 
     # post-processing
     print_and_log(datetime.now())
-    if two_tracers and ((start_integral_index is not None and start_integral_index > 1) or (last_integral_index is not None and last_integral_index < max_integrals)):
-        print_and_log("Skipping post-processing, because not all integrals may be present in the output directory.")
-        print_and_log("Carefully merge the output directories with all the integrals (if applicable) and invoke the post-processing with e.g. RascalC.post_process_auto()")
-        return
     print_and_log("Starting post-processing")
-    if two_tracers:
-        if legendre:
-            if mocks:
-                results = post_process_legendre_mocks_multi(mock_cov_name, out_dir, n_r_bins, max_l, out_dir, skip_s_bins, skip_l, print_function = print_and_log)
-            elif jackknife:
-                results = post_process_legendre_mix_jackknife_multi(*xi_jack_names, os.path.dirname(jackknife_weights_names[0]), out_dir, n_mu_bins, max_l, out_dir, skip_s_bins, skip_l, print_function = print_and_log)
-            else:
-                results = post_process_legendre_multi(out_dir, n_r_bins, max_l, out_dir, shot_noise_rescaling1, shot_noise_rescaling2, skip_s_bins, skip_l, print_function = print_and_log)
-        elif mocks:
-            results = post_process_default_mocks_multi(mock_cov_name, out_dir, n_r_bins, n_mu_bins, out_dir, skip_s_bins, print_function = print_and_log)
-        elif jackknife:
-            results = post_process_jackknife_multi(*xi_jack_names, os.path.dirname(jackknife_weights_names[0]), out_dir, n_mu_bins, out_dir, skip_s_bins, print_function = print_and_log)
-        else: # default
-            results = post_process_default_multi(out_dir, n_r_bins, n_mu_bins, out_dir, shot_noise_rescaling1, shot_noise_rescaling2, skip_s_bins, print_function = print_and_log)
-    else:
-        if legendre:
-            if mocks:
-                results = post_process_legendre_mocks(mock_cov_name, out_dir, n_r_bins, max_l, out_dir, skip_s_bins, skip_l, print_function = print_and_log)
-            elif jackknife:
-                results = post_process_legendre_mix_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), out_dir, n_mu_bins, max_l, out_dir, skip_s_bins, skip_l, print_function = print_and_log)
-            else:
-                results = post_process_legendre(out_dir, n_r_bins, max_l, out_dir, shot_noise_rescaling1, skip_s_bins, skip_l, print_function = print_and_log)
-        elif mocks:
-            results = post_process_default_mocks(mock_cov_name, out_dir, n_r_bins, n_mu_bins, out_dir, skip_s_bins, print_function = print_and_log)
-        elif jackknife:
-            results = post_process_jackknife(xi_jack_names[0], os.path.dirname(jackknife_weights_names[0]), out_dir, n_mu_bins, out_dir, skip_s_bins, print_function = print_and_log)
-        else: # default
-            results = post_process_default(out_dir, n_r_bins, n_mu_bins, out_dir, shot_noise_rescaling1, skip_s_bins, print_function = print_and_log)
+    results = post_process_3pcf(out_dir, n_r_bins, max_l, n_loops // loops_per_sample, out_dir, shot_noise_rescaling1, print_function=print_and_log)
+    # TODO:
+    # eliminate n_samples argument
+    # add skip_s_bins and skip_l functionality
+    # add mock post-processing
 
     print_and_log("Finished post-processing")
     print_and_log(datetime.now())
