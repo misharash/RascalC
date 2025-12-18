@@ -75,7 +75,10 @@ class compute_integral{
             printf("# INFO: the base RNG seed is %lu, incremented by %lu in each integration loop (matching these should guarantee the same results in a completed computation with the same input catalogs and correlation functions).\n", seed_shift, seed_step);
 
             gsl_rng_env_setup(); // initialize gsl rng
+            int completed_loops = 0; // counter of completed loops, since may not finish in index order
+            uint64 used_triples_per_sample = 0, used_quads_per_sample = 0, used_quints_per_sample = 0, used_hexes_per_sample = 0; // triple, quad, quint and hex counts for the normalization of the current output sample
             Integrals sumint(par, cf, survey_corr); // total integral
+            Integrals outint(par, cf, survey_corr); // current output integral
 
             uint64 tot_triples=0, tot_quads=0, tot_quints=0, tot_hexes=0; // global number of particle sets used (including those rejected for being in the wrong bins)
             uint64 cell_attempt3=0,cell_attempt4=0,cell_attempt5=0,cell_attempt6=0; // number of k,l,m,n cells attempted
@@ -312,30 +315,45 @@ class compute_integral{
     #pragma omp critical // only one processor can access at once
     #endif
             {
-                if ((n_loops+1)%par->nthread==0){ // Print every nthread loops
+                printf("Integral %d of %d, iteration %d of %d on thread %d completed\n", iter_no, tot_iter, 1+n_loops, par->max_loops, thread);
+                int subsample_index = completed_loops / par->loops_per_sample; // index of output subsample for this loop
+                completed_loops++; // increment completed loops counter, since they may be done not according to n_loops order
+                if (completed_loops % par->nthread == 0) { // Print every nthread completed loops
                     TotalTime.Stop(); // interrupt timing to access .Elapsed()
                     int current_runtime = TotalTime.Elapsed();
-                    int remaining_time = current_runtime/((n_loops+1)/par->nthread)*(par->max_loops/par->nthread-(n_loops+1)/par->nthread);  // estimated remaining time
-                    fprintf(stderr,"\nFinished integral loop %d of %d after %d s. Estimated time left:  %2.2d:%2.2d:%2.2d hms, i.e. %d s.\n",n_loops+1,par->max_loops, current_runtime,remaining_time/3600,remaining_time/60%60, remaining_time%60,remaining_time);
-                    
+                    int remaining_time = current_runtime*(par->max_loops - completed_loops)/completed_loops;  // estimated remaining time
+                    fprintf(stderr, "\nFinished %d integral loops of %d after %d s. Estimated time left:  %2.2d:%2.2d:%2.2d hms, i.e. %d s.\n", completed_loops, par->max_loops, current_runtime, remaining_time/3600, remaining_time/60%60, remaining_time%60, remaining_time);
+
                     TotalTime.Start(); // Restart the timer
-                    Float frob_C3, frob_C4, frob_C5, frob_C6;
-                    sumint.frobenius_difference_sum(&locint,n_loops, frob_C3, frob_C4, frob_C5, frob_C6);
-                    if(frob_C6<0.01) convergence_counter++;
-                    if (n_loops!=0){
-                        fprintf(stderr,"Frobenius percent difference after loop %d is %.3f (C3), %.3f (C4), %.3f (C5), %.3f (C6) \n",n_loops,frob_C3, frob_C4, frob_C5, frob_C6);
-                    }
                 }
-                    
+                int accumulated_loops = subsample_index * par->loops_per_sample; // number of (completed) integral loops accumulated in sumint (as can be seen later, it is updated every loops_per_sample completed loops)
+                if ((subsample_index > 0) && (completed_loops == accumulated_loops + 1)) { // the condition when the Frobenius difference after adding one loop is most straightforward to compute sensibly, because sumint is updated only every loops_per_sample completed loops. Also works for loops_per_sample=1 unlike the possible alternative condition, completed_loops % loops_per_sample == 1
+                    Float frob_C3, frob_C4, frob_C5, frob_C6;
+                    sumint.frobenius_difference_sum(&locint, accumulated_loops, frob_C3, frob_C4, frob_C5, frob_C6); // computes the Frobenius relative differences (in percents) after adding one integral loop result (locint) to the accumulation of accumulated_loops loops in sumint; the method signature is different with and without jackknives
+                    if (frob_C6<0.01) convergence_counter++;
+                    fprintf(stderr,"Frobenius percent difference after loop %d is %.3f (C3), %.3f (C4), %.3f (C5), %.3f (C6) \n",n_loops,frob_C3, frob_C4, frob_C5, frob_C6);
+                }
+
                 // Sum up integrals
-                sumint.sum_ints(&locint); 
-                
-                // Save output after each loop
-                std::string output_string = string_format("%d", n_loops);
-                
-                locint.normalize(grid->norm,(Float)loc_used_triples, (Float)loc_used_quads, (Float)loc_used_quints, (Float)loc_used_hexes);
-                locint.save_integrals(output_string.c_str(), 0, iter_no);
-                locint.sum_total_counts(cnt3, cnt4, cnt5, cnt6); 
+                outint.sum_ints(&locint); // subsample total
+
+                // Sum up pairs, triples, quads for the group
+                used_triples_per_sample += loc_used_triples;
+                used_quads_per_sample += loc_used_quads;
+                used_quints_per_sample += loc_used_quints;
+                used_hexes_per_sample += loc_used_hexes;
+
+                // Save output if the group is done
+                if (completed_loops % par->loops_per_sample == 0) {
+                    sumint.sum_ints(&outint); // add to grand total
+                    std::string output_string = string_format("%d", subsample_index);
+                    outint.normalize(grid->norm, (Float)used_triples_per_sample, (Float)used_quads_per_sample, (Float)used_quints_per_sample, (Float)used_hexes_per_sample);
+                    outint.save_integrals(output_string.c_str(), 0, iter_no);
+                    // Reset the current output sample variables
+                    outint.reset();
+                    used_triples_per_sample = used_quads_per_sample = used_quints_per_sample = used_hexes_per_sample = 0;
+                }
+                locint.sum_total_counts(cnt3, cnt4, cnt5, cnt6);
                 locint.reset();
                 
                 }
