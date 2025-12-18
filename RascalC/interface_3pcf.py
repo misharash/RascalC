@@ -14,9 +14,9 @@ from warnings import warn
 from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
 from .write_binning_file import write_binning_file
 from .pycorr_utils.input_xi import get_input_xi_from_pycorr
-from correction_function_3pcf import compute_3pcf_correction_function # not exactly sure
+from correction_function_3pcf import compute_3pcf_correction_function
 from .convergence_check_extra import convergence_check_extra
-from .utils import rmdir_if_exists_and_empty, suffixes_tracer_all, indices_corr_all, suffixes_corr_all, tracer1_corr
+from .utils import rmdir_if_exists_and_empty, suffixes_tracer_all, indices_corr_all, suffixes_corr_all
 from .post_process_3pcf import post_process_3pcf
 
 
@@ -28,6 +28,7 @@ def run_cov(mode: Literal["legendre_accumulated"],
             xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]],
             no_data_galaxies1: float,
             RRR_counts: np.ndarray[float] | None = None, # probably plug it from ENCORE/CADENZA when available and otherwise compute internally with triple_counts
+            n_mu_bins: int = 120,
             position_type: Literal["rdd", "xyz", "pos"] = "pos",
             xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
             normalize_wcounts: bool = True,
@@ -83,6 +84,10 @@ def run_cov(mode: Literal["legendre_accumulated"],
     RRR_counts : Numpy array of floats, or None
         (Optional) RRR (random triplet) counts in ENCORE format.
         If not provided, triple counts will be estimated with importance sampling (expect longer runtime).
+    
+    n_mu_bins : integer
+        (Optional) number of angular (mu) bins for the RRR (random triplet) counts computation. Default 120.
+        If the RRR counts are provided in ENCORE format, this parameter has no effect.
     
     xi_table_11 : :class:`pycorr.TwoPointEstimator`, or sequence (tuple or list) of 3 elements: ``(s_values, mu_values, xi_values)``, or sequence (tuple or list) of 4 elements: ``(s_values, mu_values, xi_values, s_edges)``
         Table of first tracer auto-correlation function in separation (s) and :math:`\mu` bins.
@@ -205,6 +210,8 @@ def run_cov(mode: Literal["legendre_accumulated"],
     
     if n_loops % loops_per_sample != 0: raise ValueError("The sample collapsing factor must divide the number of loops")
 
+    if not isinstance(RRR_counts, (np.ndarray, type(None))): raise TypeError("RRR_counts must be a Numpy array or None")
+
     if not isinstance(seed, (int, type(None))): raise TypeError("Seed must be an integer or None")
 
     if no_data_galaxies1 <= 0: raise ValueError("Number of data galaxies (no_data_galaxies1) must be positive")
@@ -264,11 +271,6 @@ def run_cov(mode: Literal["legendre_accumulated"],
     if periodic: print_and_log(f"Box side: {boxsize}")
     print_and_log(f"Normalizing weights and weighted counts: {normalize_wcounts}")
     print_and_log(datetime.now())
-
-    counts_factor = None if normalize_wcounts else 1
-
-    # deal with RRR counts
-    # need to check normalize_wcounts logic
 
     ndata = [no_data_galaxies1]
 
@@ -334,6 +336,51 @@ def run_cov(mode: Literal["legendre_accumulated"],
     binfile_cf = os.path.join(out_dir, "radial_binning_corr.csv")
     write_binning_file(binfile_cf, xi_s_edges)
 
+    counts_factor = None if normalize_wcounts else 1
+
+    # deal with RRR counts
+    # need to check normalize_wcounts logic
+    if RRR_counts is None: # need to run triple_counts
+        # Select the executable name
+        exec_name = "bin/triple.s_mu" + "_periodic" * periodic # + "_verbose" * verbose
+        # the above must be true relative to the script location
+        # below we should make it absolute, i.e. right regardless of the working directory
+        exec_path = os.path.join(os.path.realpath(os.path.dirname(__file__)), exec_name)
+
+        # form the command line
+        command = "env OMP_PROC_BIND=spread OMP_PLACES=threads " # set OMP environment variables, should not be set before
+        command += f"{exec_path} -output {out_dir}/ -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_iterations}" # here are universally acceptable parameters
+        command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
+        command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
+        command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
+        command += f" -mbin {n_mu_bins}"
+        if periodic: # append periodic flag and box size
+            command += f" -perbox -boxsize {boxsize}"
+
+        # deal with the seed
+        if seed is not None: # need to pass to the C++ code and make sure it can be received properly. 0 (False) is not equivalent to None in this case
+            seed &= 2**32 - 1 # this bitwise AND truncates the seed into a 32-bit unsigned (positive) integer (definitely a subset of unsigned long)
+            command += f" -seed {seed}"
+    
+        # run the triple_counts code
+        print_and_log(datetime.now())
+        print_and_log(f"Launching the triple_counts C++ code with command: {command}")
+        status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {command} 2>&1 | tee -a {logfile}'")
+        # tee prints what it gets to stdout AND saves to file
+        # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
+        # without pipefail, the exit_code would be of tee, not reflecting main command failures
+        # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
+
+        # check the run status
+        exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
+        if exit_code: raise RuntimeError(f"The triple_counts C++ code terminated with an error: exit code {exit_code}")
+        print_and_log("The triple_counts C++ code finished succesfully")
+
+        RRR_filename = f"{out_dir}/RRR_counts_n{n_r_bins}_m{n_mu_bins}_full.txt"
+        inv_phi_filename = compute_3pcf_correction_function(input_filenames[0], binfile, out_dir, periodic, RRR_filename, print_function=print_and_log)
+    else: # need to convert RRR counts from ENCORE/CADENZA format
+        pass
+
     # Select the executable name
     exec_name = "bin/cov.3pcf_" + mode + "_periodic" * periodic + "_verbose" * verbose
     # the above must be true relative to the script location
@@ -347,10 +394,9 @@ def run_cov(mode: Literal["legendre_accumulated"],
     command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
     command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
     command += f" -max_l {max_l}"
+    command += f" -phi_file {inv_phi_filename}"
     if periodic: # append periodic flag and box size
         command += f" -perbox -boxsize {boxsize}"
-
-    # compute the (inverse) 3PCF correction function
 
     # deal with the seed
     if seed is not None: # need to pass to the C++ code and make sure it can be received properly. 0 (False) is not equivalent to None in this case
