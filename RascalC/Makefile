@@ -95,7 +95,7 @@ $(foreach variant,$(VARIANTS),$(eval $(call make_targets,$(variant))))
 
 # The code below compiles all the valid variants for the triple_counts
 
-VARIANTS2 = s_mu s_mu_periodic # may be advisable to add verbose later, but for now it probably does not make a difference
+VARIANTS2 = s_mu s_mu_verbose s_mu_periodic s_mu_periodic_verbose
 
 VAR_SRC2_BASE	= triple_counts
 VAR_SRC2	= ../$(VAR_SRC2_BASE)/$(VAR_SRC2_BASE).cpp

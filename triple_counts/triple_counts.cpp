@@ -354,7 +354,9 @@ class compute_triples{
             int* prim_ids; // list of particle IDs in primary cell
             double p2,p3; // probabilities
             int mnp = grid->maxnp; // max number of particles in a grid cell
+#ifdef PRINTPERCENTS
             Float percent_counter;
+#endif
             int x, prim_id_1D;
             integer3 delta2, delta3, prim_id, sec_id, thi_id;
             Float3 cell_sep2,cell_sep3;
@@ -376,7 +378,9 @@ class compute_triples{
     #pragma omp for schedule(dynamic)
     #endif
            for (int n_loops = 0; n_loops<par->max_loops; n_loops++){
+#ifdef PRINTPERCENTS
                 percent_counter=0.;
+#endif
                 loc_used_pairs=0; loc_used_triples=0;
 
                 // Set/reset the RNG seed based on loop number instead of thread number to reproduce results with different number of threads but other parameters kept the same. Individual subsamples may differ because they are accumulated/written in order of loop completion which may depend on external factors at runtime, but the final integrals should be the same.
@@ -386,11 +390,13 @@ class compute_triples{
                 // LOOP OVER ALL FILLED I CELLS
                 for (int n1=0; n1<grid->nf;n1++){
                     
+#ifdef PRINTPERCENTS
                     // Print time left
                     if((float(n1)/float(grid->nf)*100)>=percent_counter){
-                        printf("Run %d of %d on thread %d: Using cell %d of %d - %.0f percent complete\n",1+n_loops/par->nthread, int(ceil(float(par->max_loops)/(float)par->nthread)),thread, n1+1,grid->nf,percent_counter);
+                        printf("Iteration %d of %d on thread %d: Using cell %d of %d - %.0f percent complete\n", 1+n_loops, par->max_loops, thread, n1+1, grid->nf, percent_counter);
                         percent_counter+=5.;
                     }
+#endif
                     
                     // Pick first particle
                     prim_id_1D = grid-> filled[n1]; // 1d ID for cell i 

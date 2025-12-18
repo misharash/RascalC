@@ -342,7 +342,7 @@ def run_cov(mode: Literal["legendre_accumulated"],
     # need to check normalize_wcounts logic
     if RRR_counts is None: # need to run triple_counts
         # Select the executable name
-        exec_name = "bin/triple.s_mu" + "_periodic" * periodic # + "_verbose" * verbose
+        exec_name = "bin/triple.s_mu" + "_periodic" * periodic + "_verbose" * verbose
         # the above must be true relative to the script location
         # below we should make it absolute, i.e. right regardless of the working directory
         exec_path = os.path.join(os.path.realpath(os.path.dirname(__file__)), exec_name)
