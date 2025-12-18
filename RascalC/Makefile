@@ -34,15 +34,16 @@ endif
 
 LD = $(CXX)
 
-# The code below compiles all the valid variants for the 2PCF covariance
+# The code below compiles all the valid variants for the 2PCF covariance, and one for 3PCF
 
-BASE_VARIANTS	= s_mu s_mu_jackknife legendre_accumulated legendre_projected legendre_projected_jackknife
+BASE_VARIANTS	= s_mu s_mu_jackknife legendre_accumulated legendre_projected legendre_projected_jackknife 3pcf_legendre_accumulated
 
 DEFINES_FOR_s_mu=
 DEFINES_FOR_s_mu_jackknife=-DJACKKNIFE
 DEFINES_FOR_legendre_accumulated=-DLEGENDRE
 DEFINES_FOR_legendre_projected=-DLEGENDRE_MIX
 DEFINES_FOR_legendre_projected_jackknife=-DLEGENDRE_MIX -DJACKKNIFE
+DEFINES_FOR_3pcf_legendre_accumulated=-DTHREE_PCF
 
 define add_periodic_variant
 DEFINES_FOR_$(1)_periodic	= $$(DEFINES_FOR_$(1)) -DPERIODIC
