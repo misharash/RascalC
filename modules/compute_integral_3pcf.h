@@ -56,6 +56,7 @@ class compute_integral{
             nbin = par->nbin; // number of radial bins
             mbin = par->mbin; // number of Legendre bins
             
+            STimer* LoopTimes = new STimer[par->max_loops];
             STimer initial, TotalTime; // Time initialization
             initial.Start(); 
             
@@ -87,7 +88,7 @@ class compute_integral{
             TotalTime.Start(); // Start timer
             
 #ifdef OPENMP       
-    #pragma omp parallel firstprivate(seed_step,seed_shift,par,printtime,grid,cf) shared(sumint,TotalTime,gsl_rng_default,rd) reduction(+:convergence_counter,cell_attempt3,cell_attempt4,cell_attempt5,cell_attempt6,used_cell3,used_cell4,used_cell5,used_cell6,tot_triples,tot_quads,tot_quints,tot_hexes)
+    #pragma omp parallel firstprivate(seed_step,seed_shift,par,printtime,grid,cf) shared(sumint,TotalTime,LoopTimes,gsl_rng_default,rd) reduction(+:convergence_counter,cell_attempt3,cell_attempt4,cell_attempt5,cell_attempt6,used_cell3,used_cell4,used_cell5,used_cell6,tot_triples,tot_quads,tot_quints,tot_hexes)
             { // start parallel loop
             // Decide which thread we are in
             int thread = omp_get_thread_num();
@@ -141,7 +142,8 @@ class compute_integral{
     #endif
             for (int n_loops = 0; n_loops<par->max_loops; n_loops++){
                 percent_counter=0.;
-                loc_used_triples=0; loc_used_quads=0; loc_used_quints=0; loc_used_hexes=0;  
+                loc_used_triples=0; loc_used_quads=0; loc_used_quints=0; loc_used_hexes=0;
+                LoopTimes[n_loops].Start();
                 
                 // End loops early if convergence has been acheived
                 if (convergence_counter==10){ 
@@ -335,7 +337,7 @@ class compute_integral{
                 
                 }
             
-                
+            LoopTimes[n_loops].Stop();
             } // end cycle loop
             
             // Free up allocated memory at end of process
@@ -365,7 +367,11 @@ class compute_integral{
         cnt6/=(9.*mbin*mbin);
         
         int runtime = TotalTime.Elapsed();
-        printf("\n\nINTEGRAL %d OF %d COMPLETE\n",iter_no+1,tot_iter); 
+        printf("\n\nINTEGRAL %d OF %d COMPLETE\n",iter_no+1,tot_iter);
+        for (int n_loop = 0; n_loop < par->max_loops; n_loop++) {
+            int loop_runtime = LoopTimes[n_loop].Elapsed();
+            fprintf(stderr, "Loop %d time: %d s, i.e. %2.2d:%2.2d:%2.2d hms\n", n_loop, loop_runtime, loop_runtime/3600, loop_runtime/60%60, loop_runtime%60);
+        }
         fprintf(stderr, "\nTotal process time for %.2e sets of cells and %.2e hexes of particles: %d s, i.e. %2.2d:%2.2d:%2.2d hms\n", double(used_cell6),double(tot_hexes),runtime, runtime/3600,runtime/60%60,runtime%60);
         printf("We tried %.2e triples, %.2e quads, %.2e quints and %.2e hexes of cells.\n",double(cell_attempt3),double(cell_attempt4),double(cell_attempt5),double(cell_attempt6));
         printf("Of these, we accepted %.2e triples, %.2e quads, %.2e quints and %.2e hexes of cells.\n",double(used_cell3),double(used_cell4),double(used_cell5),double(used_cell6));
