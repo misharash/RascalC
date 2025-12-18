@@ -91,6 +91,35 @@ endef
 
 $(foreach variant,$(VARIANTS),$(eval $(call make_targets,$(variant))))
 
+# end of variants for the covariance
+
+# The code below compiles all the valid variants for the triple_counts
+
+VARIANTS2 = s_mu s_mu_periodic # may be advisable to add verbose later, but for now it probably does not make a difference
+
+VAR_SRC2_BASE	= triple_counts
+VAR_SRC2	= ../$(VAR_SRC2_BASE)/$(VAR_SRC2_BASE).cpp
+VAR_OBJ2_BASE	= $(OBJDIR)/$(VAR_SRC2_BASE)
+
+EXEC2_BASE	= $(EXECDIR)/triple
+
+define make_targets2
+OBJ2_$(1)	= $$(VAR_OBJ2_BASE).$(1).o
+ALL_OBJS	+= $$(OBJ2_$(1))
+EXEC2_$(1)	= $$(EXEC2_BASE).$(1)
+ALL_EXECS	+= $$(EXEC2_$(1))
+
+$$(OBJ2_$(1)): $$(VAR_SRC2) | $$(OBJDIR)
+	$$(CXX) $$(CXXFLAGS) $$(DEFINES_FOR_$(1)) -c $$(VAR_SRC2) -o $$@
+
+$$(EXEC2_$(1)): $$(OBJ2_$(1)) $$(COMMON_OBJS) | $$(EXECDIR)
+	$$(LD) $$(OBJ2_$(1)) $$(COMMON_OBJS) $$(LFLAGS) -o $$@
+endef
+
+$(foreach variant,$(VARIANTS2),$(eval $(call make_targets2,$(variant))))
+
+# end of variants for the triple_counts
+
 .PHONY: all clean
 
 all: $(ALL_EXECS)
