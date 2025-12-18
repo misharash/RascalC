@@ -83,7 +83,8 @@ def run_cov(mode: Literal["legendre_accumulated"],
     
     RRR_counts : Numpy array of floats, or None
         (Optional) RRR (random triplet) counts in ENCORE format.
-        If not provided, triple counts will be estimated with importance sampling (expect longer runtime).
+        If not provided and the data is not in a periodic box, triple counts will be estimated with importance sampling (expect longer runtime).
+        In case of periodic box, the RRR counts are not needed because they are trivial.
     
     n_mu_bins : integer
         (Optional) number of angular (mu) bins for the RRR (random triplet) counts computation. Default 120.
@@ -340,43 +341,46 @@ def run_cov(mode: Literal["legendre_accumulated"],
 
     # deal with RRR counts
     # need to check normalize_wcounts logic
-    if RRR_counts is None: # need to run triple_counts
-        # Select the executable name
-        exec_name = "bin/triple.s_mu" + "_periodic" * periodic + "_verbose" * verbose
-        # the above must be true relative to the script location
-        # below we should make it absolute, i.e. right regardless of the working directory
-        exec_path = os.path.join(os.path.realpath(os.path.dirname(__file__)), exec_name)
+    if RRR_counts is None:
+        if periodic: RRR_filename = None # RRR counts not needed
+        else: # need to run triple_counts
+            # Select the executable name
+            exec_name = "bin/triple.s_mu" + "_periodic" * periodic + "_verbose" * verbose
+            # the above must be true relative to the script location
+            # below we should make it absolute, i.e. right regardless of the working directory
+            exec_path = os.path.join(os.path.realpath(os.path.dirname(__file__)), exec_name)
 
-        # form the command line
-        command = "env OMP_PROC_BIND=spread OMP_PLACES=threads " # set OMP environment variables, should not be set before
-        command += f"{exec_path} -output {out_dir}/ -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_iterations}" # here are universally acceptable parameters
-        command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
-        command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
-        command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
-        command += f" -mbin {n_mu_bins}"
-        if periodic: # append periodic flag and box size
-            command += f" -perbox -boxsize {boxsize}"
+            # form the command line
+            command = "env OMP_PROC_BIND=spread OMP_PLACES=threads " # set OMP environment variables, should not be set before
+            command += f"{exec_path} -output {out_dir}/ -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_iterations}" # here are universally acceptable parameters
+            command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
+            command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
+            command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
+            command += f" -mbin {n_mu_bins}"
+            if periodic: # append periodic flag and box size
+                command += f" -perbox -boxsize {boxsize}"
 
-        # deal with the seed
-        if seed is not None: # need to pass to the C++ code and make sure it can be received properly. 0 (False) is not equivalent to None in this case
-            seed &= 2**32 - 1 # this bitwise AND truncates the seed into a 32-bit unsigned (positive) integer (definitely a subset of unsigned long)
-            command += f" -seed {seed}"
-    
-        # run the triple_counts code
-        print_and_log(datetime.now())
-        print_and_log(f"Launching the triple_counts C++ code with command: {command}")
-        status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {command} 2>&1 | tee -a {logfile}'")
-        # tee prints what it gets to stdout AND saves to file
-        # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
-        # without pipefail, the exit_code would be of tee, not reflecting main command failures
-        # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
+            # deal with the seed
+            if seed is not None: # need to pass to the C++ code and make sure it can be received properly. 0 (False) is not equivalent to None in this case
+                seed &= 2**32 - 1 # this bitwise AND truncates the seed into a 32-bit unsigned (positive) integer (definitely a subset of unsigned long)
+                command += f" -seed {seed}"
+        
+            # run the triple_counts code
+            print_and_log(datetime.now())
+            print_and_log(f"Launching the triple_counts C++ code with command: {command}")
+            status = os.system(f"bash -c 'set -o pipefail; stdbuf -oL -eL {command} 2>&1 | tee -a {logfile}'")
+            # tee prints what it gets to stdout AND saves to file
+            # stdbuf -oL -eL should solve the output delays due to buffering without hurting the performance too much
+            # without pipefail, the exit_code would be of tee, not reflecting main command failures
+            # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
 
-        # check the run status
-        exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
-        if exit_code: raise RuntimeError(f"The triple_counts C++ code terminated with an error: exit code {exit_code}")
-        print_and_log("The triple_counts C++ code finished succesfully")
+            # check the run status
+            exit_code = os.waitstatus_to_exitcode(status) # assumes we are in Unix-based OS; on Windows status is the exit code
+            if exit_code: raise RuntimeError(f"The triple_counts C++ code terminated with an error: exit code {exit_code}")
+            print_and_log("The triple_counts C++ code finished succesfully")
 
-        RRR_filename = f"{out_dir}/RRR_counts_n{n_r_bins}_m{n_mu_bins}_full.txt"
+            RRR_filename = f"{out_dir}/RRR_counts_n{n_r_bins}_m{n_mu_bins}_full.txt"
+        
         inv_phi_filename = compute_3pcf_correction_function(input_filenames[0], binfile, out_dir, periodic, RRR_filename, print_function=print_and_log)
     else: # need to convert RRR counts from ENCORE/CADENZA format
         pass
