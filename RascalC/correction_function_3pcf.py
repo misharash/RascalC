@@ -108,6 +108,7 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
     The 3PCF survey correction function is defined as the ratio between idealistic and true RRR pair counts for a single survey.
 
     NB: Input RRR counts are not normalized here, and are already in multipole format.
+    Caveat: ENCORE only computes the triple counts for pairs of different radial bins, whereas RascalC expects them for all pairs of radial bins, crucially including the pairs of identical bins. Here we try to fill the missing data for those identical-bin pairs using the neighboring bin pairs. These should only affect the covariance rows and columns corresponding to the identical-bin pairs, which should be removed from the covariance for use with ENCORE 3PCF measurements in the end. So, those missing bin pairs should not matter in the end, but it is nicer not to have complete nonsence in the intermediate products.
     """
 
     n_multipoles = 7 # matches the value hard-coded in the C++ code
