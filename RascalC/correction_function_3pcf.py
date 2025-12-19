@@ -123,7 +123,7 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
     if triple_counts.shape[1] != n*(n-1)//2: raise ValueError("The shape of RRR_counts is inconsistent with the bins provided")
 
     # change normalization from ENCORE to simple multipoles used in RascalC
-    triple_counts *= ((-1)*ells * np.sqrt(2 * ells + 1) / (4 * np.pi))[None, None, :] # the ell-dependent factor between the ENCORE 3-point basis functions and Legendre polynomials given by Equation (16) in https://arxiv.org/pdf/2105.08722
+    triple_counts *= ((-1)**ells * np.sqrt(2 * ells + 1) / (4 * np.pi))[None, None, :] # the ell-dependent factor between the ENCORE 3-point basis functions and Legendre polynomials given by Equation (16) in https://arxiv.org/pdf/2105.08722
     # need to check if it is not division; there might also be a factor of 2 or something similar
 
     if len(triple_counts) < n_multipoles:
