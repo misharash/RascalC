@@ -22,28 +22,20 @@ def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: np
     mu_all = np.linspace(-1,1,m+1)
     mu_cen = 0.5*(mu_all[1:]+mu_all[:-1])
     
-    RRR_true = np.zeros([n,n,m])
-    
-    ## load in RRR counts (and add symmetries)
-    for i in range(len(triple_counts)):
-        RRR_true[(i//m)//n,(i//m)%n,i%m] += triple_counts[i]*0.5
-        RRR_true[(i//m)%n,(i//m)//n,i%m] += triple_counts[i]*0.5
+    ## reshape RRR counts and add symmetries
+    RRR_true = triple_counts.reshape(n, n, m)
+    RRR_true = (RRR_true + RRR_true.transpose(1, 0, 2)) / 2
         
     ## Now construct Legendre moments
     leg_triple = np.zeros([n, n, n_multipoles])
-    for a in range(n):
-        for b in range(n):
-            for ell in range(n_multipoles):
-                # (NB: we've absorbed a factor of delta_mu into RRR_true here)
-                leg_triple[a,b,ell]+=np.sum(legendre(ell)(mu_cen)*RRR_true[a,b,:])*(2.*ell+1.)
+    for ell in range(n_multipoles):
+        # (NB: we've absorbed a factor of delta_mu into RRR_true here)
+        leg_triple[:, :, ell] += (2.*ell+1.) * np.sum(legendre(ell)(mu_cen)[None, None, :] * RRR_true, axis=-1)
 
-    vol_r = lambda b: 4.*np.pi/3.*(r_bins[b,1]**3.-r_bins[b,0]**3.)
+    vol_r = 4 * np.pi / 3 * (r_bins[:, 1] **3 - r_bins[:, 0] ** 3)
 
     ## Construct inverse multipoles of Phi
-    phi_inv_mult = np.zeros([n, n, n_multipoles])
-    for b1 in range(n):
-        for b2 in range(n):
-            phi_inv_mult[b1,b2,:] = leg_triple[b1,b2,:] / (.5 * vol_r(b1) * vol_r(b2))
+    phi_inv_mult = leg_triple / (.5 * vol_r[:, None, None] * vol_r[None, :, None])
             
     ## Check all seems reasonable
     if np.mean(phi_inv_mult[:,:,0])<1e-3:
