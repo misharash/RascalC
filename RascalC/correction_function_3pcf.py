@@ -100,3 +100,70 @@ def compute_3pcf_correction_function(randoms_pos: np.ndarray[float], randoms_wei
 def compute_3pcf_correction_function_from_files(random_filename: str, binfile: str, outdir: str, periodic: bool, RRR_file: str | None = None, print_function: Callable[[str], None] = print) -> str:
     print_function("Loading randoms")
     return compute_3pcf_correction_function(*load_randoms(random_filename), binfile, outdir, periodic, RRR_file, print_function = print_function)
+
+
+def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float], randoms_weights: np.ndarray[float], binfile: str, outdir: str, triple_counts: np.ndarray, print_function: Callable[[str], None] = print) -> str:
+    """
+    Function to compute the multipole decomposition of the 3PCF inverse survey correction function from ENCORE triple counts.
+    The 3PCF survey correction function is defined as the ratio between idealistic and true RRR pair counts for a single survey.
+
+    NB: Input RRR counts are not normalized here, and are already in multipole format.
+    """
+
+    n_multipoles = 7 # matches the value hard-coded in the C++ code
+
+    ells = np.arange(len(triple_counts))
+
+    if np.array_equal(triple_counts[:, 0], ells): triple_counts = triple_counts[:, 1:] # exclude the ells if they are included as the first column
+
+    if triple_counts.shape[1] != n*(n-1)//2: raise ValueError("The shape of RRR_counts is inconsistent with the bins provided")
+
+    # change normalization from ENCORE to simple multipoles used in RascalC
+    triple_counts *= ((-1)*ells * np.sqrt(2 * ells + 1) / (4 * np.pi))[None, None, :] # the ell-dependent factor between the ENCORE 3-point basis functions and Legendre polynomials given by Equation (16) in https://arxiv.org/pdf/2105.08722
+    # need to check if it is not division; there might also be a factor of 2 or something similar
+
+    if len(triple_counts) < n_multipoles:
+        print_function(f"INFO: ENCORE triple counts have {len(triple_counts)} multipoles, fewer than {n_multipoles} used for the survey correction function, extending by zeros")
+        triple_counts = np.vstack([triple_counts, np.zeros([n_multipoles - len(triple_counts), triple_counts.shape[1]])])
+    elif len(triple_counts) > n_multipoles:
+        print_function(f"INFO: ENCORE triple counts have {len(triple_counts)} multipoles, more than {n_multipoles} used for the survey correction function, discarding the higher multipoles")
+        triple_counts = triple_counts[:n_multipoles]
+
+    V, n_bar, w_bar = compute_V_n_w_bar(randoms_pos, randoms_weights)
+
+    # Load in binning files 
+    r_bins = np.loadtxt(binfile)
+    n=len(r_bins)
+
+    ## Define normalization constant
+    norm = 6. * V * n_bar**3 * w_bar**3 # I don't think there is an exactly right answer once number density or weights vary across the survey
+
+    bin_indices = np.arange(n)
+    bin_index1 = np.repeat(bin_indices, n-1-bin_indices)
+    bin_index2 = np.concatenate([bin_indices[i+1:] for i in range(n)])
+    # bin_index1 and bin_index2 cover all the bin pairs under the condition bin_index1 < bin_index2, the order follows the ENCORE format
+
+    leg_triple = np.zeros([n, n, n_multipoles])
+    leg_triple[bin_index1, bin_index2] = triple_counts # fill below diagonal
+    leg_triple[bin_index2, bin_index1] = triple_counts # fill above diagonal symmetrically
+
+    # fill the middle diagonal elements
+    bin_indices_middle = bin_indices[1:-1]
+    leg_triple[bin_indices_middle, bin_indices_middle] = (leg_triple[bin_indices_middle+1, bin_indices_middle] + leg_triple[bin_indices_middle-1, bin_indices_middle]) / 2 # average the neighboring elements along the column. the neighboring elements along the row are the same due to symmetry
+
+    # fill the edge/corner diagonal elements which are more tricky
+    leg_triple[0, 0] = (2 * (2 * leg_triple[1, 0] - leg_triple[2, 0]) + (2 * leg_triple[1, 1] - leg_triple[2, 2])) / 3
+    leg_triple[-1, -1] = (2 * (2 * leg_triple[-2, -1] - leg_triple[-3, -1]) + (2 * leg_triple[-2, -2] - leg_triple[-3, -3])) / 3
+    # hopefully this leads to no negative bin counts, worth checking later
+
+    vol_r = 4 * np.pi / 3 * (r_bins[:, 1] **3 - r_bins[:, 0] ** 3)
+
+    ## Construct inverse multipoles of Phi
+    phi_inv_mult = leg_triple / (.5 * vol_r[:, None, None] * vol_r[None, :, None])
+        
+    outfile = os.path.join(outdir, 'BinCorrectionFactor3PCF_n%d.txt' % n)
+    
+    np.savetxt(outfile, phi_inv_mult.reshape(n*n, n_multipoles) * norm)
+    print_function("Saved (normalized) output to %s\n"%outfile)
+
+    return outfile

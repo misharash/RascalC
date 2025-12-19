@@ -14,7 +14,7 @@ from warnings import warn
 from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
 from .write_binning_file import write_binning_file
 from .pycorr_utils.input_xi import get_input_xi_from_pycorr
-from correction_function_3pcf import compute_3pcf_correction_function
+from correction_function_3pcf import compute_3pcf_correction_function, compute_3pcf_correction_function_from_encore
 from .convergence_check_extra import convergence_check_extra
 from .utils import rmdir_if_exists_and_empty, suffixes_tracer_all, indices_corr_all, suffixes_corr_all
 from .post_process_3pcf import post_process_3pcf
@@ -232,8 +232,6 @@ def run_cov(mode: Literal["legendre_accumulated"],
     # set the technical filenames
     input_filenames = [os.path.join(tmp_dir, str(t) + ".txt") for t in range(ntracers)]
     cornames = [os.path.join(out_dir, f"xi/xi_{index}.dat") for index in indices_corr]
-    # RRR_name = 
-    # inv_phi_name = # inverse correction function # [os.path.join(out_dir, f"BinCorrectionFactor_n{n_r_bins}_" + ("periodic" if periodic else f'm{n_mu_bins}') + f"_{index}.txt") for index in indices_corr]
     
     # make sure the dirs exist
     # os.makedirs() will become confused if the path elements to create include pardir (eg. “..” on UNIX systems).
@@ -383,7 +381,7 @@ def run_cov(mode: Literal["legendre_accumulated"],
         
         inv_phi_filename = compute_3pcf_correction_function(randoms_positions[0], randoms_weights[0], binfile, out_dir, periodic, RRR_filename, print_function=print_and_log)
     else: # need to convert RRR counts from ENCORE/CADENZA format
-        pass
+        inv_phi_filename = compute_3pcf_correction_function_from_encore(randoms_positions[0], randoms_weights[0], binfile, out_dir, RRR_counts, print_function=print_and_log)
 
     # Select the executable name
     exec_name = "bin/cov.3pcf_" + mode + "_periodic" * periodic + "_verbose" * verbose
