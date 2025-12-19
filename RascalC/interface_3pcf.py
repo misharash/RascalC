@@ -31,7 +31,6 @@ def run_cov(mode: Literal["legendre_accumulated"],
             n_mu_bins: int = 120,
             position_type: Literal["rdd", "xyz", "pos"] = "pos",
             xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
-            normalize_wcounts: bool = True,
             boxsize: float | None = None,
             shot_noise_rescaling1: float = 1,
             sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
@@ -71,18 +70,13 @@ def run_cov(mode: Literal["legendre_accumulated"],
     
     randoms_weights1 : array of floats of length N_randoms
         Weights of random points for the first tracer.
-
-    normalize_wcounts : boolean
-        (Optional) whether to normalize the weights and weighted counts.
-        If False, the provided RR counts must match what can be obtained from given randoms, otherwise the covariance matrix will be off by a constant factor.
-        Example: if counts were computed with ``n_randoms`` roughly similar random chunks and only one is provided to RascalC here, the counts should be divided by ``n_random`` where ``s > split_above`` and by ``n_random ** 2`` where ``s < split_above``.
-        If True (default), the weights will be normalized so that their sum is 1 and the counts will be normalized by their ``wnorm``, which gives a match with default ``pycorr`` normalization settings.
     
     no_data_galaxies1 : float
         Number of first tracer data (not random!) points for the covariance rescaling.
     
     RRR_counts : Numpy array of floats, or None
         (Optional) RRR (random triplet) counts in ENCORE format.
+        If provided, need to be computed with the same set of randoms, positions and weights. Otherwise, the covariance normalization will be off.
         If not provided and the data is not in a periodic box, triple counts will be estimated with importance sampling (expect longer runtime).
         In case of periodic box, the RRR counts are not needed because they are trivial.
     
@@ -268,7 +262,6 @@ def run_cov(mode: Literal["legendre_accumulated"],
     print_and_log(f"Mode: {mode}")
     print_and_log(f"Periodic box: {periodic}")
     if periodic: print_and_log(f"Box side: {boxsize}")
-    print_and_log(f"Normalizing weights and weighted counts: {normalize_wcounts}")
     print_and_log(datetime.now())
 
     ndata = [no_data_galaxies1]
@@ -324,7 +317,6 @@ def run_cov(mode: Literal["legendre_accumulated"],
         nrandoms = len(randoms_properties[0])
         if randoms_weights[t].ndim != 1: raise ValueError(f"Weights of randoms {t+1} not contained in a 1D array")
         if len(randoms_weights[t]) != nrandoms: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
-        if normalize_wcounts: randoms_weights[t] /= np.sum(randoms_weights[t])
         randoms_properties.append(randoms_weights[t])
         np.savetxt(input_filename, np.column_stack(randoms_properties))
         randoms_properties = None
@@ -335,10 +327,7 @@ def run_cov(mode: Literal["legendre_accumulated"],
     binfile_cf = os.path.join(out_dir, "radial_binning_corr.csv")
     write_binning_file(binfile_cf, xi_s_edges)
 
-    counts_factor = None if normalize_wcounts else 1
-
     # deal with RRR counts
-    # need to check normalize_wcounts logic
     if RRR_counts is None:
         if periodic: RRR_filename = None # RRR counts not needed
         else: # need to run triple_counts
