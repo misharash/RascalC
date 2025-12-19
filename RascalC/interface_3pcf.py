@@ -1,6 +1,5 @@
 """
-Python wrapper of ``RascalC``, heavily interfaced with ``pycorr`` `library for 2-point correlation function estimation <https://github.com/cosmodesi/pycorr>`_.
-Many of the arguments are intentionally similar to ``pycorr.TwoPointCorrelationFunction`` `high-level interface <https://py2pcf.readthedocs.io/en/latest/api/api.html#pycorr.correlation_function.TwoPointCorrelationFunction>`_.
+Python wrapper of ``RascalC`` for 3-point correlation function covariance, being interfaced with the ``ENCORE`` `code for efficient NPCF (including 3PCF) estimation <https://github.com/oliverphilcox/encore>`.
 
 Please bear with the long description; you can pay less attention to settings labeled optional in the beginning.
 """
@@ -20,21 +19,21 @@ from .utils import rmdir_if_exists_and_empty, suffixes_tracer_all, indices_corr_
 from .post_process_3pcf import post_process_3pcf
 
 
-def run_cov(mode: Literal["legendre_accumulated"],
-            s_edges: np.ndarray[float], max_l: int,
-            nthread: int, N2: int, N3: int, N4: int, N5: int, N6: int, n_loops: int, loops_per_sample: int,
-            out_dir: str, tmp_dir: str,
-            randoms_positions1: np.ndarray[float], randoms_weights1: np.ndarray[float],
-            xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]],
-            no_data_galaxies1: float,
-            RRR_counts: np.ndarray[float] | None = None, # probably plug it from ENCORE/CADENZA when available and otherwise compute internally with triple_counts
-            n_mu_bins: int = 120,
-            position_type: Literal["rdd", "xyz", "pos"] = "pos",
-            xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
-            boxsize: float | None = None,
-            shot_noise_rescaling1: float = 1,
-            sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
-            verbose: bool = False) -> dict[str, np.ndarray[float]]:
+def run_cov_3pcf(mode: Literal["legendre_accumulated"],
+                 s_edges: np.ndarray[float], max_l: int,
+                 nthread: int, N2: int, N3: int, N4: int, N5: int, N6: int, n_loops: int, loops_per_sample: int,
+                 out_dir: str, tmp_dir: str,
+                 randoms_positions1: np.ndarray[float], randoms_weights1: np.ndarray[float],
+                 xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]],
+                 no_data_galaxies1: float,
+                 RRR_counts: np.ndarray[float] | None = None,
+                 n_mu_bins: int = 120,
+                 position_type: Literal["rdd", "xyz", "pos"] = "pos",
+                 xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
+                 boxsize: float | None = None,
+                 shot_noise_rescaling1: float = 1,
+                 sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
+                 verbose: bool = False) -> dict[str, np.ndarray[float]]:
     r"""
     Run the 3-point correlation function covariance integration.
     Only supports single tracer in "accumulated" Legendre mode without jackknives.
