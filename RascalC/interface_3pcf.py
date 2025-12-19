@@ -381,7 +381,7 @@ def run_cov(mode: Literal["legendre_accumulated"],
 
             RRR_filename = f"{out_dir}/RRR_counts_n{n_r_bins}_m{n_mu_bins}_full.txt"
         
-        inv_phi_filename = compute_3pcf_correction_function(input_filenames[0], binfile, out_dir, periodic, RRR_filename, print_function=print_and_log)
+        inv_phi_filename = compute_3pcf_correction_function(randoms_positions[0], randoms_weights[0], binfile, out_dir, periodic, RRR_filename, print_function=print_and_log)
     else: # need to convert RRR counts from ENCORE/CADENZA format
         pass
 
