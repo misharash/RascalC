@@ -113,24 +113,28 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
 
     n_multipoles = 7 # matches the value hard-coded in the C++ code
 
-    ells = np.arange(len(triple_counts))
+    ells = np.arange(len(triple_counts)) # rows in triple_counts correspond to multipoles, columns - to radial bin pairs; the first column might just contain these ells
 
-    if np.array_equal(triple_counts[:, 0], ells): triple_counts = triple_counts[:, 1:] # exclude the ells if they are included as the first column
+    if np.array_equal(triple_counts[:, 0], ells): triple_counts = triple_counts[:, 1:] # remove the first column if it is all ells
 
     # Load in binning files 
     r_bins = np.loadtxt(binfile)
     n = len(r_bins)
 
-    if triple_counts.shape[1] != n*(n-1)//2: raise ValueError("The shape of RRR_counts is inconsistent with the bins provided")
+    if triple_counts.shape[1] != n*(n-1)//2: raise ValueError("The shape of RRR_counts is inconsistent with the radial bins provided")
+    # check this after removing the ells column if present
+    # the columns correspond to radial bins
 
     # change normalization from ENCORE to simple multipoles used in RascalC
-    triple_counts *= ((-1)**ells * np.sqrt(2 * ells + 1) / (4 * np.pi))[None, None, :] # the ell-dependent factor between the ENCORE 3-point basis functions and Legendre polynomials given by Equation (16) in https://arxiv.org/pdf/2105.08722
+    triple_counts *= ((-1)**ells * np.sqrt(2 * ells + 1) / (4 * np.pi))[:, None] # add the second dimension, corresponding to the radial bins, to avoid indexing errors
+    # the ell-dependent factor between the ENCORE 3-point basis functions and Legendre polynomials given by Equation (16) in https://arxiv.org/pdf/2105.08722
     # need to check if it is not division; there might also be a factor of 2 or something similar
 
-    if len(triple_counts) < n_multipoles:
+    # ensure the number of multipoles in triple_counts is right to avoid indexing errors
+    if len(triple_counts) < n_multipoles: # this seems more likely
         print_function(f"INFO: ENCORE triple counts have {len(triple_counts)} multipoles, fewer than {n_multipoles} used for the survey correction function, extending by zeros")
         triple_counts = np.vstack([triple_counts, np.zeros([n_multipoles - len(triple_counts), triple_counts.shape[1]])])
-    elif len(triple_counts) > n_multipoles:
+    elif len(triple_counts) > n_multipoles: # this seems less likely
         print_function(f"INFO: ENCORE triple counts have {len(triple_counts)} multipoles, more than {n_multipoles} used for the survey correction function, discarding the higher multipoles")
         triple_counts = triple_counts[:n_multipoles]
 
@@ -138,10 +142,11 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
     bin_index1 = np.repeat(bin_indices, n-1-bin_indices)
     bin_index2 = np.concatenate([bin_indices[i+1:] for i in range(n)])
     # bin_index1 and bin_index2 cover all the bin pairs under the condition bin_index1 < bin_index2, the order follows the ENCORE format
+    # they could be read from first two non-comment rows of the ENCORE file, but this seems unnecessary
 
     leg_triple = np.zeros([n, n, n_multipoles])
-    leg_triple[bin_index1, bin_index2] = triple_counts # fill above the diagonal
-    leg_triple[bin_index2, bin_index1] = triple_counts # fill below the diagonal symmetrically
+    leg_triple[bin_index1, bin_index2] = triple_counts.T # fill above the diagonal; transposition puts radial bin pair index first and multipole index last
+    leg_triple[bin_index2, bin_index1] = triple_counts.T # fill below the diagonal symmetrically
 
     # fill the middle diagonal elements
     bin_indices_middle = bin_indices[1:-1]
@@ -152,7 +157,7 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
     leg_triple[-1, -1] = (2 * (2 * leg_triple[-2, -1] - leg_triple[-3, -1]) + (2 * leg_triple[-2, -2] - leg_triple[-3, -3])) / 3
     # hopefully this leads to no negative bin counts, worth checking later
 
-    vol_r = 4 * np.pi / 3 * (r_bins[:, 1] **3 - r_bins[:, 0] ** 3)
+    vol_r = 4 * np.pi / 3 * (r_bins[:, 1] ** 3 - r_bins[:, 0] ** 3) # volume of radial/separation bins as 1D array
 
     V, n_bar, w_bar = compute_V_n_w_bar(randoms_pos, randoms_weights)
 

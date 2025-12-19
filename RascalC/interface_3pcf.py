@@ -218,7 +218,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
 
     n_r_bins = len(s_edges) - 1
 
-    # this condition should be updated for 3PCF, but it is not top priority
+    # this condition should be updated for 3PCF, but it is not top priority - for 2PCF, it is only relevant in small boxes, relative to s_max and xi_cut_s
     # if periodic and 2 * (max(s_edges) + xi_cut_s) > boxsize:
     #     warn("Some of the interparticle distances may not be correctly periodically wrapped because of the small box period, so some 6-point configurations may be missed in error. To avoid this, keep the sum of s_max (maximum separation in the covariance bins) and the xi cutoff scale smaller than half of the box size.")
 
