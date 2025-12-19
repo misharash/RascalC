@@ -116,6 +116,10 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
 
     if np.array_equal(triple_counts[:, 0], ells): triple_counts = triple_counts[:, 1:] # exclude the ells if they are included as the first column
 
+    # Load in binning files 
+    r_bins = np.loadtxt(binfile)
+    n = len(r_bins)
+
     if triple_counts.shape[1] != n*(n-1)//2: raise ValueError("The shape of RRR_counts is inconsistent with the bins provided")
 
     # change normalization from ENCORE to simple multipoles used in RascalC
@@ -128,15 +132,6 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
     elif len(triple_counts) > n_multipoles:
         print_function(f"INFO: ENCORE triple counts have {len(triple_counts)} multipoles, more than {n_multipoles} used for the survey correction function, discarding the higher multipoles")
         triple_counts = triple_counts[:n_multipoles]
-
-    V, n_bar, w_bar = compute_V_n_w_bar(randoms_pos, randoms_weights)
-
-    # Load in binning files 
-    r_bins = np.loadtxt(binfile)
-    n=len(r_bins)
-
-    ## Define normalization constant
-    norm = 6. * V * n_bar**3 * w_bar**3 # I don't think there is an exactly right answer once number density or weights vary across the survey
 
     bin_indices = np.arange(n)
     bin_index1 = np.repeat(bin_indices, n-1-bin_indices)
@@ -158,8 +153,20 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
 
     vol_r = 4 * np.pi / 3 * (r_bins[:, 1] **3 - r_bins[:, 0] ** 3)
 
+    V, n_bar, w_bar = compute_V_n_w_bar(randoms_pos, randoms_weights)
+
+    ## Define normalization constant
+    norm = 6. * V * n_bar**3 * w_bar**3 # I don't think there is an exactly right answer once number density or weights vary across the survey
+
     ## Construct inverse multipoles of Phi
-    phi_inv_mult = leg_triple / (.5 * vol_r[:, None, None] * vol_r[None, :, None])
+    phi_inv_mult = leg_triple / (.5 * norm * vol_r[:, None, None] * vol_r[None, :, None])
+            
+    ## Check all seems reasonable
+    if np.mean(phi_inv_mult[:,:,0])<1e-3:
+        print_function(phi_inv_mult[:,:,0])
+        raise ValueError("Survey correction function seems too small - are the RRR counts normalized correctly?")
+    if np.mean(phi_inv_mult[:,:,0])>1e3:
+        raise ValueError("Survey correction function seems too large - are the RRR counts normalized correctly?")
         
     outfile = os.path.join(outdir, 'BinCorrectionFactor3PCF_n%d.txt' % n)
     
