@@ -140,8 +140,8 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
     # bin_index1 and bin_index2 cover all the bin pairs under the condition bin_index1 < bin_index2, the order follows the ENCORE format
 
     leg_triple = np.zeros([n, n, n_multipoles])
-    leg_triple[bin_index1, bin_index2] = triple_counts # fill below diagonal
-    leg_triple[bin_index2, bin_index1] = triple_counts # fill above diagonal symmetrically
+    leg_triple[bin_index1, bin_index2] = triple_counts # fill above the diagonal
+    leg_triple[bin_index2, bin_index1] = triple_counts # fill below the diagonal symmetrically
 
     # fill the middle diagonal elements
     bin_indices_middle = bin_indices[1:-1]
