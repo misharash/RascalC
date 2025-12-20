@@ -172,17 +172,7 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
     leg_triple = np.zeros([n, n, n_multipoles])
     leg_triple[bin_index1, bin_index2] = triple_counts.T # fill above the diagonal; transposition puts radial bin pair index first and multipole index last
     leg_triple[bin_index2, bin_index1] = triple_counts.T # fill below the diagonal symmetrically
-
-    # fill the middle diagonal elements
-    bin_indices_middle = bin_indices[1:-1]
-    leg_triple[bin_indices_middle, bin_indices_middle] = (leg_triple[bin_indices_middle+1, bin_indices_middle] + leg_triple[bin_indices_middle-1, bin_indices_middle]) / 2 # average the neighboring elements along the column. the neighboring elements along the row are the same due to symmetry
-
-    # fill the edge/corner diagonal elements which are more tricky
-    leg_triple[0, 0] = (2 * (2 * leg_triple[1, 0] - leg_triple[2, 0]) + (2 * leg_triple[1, 1] - leg_triple[2, 2])) / 3
-    leg_triple[-1, -1] = (2 * (2 * leg_triple[-2, -1] - leg_triple[-3, -1]) + (2 * leg_triple[-2, -2] - leg_triple[-3, -3])) / 3
-    
-    # check for negative counts, which should be problematic
-    check_triple_counts_positive(leg_triple, lenient_samebins=True, print_function=print_function)
+    # leave zeros at the diagonal for now
 
     vol_r = 4 * np.pi / 3 * (r_bins[:, 1] ** 3 - r_bins[:, 0] ** 3) # volume of radial/separation bins as 1D array
 
@@ -193,6 +183,18 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
 
     ## Construct inverse multipoles of Phi
     phi_inv_mult = leg_triple / (.5 * norm * vol_r[:, None, None] * vol_r[None, :, None])
+
+    # fill the middle diagonal elements, which have been zeros
+    # seems better to do in phi_inv_mult because its values change less
+    bin_indices_middle = bin_indices[1:-1]
+    phi_inv_mult[bin_indices_middle, bin_indices_middle] = (phi_inv_mult[bin_indices_middle+1, bin_indices_middle] + phi_inv_mult[bin_indices_middle-1, bin_indices_middle]) / 2 # average the neighboring elements along the column. the neighboring elements along the row are the same due to symmetry
+
+    # fill the edge/corner diagonal elements, which are more tricky and have been zeros
+    phi_inv_mult[0, 0] = (2 * (2 * phi_inv_mult[1, 0] - phi_inv_mult[2, 0]) + (2 * phi_inv_mult[1, 1] - phi_inv_mult[2, 2])) / 3
+    phi_inv_mult[-1, -1] = (2 * (2 * phi_inv_mult[-2, -1] - phi_inv_mult[-3, -1]) + (2 * phi_inv_mult[-2, -2] - phi_inv_mult[-3, -3])) / 3
+    
+    # check for negative triple counts (or rather the correction function as it is passed to RascalC), which should be problematic
+    check_triple_counts_positive(phi_inv_mult * norm, lenient_samebins=True, print_function=print_function)
             
     ## Check all seems reasonable
     check_inv_phi_values(phi_inv_mult, print_function=print_function)
