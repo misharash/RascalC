@@ -69,12 +69,13 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
     
     randoms_weights1 : array of floats of length N_randoms
         Weights of random points for the first tracer.
+        If they were made negative for ENCORE, make them positive again before passing to RascalC.
     
     no_data_galaxies1 : float
         Number of first tracer data (not random!) points for the covariance rescaling.
     
     RRR_counts : Numpy array of floats, or None
-        (Optional) RRR (random triplet) counts in ENCORE format. You should be able to load them via `np.loadtxt("....r_3pcf.txt", skiprows=2)`. Removing the first/ell column is not necessary, the code should be able to do this.
+        (Optional) RRR (random triplet) counts in ENCORE format. You should be able to load them via `np.genfromtxt("....r_3pcf.txt", skip_header=8)`. Removing the first/ell column is not necessary, the code should be able to do this.
         If provided, need to be computed with the same set of randoms, positions and weights. Otherwise, the covariance normalization will be off.
         If not provided and the data is not in a periodic box, triple counts will be estimated with importance sampling (expect longer runtime).
         In case of periodic box, the RRR counts are not needed because they are trivial.
