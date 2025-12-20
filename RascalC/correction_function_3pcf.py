@@ -16,6 +16,23 @@ def compute_inv_phi_periodic_3pcf(n: int, n_multipoles: int) -> np.ndarray[float
     return phi_inv_mult
 
 
+def check_triple_counts_positive(leg_triple: np.ndarray[float], n_multipoles: int, lenient_samebins: bool = False, print_function: Callable[[str], None] = print) -> None:
+    "Check for negative counts, which should be problematic"
+    n_mu = 2001
+    triple_counts = np.zeros(list(leg_triple.shape[:-1]) + [n_mu])
+    mu_values = np.linspace(-1, 1, n_mu)
+    for ell in range(n_multipoles):
+        triple_counts += leg_triple[:, :, ell][:, :, None] * legendre(ell)(mu_values)[None, None, :]
+    problem_indices = np.argwhere(triple_counts <= 0)
+    if len(problem_indices) > 0:
+        rbins, mu_counts = np.unique(problem_indices[:, :2], axis=0, return_counts=True)
+        for ((rbin1, rbin2), mu_count) in zip(rbins, mu_counts):
+            if rbin1 > rbin2: continue # this case can be skipped by symmetry
+            title = "WARNING"
+            if lenient_samebins and rbin1 == rbin2: title = "INFO" # the problem for same-bin pairs is less critical (and seems more likely), for different-bin pairs it is more critical
+            print_function(f"{title}: counts are not positive for radial bin pair {rbin1}, {rbin2} for {mu_count} mu values of {n_mu} checked")
+
+
 def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: np.ndarray[float], triple_counts: np.ndarray[float], print_function: Callable[[str], None] = print) -> np.ndarray[float]:
     "Compute the survey correction function coefficients for the realistic survey geometry."
 
@@ -32,18 +49,8 @@ def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: np
         # (NB: we've absorbed a factor of delta_mu into RRR_true here)
         leg_triple[:, :, ell] += (2.*ell+1.) * np.sum(legendre(ell)(mu_cen)[None, None, :] * RRR_true, axis=-1)
     
-    # as a precaution, check for negative counts, which should be problematic
-    n_mu_check = 2001
-    triple_counts_check = np.zeros([n, n, n_mu_check])
-    mu_values_check = np.linspace(-1, 1, n_mu_check)
-    for ell in range(n_multipoles):
-        triple_counts_check += leg_triple[:, :, ell][:, :, None] * legendre(ell)(mu_values_check)[None, None, :]
-    problem_indices = np.argwhere(triple_counts_check <= 0)
-    if len(problem_indices) > 0:
-        rbins, mu_counts = np.unique(problem_indices[:, :2], axis=0, return_counts=True)
-        for ((rbin1, rbin2), mu_count) in zip(rbins, mu_counts):
-            if rbin1 > rbin2: continue # this case can be skipped by symmetry
-            print_function(f"WARNING: counts are not positive for radial bin pair {rbin1}, {rbin2} for {mu_count} mu values of {n_mu_check} checked")
+    # as a precaution, check for negative counts
+    check_triple_counts_positive(leg_triple, n_multipoles, print_function=print_function)
 
     vol_r = 4 * np.pi / 3 * (r_bins[:, 1] **3 - r_bins[:, 0] ** 3)
 
@@ -170,18 +177,7 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
     leg_triple[-1, -1] = (2 * (2 * leg_triple[-2, -1] - leg_triple[-3, -1]) + (2 * leg_triple[-2, -2] - leg_triple[-3, -3])) / 3
     
     # check for negative counts, which should be problematic
-    n_mu_check = 2001
-    triple_counts_check = np.zeros([n, n, n_mu_check])
-    mu_values_check = np.linspace(-1, 1, n_mu_check)
-    for ell in range(n_multipoles):
-        triple_counts_check += leg_triple[:, :, ell][:, :, None] * legendre(ell)(mu_values_check)[None, None, :]
-    problem_indices = np.argwhere(triple_counts_check <= 0)
-    if len(problem_indices) > 0:
-        rbins, mu_counts = np.unique(problem_indices[:, :2], axis=0, return_counts=True)
-        for ((rbin1, rbin2), mu_count) in zip(rbins, mu_counts):
-            if rbin1 > rbin2: continue # this case can be skipped by symmetry
-            print_function(("INFO" if rbin1 == rbin2 else "WARNING") + f": counts are not positive for radial bin pair {rbin1}, {rbin2} for {mu_count} mu values of {n_mu_check} checked")
-            # the problem for same-bin pairs is less critical (and seems more likely), for different-bin pairs it is more critical
+    check_triple_counts_positive(leg_triple, n_multipoles, lenient_samebins=True, print_function=print_function)
 
     vol_r = 4 * np.pi / 3 * (r_bins[:, 1] ** 3 - r_bins[:, 0] ** 3) # volume of radial/separation bins as 1D array
 
