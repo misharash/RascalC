@@ -6,7 +6,7 @@ from .correction_function import compute_V_n_w_bar, load_randoms
 
 
 def compute_inv_phi_periodic_3pcf(n: int, n_multipoles: int) -> np.ndarray[float]:
-    "Compute the survey correction function coefficients for the periodic box geometry."
+    "Compute the inverse 3PCF survey correction function multipoles for the periodic box geometry."
     ## Output periodic survey correction function
     phi_inv_mult = np.zeros([n, n, n_multipoles])
     
@@ -34,7 +34,7 @@ def check_triple_counts_positive(leg_triple: np.ndarray[float], n_multipoles: in
 
 
 def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: np.ndarray[float], triple_counts: np.ndarray[float], print_function: Callable[[str], None] = print) -> np.ndarray[float]:
-    "Compute the survey correction function coefficients for the realistic survey geometry."
+    "Compute the inverse 3PCF survey correction function multipoles for the realistic survey geometry."
 
     mu_all = np.linspace(-1,1,m+1)
     mu_cen = 0.5*(mu_all[1:]+mu_all[:-1])
