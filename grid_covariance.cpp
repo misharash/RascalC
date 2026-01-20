@@ -283,27 +283,27 @@ int main(int argc, char *argv[]) {
     // multi-tracer for 3PCF is not implemented
 #elif (defined LEGENDRE || defined POWER)
     // Compute integrals
-    compute_integral(all_grid,&par,all_cf,all_rd,all_survey,1,1,1,1,1); // final digit is iteration number
+    compute_integral(all_grid, &par, all_cf, all_rd, all_survey, 1, 1, 1, 1, 1); // first 4 digits encode the choice of 4 tracers involved, final digit is the iteration number (mostly used for informational printouts). Need 1 combination/iteration for 1 tracer, and 7 iterations for 2 tracers, can be extended for more
 
-    if(par.multi_tracers==true){
-        compute_integral(all_grid,&par,all_cf,all_rd,all_survey,1,2,1,1,2);
-        compute_integral(all_grid,&par,all_cf,all_rd,all_survey,1,2,2,1,3);
-        compute_integral(all_grid,&par,all_cf,all_rd,all_survey,1,2,1,2,4);
-        compute_integral(all_grid,&par,all_cf,all_rd,all_survey,1,1,2,2,5);
-        compute_integral(all_grid,&par,all_cf,all_rd,all_survey,2,1,2,2,6);
-        compute_integral(all_grid,&par,all_cf,all_rd,all_survey,2,2,2,2,7);
+    if (par.multi_tracers == true) {
+        compute_integral(all_grid, &par, all_cf, all_rd, all_survey, 1, 2, 1, 1, 2);
+        compute_integral(all_grid, &par, all_cf, all_rd, all_survey, 1, 2, 2, 1, 3);
+        compute_integral(all_grid, &par, all_cf, all_rd, all_survey, 1, 2, 1, 2, 4); // tracers 1, 2, 1, 2 should in principle be identical to 1, 2, 2, 1, but the implementation only considers first-third and second-fourth pairings for the 4-point term C4 (not including the first-fourth and second-third pairings) which makes them different. In other cases (for 2 tracers) this does not matter
+        compute_integral(all_grid, &par, all_cf, all_rd, all_survey, 1, 1, 2, 2, 5);
+        compute_integral(all_grid, &par, all_cf, all_rd, all_survey, 2, 1, 2, 2, 6);
+        compute_integral(all_grid, &par, all_cf, all_rd, all_survey, 2, 2, 2, 2, 7);
     }
 #else
     // Compute integrals
-    compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,1,1,1,1); // final digit is iteration number
+    compute_integral(all_grid, &par, all_weights, all_cf, all_rd, 1, 1, 1, 1, 1); // first 4 digits encode the choice of 4 tracers involved, final digit is the iteration number (mostly used for informational printouts). Need 1 combination/iteration for 1 tracer, and 7 iterations for 2 tracers, can be extended for more
 
-    if(par.multi_tracers==true){
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,2,1,1,2);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,2,2,1,3);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,2,1,2,4);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,1,2,2,5);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,2,1,2,2,6);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,2,2,2,2,7);
+    if (par.multi_tracers == true) {
+        compute_integral(all_grid, &par, all_weights, all_cf, all_rd, 1, 2, 1, 1, 2);
+        compute_integral(all_grid, &par, all_weights, all_cf, all_rd, 1, 2, 2, 1, 3);
+        compute_integral(all_grid, &par, all_weights, all_cf, all_rd, 1, 2, 1, 2, 4); // tracers 1, 2, 1, 2 should in principle be identical to 1, 2, 2, 1, but the implementation only considers first-third and second-fourth pairings for the 4-point term C4 (not including the first-fourth and second-third pairings) which makes them different. In other cases (for 2 tracers) this does not matter
+        compute_integral(all_grid, &par, all_weights, all_cf, all_rd, 1, 1, 2, 2, 5);
+        compute_integral(all_grid, &par, all_weights, all_cf, all_rd, 2, 1, 2, 2, 6);
+        compute_integral(all_grid, &par, all_weights, all_cf, all_rd, 2, 2, 2, 2, 7);
     }
 #endif
 
