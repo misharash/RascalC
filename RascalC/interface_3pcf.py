@@ -13,7 +13,7 @@ from warnings import warn
 from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
 from .write_binning_file import write_binning_file
 from .pycorr_utils.input_xi import get_input_xi_from_pycorr
-from correction_function_3pcf import compute_3pcf_correction_function, compute_3pcf_correction_function_from_encore
+from .correction_function_3pcf import compute_3pcf_correction_function, compute_3pcf_correction_function_from_encore
 from .convergence_check_extra import convergence_check_extra
 from .utils import rmdir_if_exists_and_empty, suffixes_tracer_all, indices_corr_all, suffixes_corr_all
 from .post_process_3pcf import post_process_3pcf
