@@ -52,6 +52,7 @@ class compute_integral{
             // MAIN FUNCTION TO COMPUTE INTEGRALS
             
             int tot_iter=2; // total number of integral sets to compute
+            assert((iter_no >= 0) && (iter_no < tot_iter)); // ensure that the iteration number/index is as it should be
             
             nbin = par->nbin; // number of radial bins
             mbin = par->mbin; // number of Legendre bins
@@ -172,7 +173,7 @@ class compute_integral{
 #ifdef PRINTPERCENTS
                     // Print time left
                     if((float(n1)/float(grid->nf)*100)>=percent_counter){
-                        printf("Integral %d of %d, iteration %d of %d on thread %d: Using cell %d of %d - %.0f percent complete\n", iter_no, tot_iter, 1+n_loops, par->max_loops, thread, n1+1, grid->nf, percent_counter);
+                        printf("Integral %d of %d, iteration %d of %d on thread %d: Using cell %d of %d - %.0f percent complete\n", iter_no+1, tot_iter, 1+n_loops, par->max_loops, thread, n1+1, grid->nf, percent_counter);
                         percent_counter+=5.;
                     }
 #endif
@@ -321,7 +322,7 @@ class compute_integral{
     #pragma omp critical // only one processor can access at once
     #endif
             {
-                printf("Integral %d of %d, iteration %d of %d on thread %d completed\n", iter_no, tot_iter, 1+n_loops, par->max_loops, thread);
+                printf("Integral %d of %d, iteration %d of %d on thread %d completed\n", iter_no+1, tot_iter, 1+n_loops, par->max_loops, thread);
                 int subsample_index = completed_loops / par->loops_per_sample; // index of output subsample for this loop
                 completed_loops++; // increment completed loops counter, since they may be done not according to n_loops order
                 if (completed_loops % par->nthread == 0) { // Print every nthread completed loops

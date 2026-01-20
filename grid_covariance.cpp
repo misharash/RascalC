@@ -277,9 +277,10 @@ int main(int argc, char *argv[]) {
     rescale.refine_wrapper(&par, all_grid, all_cf, all_rd, no_functions);
 
 #ifdef THREE_PCF
-    // Compute threePCF integrals
-    compute_integral(&all_grid[0],&par,&all_cf[0],&all_rd[0],&all_survey[0],1); // final digit is iteration number
-    compute_integral(&all_grid[0],&par,&all_cf[0],&all_rd[0],&all_survey[0],2);
+    // Compute 3PCF integrals
+    compute_integral(&all_grid[0], &par, &all_cf[0], &all_rd[0], &all_survey[0], 0); // final digit is the iteration number. For 3PCF, 0 and nonzero (1) encode different sampling strategies as described in the paper (https://arxiv.org/abs/1910.04764, Section 5.2.2)
+    compute_integral(&all_grid[0], &par, &all_cf[0], &all_rd[0], &all_survey[0], 1);
+    // multi-tracer for 3PCF is not implemented
 #elif (defined LEGENDRE || defined POWER)
     // Compute integrals
     compute_integral(all_grid,&par,all_cf,all_rd,all_survey,1,1,1,1,1); // final digit is iteration number
