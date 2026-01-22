@@ -33,6 +33,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
                  boxsize: float | None = None,
                  shot_noise_rescaling1: float = 1,
                  sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
+                 start_integral_index = None, last_integral_index = None,
                  verbose: bool = False) -> dict[str, np.ndarray[float]]:
     r"""
     Run the 3-point correlation function covariance integration.
@@ -171,6 +172,16 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
         If None (default), the initialization will be random. The randomly generated seed value can be found afterwards in the log file and/or output after ``the base RNG seed is``, but using the same seed might not reproduce the runs without a preset seed using the code before commit fd2d2c41 (12 June 2025).
         Note that False in Python is equivalent to 0, which is a legitimate RNG seed, and therefore falls under the integer case, not like None. (True is equivalent to 1.)
 
+    start_integral_index : integer (1 or 2) or None
+        (Optional) If given as an integer, chooses from which of 7 integrals (numbered 1, 2) to start.
+        This parameter is intended to help complete the timed-out runs by skipping the integral computed in an unfinished run.
+        Using this setting will disable post-processing for safety, because not all integrals may be present in the output directory. Carefully merge the output directories with all the integrals (if applicable) and invoke the post-processing.
+    
+    last_integral_index : integer (1 or 2) or None
+        (Optional) If given as an integer, chooses at which of 2 integrals (numbered 1, 2) to stop.
+        This parameter can be used to fit a run into a time limit if the full 2 integrals are expected to take longer.
+        Using this setting will disable post-processing for safety, because not all integrals may be present in the output directory. Carefully merge the output directories with all the integrals (if applicable) and invoke the post-processing.
+
     sampling_grid_size : integer
         (Optional) first guess for the sampling grid size.
         The code should be able to find a suitable number automatically.
@@ -202,6 +213,15 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
     periodic = bool(boxsize) # False for None (default) and 0
     
     if periodic and boxsize < 0: raise ValueError("Periodic box size must be positive")
+
+    max_integrals = 2
+    if start_integral_index is not None:
+        if not isinstance(start_integral_index, int): raise TypeError("start_integral_index must be an integer")
+        if not (1 <= start_integral_index <= max_integrals): raise ValueError(f"start_integral_index must take a value between 1 and {max_integrals}")
+    if last_integral_index is not None:
+        if not isinstance(last_integral_index, int): raise TypeError("last_integral_index must be an integer")
+        if not (1 <= last_integral_index <= max_integrals): raise ValueError(f"last_integral_index must take a value between 1 and {max_integrals}")
+        if start_integral_index is not None and last_integral_index < start_integral_index: raise ValueError("last_integral_index must be greater or equal than start_integral_index")
     
     if n_loops % loops_per_sample != 0: raise ValueError("The sample collapsing factor must divide the number of loops")
 
@@ -388,6 +408,8 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
     command += f" -phi_file {inv_phi_filename}"
     if periodic: # append periodic flag and box size
         command += f" -perbox -boxsize {boxsize}"
+    if start_integral_index: command += f" -start_integral_index {start_integral_index}"
+    if last_integral_index: command += f" -last_integral_index {last_integral_index}"
 
     # deal with the seed
     if seed is not None: # need to pass to the C++ code and make sure it can be received properly. 0 (False) is not equivalent to None in this case
@@ -414,6 +436,10 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
 
     # post-processing
     print_and_log(datetime.now())
+    if (start_integral_index is not None and start_integral_index > 1) or (last_integral_index is not None and last_integral_index < max_integrals):
+        print_and_log("Skipping post-processing, because not all integrals may be present in the output directory.")
+        print_and_log("Carefully merge the output directories with all the integrals (if applicable) and invoke the post-processing with e.g. RascalC.post_process_auto()")
+        return
     print_and_log("Starting post-processing")
     results = post_process_3pcf(out_dir, n_r_bins, max_l, n_loops // loops_per_sample, out_dir, shot_noise_rescaling1, print_function=print_and_log)
     # TODO:

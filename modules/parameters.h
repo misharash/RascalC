@@ -134,7 +134,11 @@ public:
 
     // parameters allowing to run only some of the 7 integrals
     int start_integral_index = 1; // the first integral to be computed
+#ifdef THREE_PCF
+    int last_integral_index = 2; // the last integral to be computed
+#else
     int last_integral_index = 7; // the last integral to be computed
+#endif
     // defaults compute all integrals
 
     //---------- (r,mu) MULTI-FIELD PARAMETERS ------------------------------
@@ -530,9 +534,13 @@ public:
         // check integral selection parameters
         assert(start_integral_index >= 1);
         assert(last_integral_index >= 1);
-        if (!multi_tracers) last_integral_index = 1;
-        assert(start_integral_index <= last_integral_index);
+#ifdef THREE_PCF
+        int no_integrals = 2; // there are 2 integrals for single-tracer 3PCF
+#else
         int no_integrals = multi_tracers ? 7 : 1;
+        if (!multi_tracers) last_integral_index = 1; // only 1 integral for single-tracer 2PCF
+#endif
+        assert(start_integral_index <= last_integral_index);
         assert(start_integral_index <= no_integrals);
         assert(last_integral_index <= no_integrals);
 
@@ -678,10 +686,17 @@ private:
         fprintf(stderr, "   -seed <seed>:  If given, allows to reproduce the results with the same settings, except the number of threads.\n");
         fprintf(stderr, "      Individual subsamples may differ because they are accumulated/written in order of loop completion which may depend on external factors at runtime, but the final integrals should be the same.\n");
         fprintf(stderr, "      Needs to be a non-negative integer fitting into 32 bits (max 4294967295). If not given (default), the seed will be created randomly.\n");
+#ifdef THREE_PCF
+        fprintf(stderr, "   -start_integral_index <start_integral_index>: If given, chooses from which of 2 integrals (numbered 1 and 2) to stop for 3PCF. Default 1 (to cover all integrals).\n");
+        fprintf(stderr, "      Intended to help complete the timed-out multi-tracer runs by skipping the integrals computed in an unfinished run.\n");
+        fprintf(stderr, "   -last_integral_index <start_integral_index>: If given, chooses at which of 2 integrals (numbered 1 and 2) to stop for 3PCF. Default 2 (to cover all integrals).\n");
+        fprintf(stderr, "      Can be used to fit into the time limit if the full 2 integrals are expected to take longer.\n");
+#else
         fprintf(stderr, "   -start_integral_index <start_integral_index>: If given, chooses from which of 7 integrals (numbered 1 through 7) to start in the multi-tracer regime. Default 1 (to cover all integrals).\n");
         fprintf(stderr, "      Intended to help complete the timed-out multi-tracer runs by skipping the integrals computed in an unfinished run.\n");
         fprintf(stderr, "   -last_integral_index <start_integral_index>: If given, chooses at which of 7 integrals (numbered 1 through 7) to stop in the multi-tracer regime. Default 7 (to cover all integrals).\n");
         fprintf(stderr, "      Can be used to fit into the time limit if the full 7 integrals are expected to take longer.\n");
+#endif
 	    fprintf(stderr, "\n");
 	    fprintf(stderr, "\n");
 

@@ -53,6 +53,11 @@ class compute_integral{
             
             int tot_iter=2; // total number of integral sets to compute
             assert((iter_no >= 0) && (iter_no < tot_iter)); // ensure that the iteration number/index is as it should be
+
+            if ((iter_no+1 < par->start_integral_index) || (iter_no+1 > par->last_integral_index)) { // here, iter_no starts from 0 for compatibility with other pieces of 3PCF code, whereas integral_indices start from 1 for compatibility with 2PCF
+                printf("# Skipping integral computation %d of %d; only running %d through %d (both inclusive).\n", iter_no+1, tot_iter, par->start_integral_index, par->last_integral_index);
+                return;
+            }
             
             nbin = par->nbin; // number of radial bins
             mbin = par->mbin; // number of Legendre bins
