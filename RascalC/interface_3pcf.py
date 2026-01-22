@@ -14,7 +14,7 @@ from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
 from .write_binning_file import write_binning_file
 from .pycorr_utils.input_xi import get_input_xi_from_pycorr
 from .correction_function_3pcf import compute_3pcf_correction_function, compute_3pcf_correction_function_from_encore
-from .convergence_check_extra import convergence_check_extra
+from .convergence_check_extra import convergence_check_extra_3pcf
 from .utils import rmdir_if_exists_and_empty, suffixes_tracer_all, indices_corr_all, suffixes_corr_all
 from .post_process_3pcf import post_process_3pcf
 
@@ -451,7 +451,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
     print_and_log(datetime.now())
 
     print_and_log("Performing an extra convergence check")
-    convergence_check_extra(results, print_function = print_and_log)
+    convergence_check_extra_3pcf(results, n_r_bins, max_l, print_function = print_and_log)
 
     print_and_log("Finished.")
     print_and_log(datetime.now())
