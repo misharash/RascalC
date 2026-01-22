@@ -100,10 +100,10 @@ class compute_integral{
             // Decide which thread we are in
             int thread = omp_get_thread_num();
             assert(omp_get_num_threads()<=par->nthread);
-            if (thread==0) printf("# Starting integral computation %d of %d on %d threads.\n", iter_no, tot_iter, omp_get_num_threads());        
+            if (thread==0) printf("# Starting integral computation %d of %d on %d threads.\n", iter_no+1, tot_iter, omp_get_num_threads());
 #else
             int thread = 0;
-            printf("# Starting integral computation %d of %d single threaded.\n",iter_no,tot_iter);
+            printf("# Starting integral computation %d of %d single threaded.\n", iter_no + 1, tot_iter);
             { // start loop
 #endif
             
