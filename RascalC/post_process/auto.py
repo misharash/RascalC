@@ -209,7 +209,7 @@ def post_process_auto(file_root: str,
             max_l = int(m["MAX_L"])
         else:
             prefix = f"n{n_r_bins}_l"
-            raw_matrices = collect_raw_covariance_matrices(file_root, print_function = print_function)
+            raw_matrices = collect_raw_covariance_matrices(file_root, print_function = print_function)[0]
             matched_labels = [label[len(prefix):] for label in raw_matrices.keys() if label.startswith(prefix)]
             if not matched_labels: raise ValueError("No Legendre results matched by the number of radial bins.")
             if len(matched_labels) > 1: warn("Found multiple `max_l` options.")

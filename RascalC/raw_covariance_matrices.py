@@ -1,4 +1,4 @@
-## Script to collect the raw covariance matrices from the output directory of the C++ code
+"Functions to collect the raw covariance matrices from the output directory of the C++ code into a numpy file, load them, and catenate raw covariance matrices from one directory or multiple directories into another directory."
 
 import numpy as np
 import os
@@ -15,16 +15,17 @@ def convert_suffix(suffix: str) -> int | str:
     return suffix
 
 
-def organize_filename(filename: str, output_groups: dict, jack: bool = False) -> None:
+def organize_filename(filename: str, output_groups: dict, jack: bool = False, threepcf: bool = False) -> None:
     "Interpret the filename as saved by the C++ code and put it into output_groups array. Jack is for jackknife"
     filename_no_ext = os.path.basename(filename) # remove the directory name
     filename_no_ext = ".".join(filename_no_ext.split(".")[:-1]) # remove the extension
     filename_parts = filename_no_ext.split("_") # split the rest by underscore
     term_name = filename_parts[0] # cN, RRN or EEN
-    if term_name not in ("c2", "c3", "c4", "RR1", "RR2", "EE1", "EE2"): return # do not process other arrays
+    term_names = [f"c{i}" for i in range(3, 7)] if threepcf else ("c2", "c3", "c4", "RR1", "RR2", "EE1", "EE2")
+    if term_name not in term_names: return # do not process other arrays
     if jack and term_name.startswith("c"): term_name += "j" # add "j" to cN if doing jack
     output_group_name = "_".join(filename_parts[1:-2]) # nN and mM or lL joined back
-    indices = filename_parts[-2] # tracer numbers
+    indices = filename_parts[-2] # tracer numbers for 2PCF and integral index for 3PCF
     try:
         suffix = convert_suffix(filename_parts[-1]) # "full" or subsample number
     except ValueError:
@@ -40,14 +41,14 @@ def organize_filename(filename: str, output_groups: dict, jack: bool = False) ->
     output_groups[output_group_name][matrix_name][suffix] = filename
 
 
-def save_safe(output_dir: str, output_group_name: str, output_dictionary: dict[str]):
+def save_safe(output_dir: str, output_group_name: str, output_dictionary: dict[str], threepcf: bool = False):
     "Save the dictionary of Numpy arrays into directory avoiding name clashes"
-    output_filename = os.path.join(output_dir, f"Raw_Covariance_Matrices_{output_group_name}.npz")
+    output_filename = os.path.join(output_dir, "Raw_Covariance_Matrices" + "_3PCF" * threepcf + f"_{output_group_name}.npz")
     if os.path.exists(output_filename):
         warn(f"The default output filename for group {output_group_name}, {output_filename}, already exists. Will try to find a replacement.")
         i = 1
         while True:
-            output_filename = os.path.join(output_dir, f"Raw_Covariance_Matrices_{output_group_name}.{i}.npz")
+            output_filename = os.path.join(output_dir, "Raw_Covariance_Matrices" + "_3PCF" * threepcf + f"_{output_group_name}.{i}.npz")
             if not os.path.exists(output_filename):
                 warn(f"Found unused name {output_filename}, will save there.")
                 break
@@ -57,12 +58,13 @@ def save_safe(output_dir: str, output_group_name: str, output_dictionary: dict[s
     np.savez_compressed(output_filename, **output_dictionary)
 
 
-def collect_raw_covariance_matrices(cov_dir: str, cleanup: bool = True, print_function: Callable[[str], None] = print) -> dict[str, dict[str, np.ndarray[float]]]:
+def collect_raw_covariance_matrices(cov_dir: str, cleanup: bool = True, print_function: Callable[[str], None] = print) -> list[dict[str, dict[str, np.ndarray[float]]]]:
     """
     Collect the covariance matrices from text files written by the C++ code and organize them into a Numpy .npz file.
     With cleanup enabled (default), deletes the text files after collection.
     """
 
+    # 2PCF
     cov_dir_all = os.path.join(cov_dir, 'CovMatricesAll/')
     cov_dir_jack = os.path.join(cov_dir, 'CovMatricesJack/')
 
@@ -70,90 +72,101 @@ def collect_raw_covariance_matrices(cov_dir: str, cleanup: bool = True, print_fu
 
     # load the full matrices
     for input_filename in glob(cov_dir_all + "*.txt"):
-        organize_filename(input_filename, output_groups, jack = False)
+        organize_filename(input_filename, output_groups, jack=False, threepcf=False)
 
     # load the jack matrices if present
     for input_filename in glob(cov_dir_jack + "*.txt"):
-        organize_filename(input_filename, output_groups, jack = True)
+        organize_filename(input_filename, output_groups, jack=True, threepcf=False)
     
-    print_function(f"Detected {len(output_groups)} output group(s) in {cov_dir}")
+    print_function(f"Detected {len(output_groups)} 2PCF output group(s) in {cov_dir}")
 
-    return_dictionary = {}
+    # 3PCF - should be done separately, because the output group name might match 2PCF and some arrays would be overwritten
+    cov_dir_3pcf_all = os.path.join(cov_dir, '3PCFCovMatricesAll/')
+
+    output_groups_3pcf = {}
+
+    # load the full 3PCF matrices
+    for input_filename in glob(cov_dir_3pcf_all + "*.txt"):
+        organize_filename(input_filename, output_groups_3pcf, jack=False, threepcf=True)
+
+    return_dictionaries = [{}, {}] # for 2PCF and 3PCF separately
     
-    for output_group_name, output_group in output_groups.items():
-        print_function(f"Processing output group {output_group_name}")
-        # check that the different matrices have the same number of subsamples
-        subsample_numbers = []
-        for matrix_filenames_dictionary in output_group.values():
-            subsample_number = 0
-            for suffix in matrix_filenames_dictionary.keys():
-                if isinstance(suffix, int): subsample_number += 1
-                # subsamples have integer suffixes
-            subsample_numbers.append(subsample_number)
-        subsample_number = min(subsample_numbers)
-
-        if any(this_subsample_number != subsample_number for this_subsample_number in subsample_numbers):
-            warn(f"Some matrices in output group {output_group_name} have different number of subsamples. Will cut to the smallest number of subsamples.")
-            # now cut all to the minimal number of subsamples, using the lowest numbers present
+    for threepcf, these_output_groups in enumerate([output_groups, output_groups_3pcf]):
+        for output_group_name, output_group in these_output_groups.items():
+            print_function(f"Processing {2+threepcf}PCF output group {output_group_name}")
+            # check that the different matrices have the same number of subsamples
+            subsample_numbers = []
             for matrix_filenames_dictionary in output_group.values():
-                subsample_suffixes_increasing = sorted([suffix for suffix in matrix_filenames_dictionary.keys() if isinstance(suffix, int)])
-                if len(subsample_suffixes_increasing) == 0: continue # some arrays will not have subsamples
-                subsample_suffix_max = subsample_suffixes_increasing[subsample_number - 1]
+                subsample_number = 0
                 for suffix in matrix_filenames_dictionary.keys():
-                    if isinstance(suffix, int) and suffix > subsample_suffix_max:
-                        matrix_filenames_dictionary.pop(suffix)
-        
-        # now create and fill the dictionary to be saved in the numpy file
-        output_dictionary = {}
-        for matrix_name, matrix_filenames_dictionary in output_group.items():
-            output_dictionary[matrix_name] = dict()
-            for suffix, input_filename in matrix_filenames_dictionary.items():
-                matrix = np.loadtxt(input_filename)
-                if matrix_name.startswith("c2") and matrix.ndim == 1: matrix = np.diag(matrix) # convert 1D c2 to a 2D diagonal matrix
-                output_dictionary[matrix_name][suffix] = matrix
+                    if isinstance(suffix, int): subsample_number += 1
+                    # subsamples have integer suffixes
+                subsample_numbers.append(subsample_number)
+            subsample_number = min(subsample_numbers)
 
-            # special treatment for string suffixes (at the moment, only "full")
-            tmp_keys = list(output_dictionary[matrix_name].keys())
-            for suffix in tmp_keys:
-                if isinstance(suffix, str):
-                    output_dictionary[matrix_name + "_" + suffix] = output_dictionary[matrix_name].pop(suffix)
-                    # this creates a separate array to be saved
+            if any(this_subsample_number != subsample_number for this_subsample_number in subsample_numbers):
+                warn(f"Some matrices in {2+threepcf}PCF output group {output_group_name} have different number of subsamples. Will cut to the smallest number of subsamples.")
+                # now cut all to the minimal number of subsamples, using the lowest numbers present
+                for matrix_filenames_dictionary in output_group.values():
+                    subsample_suffixes_increasing = sorted([suffix for suffix in matrix_filenames_dictionary.keys() if isinstance(suffix, int)])
+                    if len(subsample_suffixes_increasing) == 0: continue # some arrays will not have subsamples
+                    subsample_suffix_max = subsample_suffixes_increasing[subsample_number - 1]
+                    for suffix in matrix_filenames_dictionary.keys():
+                        if isinstance(suffix, int) and suffix > subsample_suffix_max:
+                            matrix_filenames_dictionary.pop(suffix)
+            
+            # now create and fill the dictionary to be saved in the numpy file
+            output_dictionary = {}
+            for matrix_name, matrix_filenames_dictionary in output_group.items():
+                output_dictionary[matrix_name] = dict()
+                for suffix, input_filename in matrix_filenames_dictionary.items():
+                    matrix = np.loadtxt(input_filename)
+                    if matrix_name.startswith("c2") and matrix.ndim == 1: matrix = np.diag(matrix) # convert 1D c2 to a 2D diagonal matrix
+                    output_dictionary[matrix_name][suffix] = matrix
 
-            # now all the remaining suffixes must be integers so can be sorted easily
-            output_dictionary[matrix_name] = np.array([output_dictionary[matrix_name][i_subsample] for i_subsample in sorted(output_dictionary[matrix_name].keys())])
-            # this transformed the dictionary to numpy array, ordered by increasing subsample index
+                # special treatment for string suffixes (at the moment, only "full")
+                tmp_keys = list(output_dictionary[matrix_name].keys())
+                for suffix in tmp_keys:
+                    if isinstance(suffix, str):
+                        output_dictionary[matrix_name + "_" + suffix] = output_dictionary[matrix_name].pop(suffix)
+                        # this creates a separate array to be saved
 
-            # calculate the full as the mean of the subsamples
-            full_matrix_computed = np.mean(output_dictionary[matrix_name], axis = 0)
-            full_matrix_name = matrix_name + "_full"
-            if full_matrix_name in output_dictionary:
-                if not np.allclose(output_dictionary[full_matrix_name], full_matrix_computed):
-                    warn(f"For {matrix_name} matrix, the loaded full is different from the average of subsamples. The latter will be saved.")
-                    matrix_filenames_dictionary.pop("full") # remove the filename since it will be technically unused
-            output_dictionary[full_matrix_name] = full_matrix_computed
-        
-        return_dictionary[output_group_name] = output_dictionary
-        
-        save_safe(cov_dir, output_group_name, output_dictionary)
+                # now all the remaining suffixes must be integers so can be sorted easily
+                output_dictionary[matrix_name] = np.array([output_dictionary[matrix_name][i_subsample] for i_subsample in sorted(output_dictionary[matrix_name].keys())])
+                # this transformed the dictionary to numpy array, ordered by increasing subsample index
 
-        # now that the file is saved (not any earlier to be sure), can remove all the text files
-        # the list contains only the files that had their contents loaded and saved
-        if cleanup:
-            for matrix_filenames_dictionary in output_group.values():
-                for input_filename in matrix_filenames_dictionary.values():
-                    os.remove(input_filename)
-        
-        print_function(f"Finished with output group {output_group_name}")
+                # calculate the full as the mean of the subsamples
+                full_matrix_computed = np.mean(output_dictionary[matrix_name], axis = 0)
+                full_matrix_name = matrix_name + "_full"
+                if full_matrix_name in output_dictionary:
+                    if not np.allclose(output_dictionary[full_matrix_name], full_matrix_computed):
+                        warn(f"For {matrix_name} {2+threepcf}PCF matrix, the loaded full is different from the average of subsamples. The latter will be saved.")
+                        matrix_filenames_dictionary.pop("full") # remove the filename since it will be technically unused
+                output_dictionary[full_matrix_name] = full_matrix_computed
+            
+            return_dictionaries[threepcf][output_group_name] = output_dictionary
+            
+            save_safe(cov_dir, output_group_name, output_dictionary, threepcf=threepcf)
+
+            # now that the file is saved (not any earlier to be sure), can remove all the text files
+            # the list contains only the files that had their contents loaded and saved
+            if cleanup:
+                for matrix_filenames_dictionary in output_group.values():
+                    for input_filename in matrix_filenames_dictionary.values():
+                        os.remove(input_filename)
+            
+            print_function(f"Finished with {2+threepcf}PCF output group {output_group_name}")
 
     # remove subdirectories too if they are empty
     if cleanup:
         rmdir_if_exists_and_empty(cov_dir_all)
         rmdir_if_exists_and_empty(cov_dir_jack)
+        rmdir_if_exists_and_empty(cov_dir_3pcf_all)
 
-    return return_dictionary
+    return return_dictionaries
 
 
-def load_raw_covariances(file_root: str, label: str, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function: Callable[[str], None] = print) -> dict[str]:
+def load_raw_covariances(file_root: str, label: str, threepcf: bool = False, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function: Callable[[str], None] = print) -> dict[str]:
     """
     Load the raw covariance matrices as a dictionary. Uses the Numpy file if it exists, otherwise tried to run the collection function.
 
@@ -161,17 +174,19 @@ def load_raw_covariances(file_root: str, label: str, n_samples: None | int | Ite
 
     label specifies the number of radial bins and either the number of angular (mu) bins (nN_mM) or the maximum (even) multipole index (nN_lL).
 
+    threepcf chooses between 2PCF (False, default) and 3PCF (True).
+
     n_samples allows to select subsamples flexibly:
     - if None (default) returns all samples;
     - if a positive integer, returns as many samples from the beginning;
     - if a sequence of integers, returns subsamples with indices from this sequence;
     - sequence of boolean values is interpreted as a boolean mask for subsamples.
     """
-    input_filename = os.path.join(file_root, f"Raw_Covariance_Matrices_{label}.npz")
+    input_filename = os.path.join(file_root, "Raw_Covariance_Matrices" + "_3PCF" * threepcf + f"_{label}.npz")
     if os.path.isfile(input_filename): raw_cov = dict(np.load(input_filename))
     else:
         print_function(f"Collecting the raw covariance matrices from {file_root}")
-        result = collect_raw_covariance_matrices(file_root, print_function = print_function)
+        result = collect_raw_covariance_matrices(file_root, print_function = print_function)[threepcf]
         if label not in result:
             raise ValueError(f"Raw covariance matrices for {label} not produced. Check the n and m/max_l values.")
         raw_cov = result[label]
@@ -206,7 +221,7 @@ def load_raw_covariances_smu(file_root: str, n: int, m: int, n_samples: None | i
     - sequence of boolean values is interpreted as a boolean mask for subsamples.
     """
     label = f"n{n}_m{m}"
-    return load_raw_covariances(file_root, label, n_samples, print_function)
+    return load_raw_covariances(file_root, label, threepcf=False, n_samples=n_samples, print_function=print_function)
 
 
 def load_raw_covariances_legendre(file_root: str, n: int, max_l: int, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function = print) -> dict[str]:
@@ -223,10 +238,27 @@ def load_raw_covariances_legendre(file_root: str, n: int, max_l: int, n_samples:
     - sequence of boolean values is interpreted as a boolean mask for subsamples.
     """
     label = f"n{n}_l{max_l}"
-    return load_raw_covariances(file_root, label, n_samples, print_function)
+    return load_raw_covariances(file_root, label, threepcf=False, n_samples=n_samples, print_function=print_function)
 
 
-def cat_raw_covariance_matrices(n: int, mstr: str, input_roots: list[str], ns_samples: list[None | int | Iterable[int] | Iterable[bool]], output_root: str, collapse_factor: int = 1, print_function: Callable[[str], None] = print) -> dict[str]:
+def load_raw_covariances_3pcf_legendre(file_root: str, n: int, max_l: int, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function = print) -> dict[str]:
+    """
+    Load the raw covariance matrices from the 3PCF Legendre mode as a dictionary. Uses the Numpy file if it exists, otherwise tried to run the collection function.
+
+    file_root is the directory to look in.
+    n and m are numbers of radial and angular (mu) bins respectively.
+
+    n_samples allows to select subsamples flexibly:
+    - if None (default) returns all samples;
+    - if a positive integer, returns as many samples from the beginning;
+    - if a sequence of integers, returns subsamples with indices from this sequence;
+    - sequence of boolean values is interpreted as a boolean mask for subsamples.
+    """
+    label = f"n{n}_l{max_l}"
+    return load_raw_covariances(file_root, label, threepcf=True, n_samples=n_samples, print_function=print_function)
+
+
+def cat_raw_covariance_matrices(n: int, mstr: str, input_roots: list[str], ns_samples: list[None | int | Iterable[int] | Iterable[bool]], output_root: str, collapse_factor: int = 1, threepcf: bool = False, print_function: Callable[[str], None] = print) -> dict[str]:
     """
     Catenate the raw covariance matrices from one or more input directories, assuming they are from similar runs: the same number of input random points, ``N2``, ``N3``, ``N4`` and ``loops_per_sample``.
 
@@ -271,7 +303,7 @@ def cat_raw_covariance_matrices(n: int, mstr: str, input_roots: list[str], ns_sa
     label = f"n{n}_{mstr}"
     result = {}
     for index, (input_root, n_samples) in enumerate(zip(input_roots, ns_samples)):
-        input_file = load_raw_covariances(input_root, label, n_samples, print_function)
+        input_file = load_raw_covariances(input_root, label, threepcf=threepcf, n_samples=n_samples, print_function=print_function)
         # ignore full arrays
         input_file = {key: value for (key, value) in input_file.items() if not key.endswith("_full")}
         # check that the keys are the same, unless the result is brand new

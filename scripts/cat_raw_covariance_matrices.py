@@ -1,4 +1,4 @@
-## Script to catenate (take a subset of subsamples or resample) raw covariance matrix files produced by collect_raw_covariance_matrices.py
+## Script to catenate (take a subset of subsamples or resample) raw covariance matrix files
 ## More specifically, copy part of partial results to other directory and recompute totals by averaging
 ## Determines single-field vs multi-field and jackknife automatically
 ## Do not use if subsamples have different numbers of pairs/triples/quadruplets
