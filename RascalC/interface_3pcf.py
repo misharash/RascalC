@@ -14,7 +14,7 @@ from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
 from .write_binning_file import write_binning_file
 from .pycorr_utils.input_xi import get_input_xi_from_pycorr
 from .correction_function_3pcf import compute_3pcf_correction_function, compute_3pcf_correction_function_from_encore
-from .convergence_check_extra import convergence_check_extra_3pcf
+from .convergence_check_extra import convergence_check_extra
 from .utils import rmdir_if_exists_and_empty, suffixes_tracer_all, indices_corr_all, suffixes_corr_all
 from .post_process_3pcf import post_process_3pcf
 
@@ -32,6 +32,8 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
                  xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
                  boxsize: float | None = None,
                  shot_noise_rescaling1: float = 1,
+                 skip_s_bins: int | tuple[int, int] = 0, skip_l: int = 0,
+                 exclude_samebins: bool = True,
                  sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
                  start_integral_index = None, last_integral_index = None,
                  verbose: bool = False) -> dict[str, np.ndarray[float]]:
@@ -154,6 +156,9 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
         Directory for temporary files. Can be deleted after running the code, and is cleaned up after the normal execution.
         More disk space required - needs to store all the input arrays in the current implementation.
 
+    shot_noise_rescaling1 : float
+        (Optional) shot-noise rescaling value for the first tracer if known beforehand. Default 1 (no rescaling).
+
     skip_s_bins : integer or tuple of two integers
         (Optional) removal of separations bins at the post-processing stage.
         First (or the only) number sets the number of radial/separation bins to skip from the beginning (lowest-separation bins tend to converge worse and probably will not be precise due to the limitations of the formalism).
@@ -163,8 +168,8 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
     skip_l : integer
         (Only for the Legendre modes; optional) number of highest (even) multipoles to skip at the post-processing stage. (Higher multipole moments of the correlation function tend to converge worse.) Default 0 (no skipping).
 
-    shot_noise_rescaling1 : float
-        (Optional) shot-noise rescaling value for the first tracer if known beforehand. Default 1 (no rescaling).
+    exclude_samebins : bool
+        Whether to exclude the same-bin pairs. Default (True) corresponds to ENCORE convention.
 
     seed : integer or None
         (Optional) If given as an integer, sets the base RNG (random number generator) seed, allowing to reproduce the results with the same input data and settings (except the number of threads, which can be varied).
@@ -441,17 +446,15 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
         print_and_log("Carefully merge the output directories with all the integrals (if applicable) and invoke the post-processing with e.g. RascalC.post_process_auto()")
         return
     print_and_log("Starting post-processing")
-    results = post_process_3pcf(out_dir, n_r_bins, max_l, n_loops // loops_per_sample, out_dir, shot_noise_rescaling1, print_function=print_and_log)
+    results = post_process_3pcf(out_dir, n_r_bins, max_l, out_dir, shot_noise_rescaling1, skip_s_bins, skip_l, exclude_samebins=exclude_samebins, print_function=print_and_log)
     # TODO:
-    # eliminate n_samples argument
-    # add skip_s_bins and skip_l functionality
     # add mock post-processing
 
     print_and_log("Finished post-processing")
     print_and_log(datetime.now())
 
     print_and_log("Performing an extra convergence check")
-    convergence_check_extra_3pcf(results, n_r_bins, max_l, print_function = print_and_log)
+    convergence_check_extra(results, print_function = print_and_log)
 
     print_and_log("Finished.")
     print_and_log(datetime.now())

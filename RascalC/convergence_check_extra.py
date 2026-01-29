@@ -83,25 +83,3 @@ def convergence_check_extra_file(rascalc_results_filename: str, n_samples: int |
     """
     with np.load(rascalc_results_filename) as f:
         return convergence_check_extra(f, n_samples, print_function)
-
-
-def convergence_check_extra_3pcf(rascalc_results: dict[str], n_r_bins: int, max_l: int, exclude_samebins: bool = True, n_samples: int | None = None, print_function: Callable[[str], None] = blank_function) -> dict[str, dict[str, dict[str, float]]]:
-    """
-    Perform two different splittings in halves using the RascalC 3PCF results file/dictionary, compute the comparison measures between the two average covariance matrices and return as a dictionary.
-    This method is decribed in Section 3.2 of `Rashkovetskyi et al 2023 <https://arxiv.org/abs/2306.06320>`_.
-    Exclude the rows and columns corresponding to the duplicate bin pairs, and also (optionally) to the same-bin pairs (excluded in ENCORE measurements). For this, number of radial bins and max_l are needed.
-    Optionally, use only ``n_samples`` first samples.
-    Further optionally, use ``print_function`` to report the results.
-    """
-    bin_filter_1d = np.repeat(np.ravel(np.triu(np.ones([n_r_bins, n_r_bins], dtype=bool), k=exclude_samebins)), max_l+1)
-    # the covariance bin ordering is [r1, r2, l]
-    # here, we first create a square matrix of boolean ones (i.e., all elements are True)
-    # then, the triu function puts zeroes (False) below the diagonal; if k=exclude_samebins=1 (True), it also puts zeros on the diagonal
-    # then, we make the array 1D with the ravel function. it shouldn't matter along the rows or the columns first; RascalC results should be properly symmetrized during post-processing
-    # finally, we repeat each element max_l+1 times, extending along the last index
-    filtered_covs = rascalc_results["individual_theory_covariances"][:, bin_filter_1d][:, :, bin_filter_1d] # apply the 1D filter along the second and third axes.
-    # [:, bin_filter_1d, bin_filter_1d] would slice along the "diagonal" which is not what we want
-
-    print_function("Full covariance")
-    result = {"full": convergence_check_extra_splittings(filtered_covs, n_samples, print_function)}
-    return result

@@ -5,111 +5,89 @@ We output the theoretical covariance matrices, (quadratic-bias corrected) precis
 
 import numpy as np
 import os
-from tqdm import trange
-from typing import Callable
+from ..utils import symmetrized, format_skip_r_bins
+from ..post_process.utils import check_positive_definiteness, compute_D_precision_matrix, compute_N_eff_D
+from ..raw_covariance_matrices import load_raw_covariances_3pcf_legendre
+from typing import Callable, Iterable
 
 
-def post_process_3pcf(file_root: str, n: int, max_l: int, n_samples: int, outdir: str, alpha: float = 1, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def cov_filter_3pcf_legendre(n: int, max_l: int, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, exclude_samebins: bool = True):
+    """Produce a 2D indexing array for 3PCF Legendre covariance matrices in RascalC convention (not compatible with ENCORE bin ordering)."""
+    skip_r_bins_start, skip_r_bins_end = format_skip_r_bins(skip_r_bins)
+    n_l = max_l + 1
+    l_indices = np.arange(n_l - skip_l)
+    r_indices = np.arange(skip_r_bins_start, n - skip_r_bins_end)
+    r_indices1, r_indices2 = [a.ravel() for a in np.meshgrid(r_indices, r_indices, indexing='ij')] # flattened array indices
+    r_filter = (r_indices1 <= r_indices2 - exclude_samebins) # strictly less for exclude_samebin=True, less or equal otherwise
+    r_indices1, r_indices2 = r_indices1[r_filter], r_indices2[r_filter] # apply filter to both index arrays
+    indices_l_r = (n_l * (n * r_indices1 + r_indices2))[:, None] + l_indices[None, :]
+    # indices_l_r = (n_l * (n * r_indices1 + r_indices2))[None, :] + l_indices[:, None] # could switch the l vs bin pair ordering right here easily but decided not to
+    indices_1d = indices_l_r.ravel()
+    return np.ix_(indices_1d, indices_1d)
+
+
+def symmetrized_3pcf(A: np.typing.NDArray[np.float64], n: int, max_l: int) -> np.typing.NDArray[np.float64]:
+    "Symmetrize a 3PCF covariance matrix (2D array), or an array of 3PCF covariance matrices (3D array)"
+    if len(A.shape) not in (2, 3): raise ValueError("Dimension of the input array must be 2 or 3")
+    m = max_l + 1
+    if not np.array_equal(A.shape[:-2], [n * n * m] * 2): raise ValueError("Unexpected shape in the last 2 dimensions")
+    leading_dims = list(A.shape[:-2]) # list containing a leading dimension for the array of covariance matrices, and empty for a single covariance matrix
+    A1 = A.reshape(leading_dims + [n, n, m] * 2) # last 6 axes will be [r1, r2, l12, r3, r4, l34]
+    A2 = (A1 + A1.swapaxes(-2, -3)) / 2 # symmetrize wrt swaps of r3 and r4. Create new array against the risk of A1 being a view of original A
+    A2 = (A2 + A2.swapaxes(-5, -6)) / 2 # symmetrize wrt swaps of r1 and r2
+    A2 = A2.reshape(leading_dims + [n * n * m] * 2) # back to the original shape
+    return symmetrized(A2) # finally, symetrize wrt full covariance matrix bin swap
+
+
+def load_matrices(input_data: dict[str], cov_filter: np.typing.NDArray[np.int_], full: bool = True) -> tuple[np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64]]:
+    """Load the 3PCF single-tracer covariance matrix terms."""
+    matrices = []
+    for npoints in range(3, 7):
+        these_matrices = [input_data[f"c{npoints}_{index}" + "_full" * full] for index in range(2)]
+        this_matrix = these_matrices[0] * (npoints != 6) + these_matrices[1] # do not include c6_0 term here (but why? need to test)
+        this_matrix = symmetrized_3pcf(this_matrix) # symmetrize before filtering, because filtering removes repeating bin pairs
+        matrices.append(this_matrix[cov_filter] if full else np.array([a[cov_filter] for a in this_matrix])) # can't just apply the 2D index array cov_filter along the last 2 axes
+    return tuple(matrices)
+
+
+def add_cov_terms(c3: np.typing.NDArray[np.float64], c4: np.typing.NDArray[np.float64], c5: np.typing.NDArray[np.float64], c6: np.typing.NDArray[np.float64], alpha: float = 1) -> np.typing.NDArray[np.float64]:
+    """Add the 3PCF single-tracer covariance matrix terms with a given shot-noise rescaling value."""
+    return c6 + c5 * alpha + c4 * alpha**2 + c3 * alpha**3
+
+
+def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     output_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_3PCF_n%d_l%d.npz' % (n, max_l))
     name_dict = dict(path=output_name, filename=os.path.basename(output_name))
     if dry_run: return name_dict
 
-    m = max_l+1
+    cov_filter = cov_filter_3pcf_legendre(n, max_l, skip_r_bins, skip_l, exclude_samebins)
+    
+    input_file = load_raw_covariances_3pcf_legendre(file_root, n, max_l, n_samples, print_function)
+
     # Create output directory
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    def symmetrize(mat):
-        """ Add in symmetries to matrices """
-        out_mat = np.zeros_like(mat)
-        for i in range(len(mat)//m):
-            a = i//n
-            b = i%n
-            for j in range(len(mat)//m):
-                c = j//n
-                d = j%n
-                # Add to all relevant bins
-                these_mat = mat[i*m:(i+1)*m,j*m:(j+1)*m]*0.25
-                out_mat[(a*n+b)*m:(a*n+b)*m+m,(c*n+d)*m:(c*n+d)*m+m]+=these_mat
-                out_mat[(b*n+a)*m:(b*n+a)*m+m,(c*n+d)*m:(c*n+d)*m+m]+=these_mat
-                out_mat[(b*n+a)*m:(b*n+a)*m+m,(d*n+c)*m:(d*n+c)*m+m]+=these_mat
-                out_mat[(a*n+b)*m:(a*n+b)*m+m,(d*n+c)*m:(d*n+c)*m+m]+=these_mat
-        return 0.5*(out_mat+out_mat.T)
-
-    def load_matrices(index):
-        """Load intermediate or full covariance matrices"""
-        cov_root = os.path.join(file_root, '3PCFCovMatricesAll/')
-        c3_0 = np.loadtxt(cov_root + 'c3_n%d_l%d_0_%s.txt' % (n, max_l, index))
-        c4_0 = np.loadtxt(cov_root + 'c4_n%d_l%d_0_%s.txt' % (n, max_l, index))
-        c5_0 = np.loadtxt(cov_root + 'c5_n%d_l%d_0_%s.txt' % (n, max_l, index))
-        c6_0 = np.loadtxt(cov_root + 'c6_n%d_l%d_0_%s.txt' % (n, max_l, index))
-        c3_1 = np.loadtxt(cov_root + 'c3_n%d_l%d_1_%s.txt' % (n, max_l, index))
-        c4_1 = np.loadtxt(cov_root + 'c4_n%d_l%d_1_%s.txt' % (n, max_l, index))
-        c5_1 = np.loadtxt(cov_root + 'c5_n%d_l%d_1_%s.txt' % (n, max_l, index))
-        c6_1 = np.loadtxt(cov_root + 'c6_n%d_l%d_1_%s.txt' % (n, max_l, index))
-        
-        c3 = c3_0 + c3_1
-        c4 = c4_0 + c4_1
-        c5 = c5_0 + c5_1
-        c6 = c6_1 # do not include c6_0 term here (but why? need to test)
-        
-        # Now symmetrize and return matrices
-        return symmetrize(c3),symmetrize(c4),symmetrize(c5),symmetrize(c6)
-
     # Load in full theoretical matrices
     print_function("Loading best estimate of covariance matrix")
-    c3, c4, c5, c6 = load_matrices('full')
+    c3, c4, c5, c6 = load_matrices(input_file, cov_filter, full=True)
 
     # Compute full covariance matrices and precision
-    full_cov = c6 + c5*alpha + c4*alpha**2 + c3*alpha**3
-    n_bins = len(c6)
+    full_cov = add_cov_terms(c3, c4, c5, c6, alpha)
+
+    # Check positive definiteness
+    check_positive_definiteness(full_cov)
 
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
     # Load in partial theoretical matrices
-    c3s, c4s, c5s, c6s = [], [], [], []
-    for i in trange(n_samples, desc="Loading full subsamples"):
-        c3t, c4t, c5t, c6t = load_matrices(i)
-        c3s.append(c3t)
-        c4s.append(c4t)
-        c5s.append(c5t)
-        c6s.append(c6t)
-    c3s, c4s, c5s, c6s = [np.array(a) for a in (c3s, c4s, c5s, c6s)]
-        
-    partial_cov = alpha**3 * c3s + alpha**2 * c4s + alpha * c5s + c6s
-    sum_partial_cov = np.sum(partial_cov, axis=0)
+    c3s, c4s, c5s, c6s = load_matrices(input_file, cov_filter, full=False)
+    partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha)
+    full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
+    print_function("Full precision matrix estimate computed")
 
-    tmp=0.
-
-    for i in range(n_samples):
-        c_excl_i = (sum_partial_cov - partial_cov[i]) / (n_samples - 1)
-        try:
-            tmp += np.matmul(np.linalg.inv(c_excl_i), partial_cov[i])
-        except np.linalg.LinAlgError:
-            print_function("Could not invert submatrix, so setting overall precision to zero. Matrix is not fully converged")
-            tmp = None
-            break # no point in continuing
-    if tmp is None:
-        # Couldn't estimate precision
-        full_prec = np.zeros_like(full_cov)
-        full_D_est = np.zeros_like(full_cov)
-        N_eff_D = 0.
-    else:
-        # Continue to estimate precision
-                
-        full_D_est = (n_samples-1.) / n_samples * (-1 * np.eye(n_bins) + tmp / n_samples)
-        full_prec = np.matmul(np.eye(n_bins) - full_D_est, np.linalg.inv(full_cov))
-        print_function("Full precision matrix estimate computed")    
-
-        # Now compute effective N:
-        slogdetD = np.linalg.slogdet(full_D_est)
-        D_value = slogdetD[0] * np.exp(slogdetD[1] / n_bins)
-        if slogdetD[0] < 0:
-            print_function("N_eff is negative! Setting to zero")
-            N_eff_D = 0.
-        else:
-            N_eff_D = (n_bins+1.)/D_value + 1.
-            print_function("Total N_eff Estimate: %.4e"%N_eff_D)        
+    # Now compute effective N:
+    N_eff_D = compute_N_eff_D(full_D_est, print_function)  
 
     output_dict = dict(full_theory_covariance=full_cov, shot_noise_rescaling=alpha,
                        full_theory_precision=full_prec, N_eff=N_eff_D,
