@@ -88,6 +88,8 @@ def collect_raw_covariance_matrices(cov_dir: str, cleanup: bool = True, print_fu
     # load the full 3PCF matrices
     for input_filename in glob(cov_dir_3pcf_all + "*.txt"):
         organize_filename(input_filename, output_groups_3pcf, jack=False, threepcf=True)
+    
+    print_function(f"Detected {len(output_groups_3pcf)} 3PCF output group(s) in {cov_dir}")
 
     return_dictionaries = [{}, {}] # for 2PCF and 3PCF separately
     
@@ -188,7 +190,7 @@ def load_raw_covariances(file_root: str, label: str, threepcf: bool = False, n_s
         print_function(f"Collecting the raw covariance matrices from {file_root}")
         result = collect_raw_covariance_matrices(file_root, print_function = print_function)[threepcf]
         if label not in result:
-            raise ValueError(f"Raw covariance matrices for {label} not produced. Check the n and m/max_l values.")
+            raise ValueError(f"Raw {2+threepcf}PCF covariance matrices for {label} not produced. Check the n and m/max_l values.")
         raw_cov = result[label]
     if n_samples is None: return raw_cov # return the full set
     elif isinstance(n_samples, int):
