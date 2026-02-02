@@ -74,7 +74,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str, alpha: fl
     # Check matrix convergence by analogy with 2PCF, may be less helpful
     check_eigval_convergence(c3, c6, alpha, Npcf=3, print_function=print_function)
 
-    # Compute full covariance matrices and precision
+    # Compute full covariance matrix
     full_cov = add_cov_terms(c3, c4, c5, c6, alpha)
 
     # Check positive definiteness
