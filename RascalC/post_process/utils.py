@@ -76,7 +76,7 @@ def load_matrices_single(input_data: dict[str], cov_filter: np.typing.NDArray[np
     return tuple([symmetrized(apply_cov_filter(a, cov_filter)) for a in (c2, c3, c4)])
 
 
-def check_eigval_convergence(c2: np.typing.NDArray[np.float64], c4: np.typing.NDArray[np.float64], alpha: float = 1, kind: str = "", warn_function: Callable = warn, print_function: Callable = blank_function) -> bool:
+def check_eigval_convergence(cN: np.typing.NDArray[np.float64], c2N: np.typing.NDArray[np.float64], alpha: float = 1, kind: str = "", Npcf: Literal[2, 3] = 2, warn_function: Callable = warn, print_function: Callable = blank_function) -> bool:
     """
     Perform the eigenvalue convergence test on the covariance matrix terms.
     Warn about violated condition(s) using the `warn_function` (default: `warnings.warn`).
@@ -87,17 +87,17 @@ def check_eigval_convergence(c2: np.typing.NDArray[np.float64], c4: np.typing.ND
     """
     result = True
     if kind and not kind.endswith(" "): kind += " "
-    min_eig_c2 = min(np.linalg.eigvalsh(c2))
-    min_eig_c4 = min(np.linalg.eigvalsh(c4))
-    print_function(f"{kind}4-point covariance matrix convergence check: min eigenvalue of C2 = {min_eig_c2:.2e}, min eigenvalue of C4 = {min_eig_c4:.2e}")
-    inv_sqrt_c2 = np.linalg.inv(sqrtm(c2))
-    min_eig_comb = min(np.linalg.eigvalsh(inv_sqrt_c2.dot(c4).dot(inv_sqrt_c2)))
-    print_function(f"{kind}4-point covariance matrix convergence check: min eigenvalue of C2^{{-1/2}} C4 C2^{{-1/2}} = {min_eig_comb:.2f}")
+    min_eig_cN = min(np.linalg.eigvalsh(cN))
+    min_eig_c2N = min(np.linalg.eigvalsh(c2N))
+    print_function(f"{kind}{2*Npcf}-point covariance matrix convergence check: min eigenvalue of C{Npcf} = {min_eig_cN:.2e}, min eigenvalue of C{2*Npcf} = {min_eig_c2N:.2e}")
+    inv_sqrt_c2 = np.linalg.inv(sqrtm(cN))
+    min_eig_comb = min(np.linalg.eigvalsh(inv_sqrt_c2.dot(c2N).dot(inv_sqrt_c2)))
+    print_function(f"{kind}{2*Npcf}-point covariance matrix convergence check: min eigenvalue of C{Npcf}^{{-1/2}} C{2*Npcf} C{Npcf}^{{-1/2}} = {min_eig_comb:.2f}")
     if min_eig_comb <= -alpha**2:
-        warn_function(f"{kind}4-point covariance matrix has not converged properly via the weaker eigenvalue test for shot-noise rescaling >= {alpha:.2f}. Min eigenvalue of C2^{{-1/2}} C4 C2^{{-1/2}} = {min_eig_comb:.2f}, should be > {-alpha**2:.2f}")
+        warn_function(f"{kind}{2*Npcf}-point covariance matrix has not converged properly via the weaker eigenvalue test for shot-noise rescaling >= {alpha:.2f}. Min eigenvalue of C{Npcf}^{{-1/2}} C{2*Npcf} C{Npcf}^{{-1/2}} = {min_eig_comb:.2f}, should be > {-alpha**2:.2f}")
         result = False
-    if min_eig_c4 < - min_eig_c2 * alpha**2:
-        warn_function(f"{kind}4-point covariance matrix has not converged properly via the stronger eigenvalue test for shot-noise rescaling >= {alpha:.2f}. Min eigenvalue of C2 = {min_eig_c2:.2e}, min eigenvalue of C4 = {min_eig_c4:.2e}")
+    if min_eig_c2N < - min_eig_cN * alpha**2:
+        warn_function(f"{kind}{2*Npcf}-point covariance matrix has not converged properly via the stronger eigenvalue test for shot-noise rescaling >= {alpha:.2f}. Min eigenvalue of C{Npcf} = {min_eig_cN:.2e}, min eigenvalue of C{2*Npcf} = {min_eig_c2N:.2e}")
         result = False
     return result
 

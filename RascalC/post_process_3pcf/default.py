@@ -6,7 +6,7 @@ We output the theoretical covariance matrices, (quadratic-bias corrected) precis
 import numpy as np
 import os
 from ..utils import symmetrized, format_skip_r_bins
-from ..post_process.utils import apply_cov_filter, check_positive_definiteness, compute_D_precision_matrix, compute_N_eff_D
+from ..post_process.utils import apply_cov_filter, check_eigval_convergence, check_positive_definiteness, compute_D_precision_matrix, compute_N_eff_D
 from ..raw_covariance_matrices import load_raw_covariances_3pcf_legendre
 from typing import Callable, Iterable
 
@@ -70,6 +70,9 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str, alpha: fl
     # Load in full theoretical matrices
     print_function("Loading best estimate of covariance matrix")
     c3, c4, c5, c6 = load_matrices(input_file, n, max_l, cov_filter, full=True)
+
+    # Check matrix convergence by analogy with 2PCF, may be less helpful
+    check_eigval_convergence(c3, c6, alpha, Npcf=3, print_function=print_function)
 
     # Compute full covariance matrices and precision
     full_cov = add_cov_terms(c3, c4, c5, c6, alpha)
