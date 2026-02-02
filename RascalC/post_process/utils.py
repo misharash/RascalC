@@ -59,6 +59,13 @@ def cov_filter_legendre_pycorr(n: int, max_l: int, skip_r_bins: int = 0, skip_l:
     return np.ix_(indices_1d, indices_1d)
 
 
+def apply_cov_filter(A: np.typing.NDArray[np.float64], cov_filter: np.typing.NDArray[np.int_]) -> np.typing.NDArray[np.float64]:
+    "Apply the 2D cov filter, accounting for the possibility for an extra first dimension for subsamples"
+    if A.ndim == 2: return A[cov_filter]
+    if A.ndim == 3: return A[np.arange(A.shape[0])[:, None, None], cov_filter[0][None, :, :], cov_filter[1][None, :, :]] # this correctly selects according to the cov_filter along the last 2 axes
+    raise ValueError("Matrix dimension must be 2 or 3")
+
+
 def load_matrices_single(input_data: dict[str], cov_filter: np.typing.NDArray[np.int_], tracer: Literal[1, 2] = 1, full: bool = True, jack: bool = False) -> tuple[np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64]]:
     """Load the single-tracer covariance matrix terms. Allows to choose the tracer index (1-based) to load."""
     joint = "j" * jack + "_"
@@ -66,16 +73,7 @@ def load_matrices_single(input_data: dict[str], cov_filter: np.typing.NDArray[np
     c2 = input_data["c2" + joint + suffix]
     c3 = input_data["c3" + joint + str(tracer) + "," + suffix]
     c4 = input_data["c4" + joint + str(tracer) * 2 + "," + suffix]
-    matrices = (c2, c3, c4)
-
-    def finalize_matrix(a: np.typing.NDArray[np.float64]):
-        return symmetrized(a[cov_filter])
-    
-    if full: # 2D matrices, filter can be applied directly
-        c234 = [finalize_matrix(a) for a in matrices]
-    else: # 3D matrices, need to loop over the first index first
-        c234 = [np.array(list(map(finalize_matrix, a))) for a in matrices]
-    return tuple(c234)
+    return tuple([symmetrized(apply_cov_filter(a, cov_filter)) for a in (c2, c3, c4)])
 
 
 def check_eigval_convergence(c2: np.typing.NDArray[np.float64], c4: np.typing.NDArray[np.float64], alpha: float = 1, kind: str = "", warn_function: Callable = warn, print_function: Callable = blank_function) -> bool:
@@ -188,18 +186,12 @@ def load_matrices_multi(input_data: dict[str], cov_filter: np.ndarray[int], full
     n3 = np.zeros([ntracers] * 3)
     n4 = np.zeros([ntracers] * 4)
 
-    def finalize_matrix(a: np.typing.NDArray[np.float64]):
-        return a[cov_filter]
-
     # accumulate the values
     for matrix_name, matrices in input_data.items():
         matrix_name_split = matrix_name.split("_")
         if len(matrix_name_split) != 2 + full: continue # should skip full if not loading full, and skip subsamples if loading full
         if full and matrix_name_split[-1] != "full": continue # double-check for safety
-        if full: # 2D matrix, can apply cov filter directly
-            matrices = finalize_matrix(matrices)
-        else: # 3D matrix, should loops over the first index first
-            matrices = np.array(list(map(finalize_matrix, matrices)))
+        matrices = apply_cov_filter(matrices, cov_filter)
         matrix_name = matrix_name_split[0]
         index = matrix_name_split[1]
         if matrix_name == "c2" + suffix_jack:

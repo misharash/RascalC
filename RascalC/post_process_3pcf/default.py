@@ -6,7 +6,7 @@ We output the theoretical covariance matrices, (quadratic-bias corrected) precis
 import numpy as np
 import os
 from ..utils import symmetrized, format_skip_r_bins
-from ..post_process.utils import check_positive_definiteness, compute_D_precision_matrix, compute_N_eff_D
+from ..post_process.utils import apply_cov_filter, check_positive_definiteness, compute_D_precision_matrix, compute_N_eff_D
 from ..raw_covariance_matrices import load_raw_covariances_3pcf_legendre
 from typing import Callable, Iterable
 
@@ -45,8 +45,7 @@ def load_matrices(input_data: dict[str], n: int, max_l: int, cov_filter: np.typi
     for npoints in range(3, 7):
         these_matrices = [input_data[f"c{npoints}_{index}" + "_full" * full] for index in range(2)]
         this_matrix = these_matrices[0] * (npoints != 6) + these_matrices[1] # do not include c6_0 term here (but why? need to test)
-        this_matrix = symmetrized_3pcf(this_matrix, n, max_l) # symmetrize before filtering, because filtering removes repeating bin pairs
-        matrices.append(this_matrix[cov_filter] if full else np.array([a[cov_filter] for a in this_matrix])) # can't just apply the 2D index array cov_filter along the last 2 axes
+        matrices.append(apply_cov_filter(symmetrized_3pcf(this_matrix, n, max_l), cov_filter)) # symmetrize before filtering, because filtering removes repeating bin pairs
     return tuple(matrices)
 
 
