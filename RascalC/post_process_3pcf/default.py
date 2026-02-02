@@ -30,7 +30,7 @@ def symmetrized_3pcf(A: np.typing.NDArray[np.float64], n: int, max_l: int) -> np
     "Symmetrize a 3PCF covariance matrix (2D array), or an array of 3PCF covariance matrices (3D array)"
     if len(A.shape) not in (2, 3): raise ValueError("Dimension of the input array must be 2 or 3")
     m = max_l + 1
-    if not np.array_equal(A.shape[:-2], [n * n * m] * 2): raise ValueError("Unexpected shape in the last 2 dimensions")
+    if not np.array_equal(A.shape[-2:], [n * n * m] * 2): raise ValueError("Unexpected shape in the last 2 dimensions")
     leading_dims = list(A.shape[:-2]) # list containing a leading dimension for the array of covariance matrices, and empty for a single covariance matrix
     A1 = A.reshape(leading_dims + [n, n, m] * 2) # last 6 axes will be [r1, r2, l12, r3, r4, l34]
     A2 = (A1 + A1.swapaxes(-2, -3)) / 2 # symmetrize wrt swaps of r3 and r4. Create new array against the risk of A1 being a view of original A
@@ -39,13 +39,13 @@ def symmetrized_3pcf(A: np.typing.NDArray[np.float64], n: int, max_l: int) -> np
     return symmetrized(A2) # finally, symetrize wrt full covariance matrix bin swap
 
 
-def load_matrices(input_data: dict[str], cov_filter: np.typing.NDArray[np.int_], full: bool = True) -> tuple[np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64]]:
+def load_matrices(input_data: dict[str], n: int, max_l: int, cov_filter: np.typing.NDArray[np.int_], full: bool = True) -> tuple[np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64]]:
     """Load the 3PCF single-tracer covariance matrix terms."""
     matrices = []
     for npoints in range(3, 7):
         these_matrices = [input_data[f"c{npoints}_{index}" + "_full" * full] for index in range(2)]
         this_matrix = these_matrices[0] * (npoints != 6) + these_matrices[1] # do not include c6_0 term here (but why? need to test)
-        this_matrix = symmetrized_3pcf(this_matrix) # symmetrize before filtering, because filtering removes repeating bin pairs
+        this_matrix = symmetrized_3pcf(this_matrix, n, max_l) # symmetrize before filtering, because filtering removes repeating bin pairs
         matrices.append(this_matrix[cov_filter] if full else np.array([a[cov_filter] for a in this_matrix])) # can't just apply the 2D index array cov_filter along the last 2 axes
     return tuple(matrices)
 
@@ -70,7 +70,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str, alpha: fl
 
     # Load in full theoretical matrices
     print_function("Loading best estimate of covariance matrix")
-    c3, c4, c5, c6 = load_matrices(input_file, cov_filter, full=True)
+    c3, c4, c5, c6 = load_matrices(input_file, n, max_l, cov_filter, full=True)
 
     # Compute full covariance matrices and precision
     full_cov = add_cov_terms(c3, c4, c5, c6, alpha)
@@ -81,7 +81,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str, alpha: fl
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
     # Load in partial theoretical matrices
-    c3s, c4s, c5s, c6s = load_matrices(input_file, cov_filter, full=False)
+    c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False)
     partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha)
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
     print_function("Full precision matrix estimate computed")
