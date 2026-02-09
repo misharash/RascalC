@@ -54,7 +54,68 @@ def add_cov_terms(c3: np.typing.NDArray[np.float64], c4: np.typing.NDArray[np.fl
     return c6 + c5 * alpha + c4 * alpha**2 + c3 * alpha**3
 
 
-def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+    r"""
+    3PCF post-processing for Legendre (accumulated) mode.
+
+    Do not run this (or any other post-processing function/script) while the main RascalC computation is running — this may delete the output directory and cause the code to crash.
+
+    Parameters
+    ----------
+    file_root : string
+        Path to the RascalC (:func:`RascalC.run_cov_3pcf` or command-line) output directory.
+    
+    n : integer
+        The number of radial bins used in the RascalC run (before applying ``skip_r_bins`` if it is provided).
+    
+    max_l : integer
+        The maximum ell (Legendre moment index) used in the RascalC run (before applying ``skip_l`` if it is provided).
+
+    outdir : string or None
+        (Optional) path to the directory in which the post-processing results should be saved. If None (default), is set to ``file_root``. Empty string means the current working directory.
+        We advise to use different output directories for different post-processing options.
+
+    alpha : float
+        Fixed shot-noise rescaling value to use. In principle optional, but the default value of 1 may not be particularly good.
+
+    skip_r_bins : integer or tuple of two integers
+        (Optional) removal of some radial bins.
+        First (or the only) number sets the number of radial/separation bins to skip from the beginning.
+        Second number (if provided) sets the number of radial/separation bins to skip from the end.
+        By default, no bins are skipped.
+
+    skip_l : integer
+        (Optional) number of higher multipoles to skip (from the end and counting only even multipoles).
+
+    n_samples : None, integer, array/list/tuple/etc of integers or boolean values
+        (Optional) selection of RascalC subsamples (independent realizations of Monte-Carlo integrals).
+        
+            - If None, use all (default).
+            - If an integer, use the given number of samples from the beginning.
+            - If an array/list/tuple/etc of integers, it will be used as a NumPy index array.
+            - If an array/list/tuple/etc of boolean, it will be used as a NumPy boolean array mask.
+    
+    exclude_samebins : boolean
+        (Optional) If False, the covariance will include the pairs of the same radial bins.
+        The default behavior (for the True value) is to exclude them for compatibility with ENCORE.
+        In either case, the post-processed covariances only include each pair of different radial bins in one ordering, ``bin1 < bin2``; the raw covariances also include ``bin1 > bin2`` pairs.
+    
+    print_function : Callable
+        (Optional) custom function to use for printing. Default is ``print``.
+    
+    dry_run: boolean
+        (Optional) If True, this will not run actual post-processing, only determine the filename and path (see below).
+
+    Returns
+    -------
+    post_processing_results : dict[str, np.ndarray[float]]
+        Post-processing results as a dictionary with string keys and Numpy array values. All this information is also saved in a ``Rescaled_Covariance_Matrices*.npz`` file in the ``out_dir`` (in ``file_root`` if the former is not provided).
+        Selected common keys are: ``"full_theory_covariance"`` for the final covariance matrix and ``"shot_noise_rescaling"`` for the shot-noise rescaling value(s).
+        For convenience, in the output dictionary only, ``"filename"`` contains the name of the file where the results were saved (which can be inconvenient to predict), and ``"path"`` contains its path (also obtainable by :func:`os.path.join`-ing ``out_dir`` with the filename)
+    """
+    # Set default output directory if not set
+    if outdir is None: outdir = file_root
+
     output_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_3PCF_n%d_l%d.npz' % (n, max_l))
     name_dict = dict(path=output_name, filename=os.path.basename(output_name))
     if dry_run: return name_dict
