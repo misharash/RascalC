@@ -1,8 +1,8 @@
 """
 This module contains convenience functions that
 
-- read RascalC results (checking eigenvalues of the inversion bias matrix. If they are much smaller than 1, it is safe to simply invert the covariance matrix. Otherwise, a correction factor is necessary. Caveat: may need to cut the inversion bias matrix for 3PCF covariances, which is not yet implemented)
-- convert (reorder) 3PCF covariance matrices (as is often needed for Legendre moments)
+- read RascalC results (checking eigenvalues of the inversion bias matrix. If they are much smaller than 1, it is safe to simply invert the covariance matrix. Otherwise, a correction factor is necessary.
+- convert (reorder) 3PCF covariance matrices (as is usually needed for Legendre moments)
 - and/or export (save) the full 3PCF covariance matrix to a text file.
 """
 
