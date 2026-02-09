@@ -11,11 +11,12 @@ from ..raw_covariance_matrices import load_raw_covariances_3pcf_legendre
 from typing import Callable, Iterable
 
 
-def cov_filter_3pcf_legendre(n: int, max_l: int, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, exclude_samebins: bool = True):
-    """Produce a 2D indexing array for 3PCF Legendre covariance matrices in RascalC convention (not compatible with ENCORE bin ordering)."""
+def cov_filter_3pcf_legendre(n: int, max_l: int, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, exclude_samebins: bool = True, exclude_odd_l: bool = False):
+    """Produce a 2D indexing array for 3PCF Legendre covariance matrices in RascalC convention (not yet fully compatible with ENCORE bin ordering)."""
     skip_r_bins_start, skip_r_bins_end = format_skip_r_bins(skip_r_bins)
     n_l = max_l + 1
-    l_indices = np.arange(n_l - skip_l)
+    l_indices = np.arange(0, n_l, 1+exclude_odd_l)
+    if skip_l > 0: l_indices = l_indices[:-skip_l] # without the condition, wouldn't work right for skip_l
     r_indices = np.arange(skip_r_bins_start, n - skip_r_bins_end)
     r_indices1, r_indices2 = [a.ravel() for a in np.meshgrid(r_indices, r_indices, indexing='ij')] # flattened array indices
     r_filter = (r_indices1 <= r_indices2 - exclude_samebins) # strictly less for exclude_samebin=True, less or equal otherwise
@@ -54,7 +55,7 @@ def add_cov_terms(c3: np.typing.NDArray[np.float64], c4: np.typing.NDArray[np.fl
     return c6 + c5 * alpha + c4 * alpha**2 + c3 * alpha**3
 
 
-def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     r"""
     3PCF post-processing for Legendre (accumulated) mode.
 
@@ -85,7 +86,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
         By default, no bins are skipped.
 
     skip_l : integer
-        (Optional) number of higher multipoles to skip (from the end and counting only even multipoles).
+        (Optional) number of higher multipoles to skip (from the end, counting all multipoles by default and only even multipoles if exlude_odd_l is True).
 
     n_samples : None, integer, array/list/tuple/etc of integers or boolean values
         (Optional) selection of RascalC subsamples (independent realizations of Monte-Carlo integrals).
@@ -99,6 +100,9 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
         (Optional) If False, the covariance will include the pairs of the same radial bins.
         The default behavior (for the True value) is to exclude them for compatibility with ENCORE.
         In either case, the post-processed covariances only include each pair of different radial bins in one ordering, ``bin1 < bin2``; the raw covariances also include ``bin1 > bin2`` pairs.
+    
+    exclude_odd_l : boolean
+        (Optional) If True, the covariance will exclude the odd multipoles; note that then they will also not count in ``skip_l``. By default (False value), odd multipoles are kept and counted in ``skip_l``.
     
     print_function : Callable
         (Optional) custom function to use for printing. Default is ``print``.
@@ -120,7 +124,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
     name_dict = dict(path=output_name, filename=os.path.basename(output_name))
     if dry_run: return name_dict
 
-    cov_filter = cov_filter_3pcf_legendre(n, max_l, skip_r_bins, skip_l, exclude_samebins)
+    cov_filter = cov_filter_3pcf_legendre(n, max_l, skip_r_bins, skip_l, exclude_samebins, exclude_odd_l)
     
     input_file = load_raw_covariances_3pcf_legendre(file_root, n, max_l, n_samples, print_function)
 

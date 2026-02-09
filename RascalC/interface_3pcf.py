@@ -33,7 +33,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
                  boxsize: float | None = None,
                  shot_noise_rescaling1: float = 1,
                  skip_s_bins: int | tuple[int, int] = 0, skip_l: int = 0,
-                 exclude_samebins: bool = True,
+                 exclude_samebins: bool = True, exclude_odd_l: bool = False,
                  sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
                  start_integral_index = None, last_integral_index = None,
                  verbose: bool = False) -> dict[str, np.ndarray[float]]:
@@ -170,6 +170,9 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
 
     exclude_samebins : bool
         Whether to exclude the same-bin pairs. Default (True) corresponds to ENCORE convention.
+    
+    exclude_odd_l : boolean
+        (Optional) If True, the covariance will exclude the odd multipoles; note that then they will also not count in ``skip_l``. By default (False value), odd multipoles are kept and counted in ``skip_l``.
 
     seed : integer or None
         (Optional) If given as an integer, sets the base RNG (random number generator) seed, allowing to reproduce the results with the same input data and settings (except the number of threads, which can be varied).
@@ -446,7 +449,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
         print_and_log("Carefully merge the output directories with all the integrals (if applicable) and invoke the post-processing with e.g. RascalC.post_process_auto()")
         return
     print_and_log("Starting post-processing")
-    results = post_process_3pcf(out_dir, n_r_bins, max_l, out_dir, shot_noise_rescaling1, skip_s_bins, skip_l, exclude_samebins=exclude_samebins, print_function=print_and_log)
+    results = post_process_3pcf(out_dir, n_r_bins, max_l, out_dir, shot_noise_rescaling1, skip_s_bins, skip_l, exclude_samebins=exclude_samebins, exclude_odd_l=exclude_odd_l, print_function=print_and_log)
     # TODO:
     # add mock post-processing
 
