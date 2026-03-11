@@ -1,5 +1,6 @@
 from typing import Iterable, Callable, Literal
 import numpy as np
+import numpy.typing as npt
 import os
 from glob import glob
 from re import fullmatch
@@ -35,7 +36,7 @@ def post_process_auto(file_root: str,
                       xi_11_samples: Iterable[pycorr.twopoint_estimator.BaseTwoPointEstimator] | None = None,
                       xi_12_samples: Iterable[pycorr.twopoint_estimator.BaseTwoPointEstimator] | None = None,
                       xi_22_samples: Iterable[pycorr.twopoint_estimator.BaseTwoPointEstimator] | None = None,
-                      xi_sample_cov: np.ndarray[float] | None = None,
+                      xi_sample_cov: npt.NDArray[np.float64] | None = None,
                       print_function: Callable[[str], None] = print,
                       extra_convergence_check: bool = True,
                       jackknife: bool | None = None, load_sample_cov: bool | None = None,
@@ -43,14 +44,18 @@ def post_process_auto(file_root: str,
                       n_r_bins: int | None = None, n_mu_bins: int | None = None,
                       n_jack: int | None = None,
                       max_l: int | None = None,
-                      dry_run: bool = False) -> dict[str]:
+                      check_finished: bool = True,
+                      dry_run: bool = False) -> dict[str, npt.NDArray[np.float64] | float | str]:
     r"""
     Automatic but highly customizable post-processing interface. Designed to work with the :func:`RascalC.run_cov` outputs.
 
         - By default, this function guesses jackknife or mock pipeline and the covariance binning mode by the output directory contents, but you can also specify some or all of these regimes via optional arguments.
         - Note that ``skip_s_bins`` and ``skip_l`` are not auto-determined, so by default no bins are be skipped even if they were cut in :func:`RascalC.run_cov`.
 
-    Do not run this (or any other post-processing function/script) while the main RascalC computation is running — this may delete the output directory and cause the code to crash.
+    Now it should be safe to run this (or attempt other post-processing) while the main RascalC computation is still running, as long as you do not put multiple runs into one output directory.
+    Some extra caution may be needed for two-tracer computations, but they should be good if you ran them with :func:`RascalC.run_cov`.
+    This is achieved by a default heuristic check for the normal finishing of the main RascalC computation.
+    With this, inspecting the output of an aborted or timed-out run is harder, by default it will be considered unfinished. But if you are sure that the main computation is not running, you can disable the check via ``check_finished=False``. Doing this once should be sufficient, repeated post-processing attempts should no longer detect the run as unfinished.
 
     Parameters
     ----------
@@ -137,13 +142,16 @@ def post_process_auto(file_root: str,
     n_r_bins, n_mu_bins, n_jack, max_l : integer or None
         (Optional) integer value is used to set manually the number of radial bins, angular bins (not needed in some Legendre modes), jackknife regions (jackknife mode only) and maximum (even) ell (Legendre mode only) respectively. Each parameter which is None (default) is determined automatically.
     
+    check_finished : boolean
+        (Optional) whether to check if the RascalC computation was finished successfully before post-processing to avoid disrupting ongoing runs. It is on by default for safety. You can disable this check, but we advise to do so only if you are sure that the main RascalC computation is not running in the directory due to an interruption and/or time-out and you want to check the quality of this unfinished run's output. Doing this once should be sufficient, repeated post-processing attempts should no longer detect the run as unfinished.
+    
     dry_run: boolean
         (Optional) If True, this will not run actual post-processing, only determine the filename and path (see below).
 
     Returns
     -------
-    post_processing_results : dict[str, np.ndarray[float]]
-        Post-processing results as a dictionary with string keys and Numpy array values. All this information is also saved in a ``Rescaled_Covariance_Matrices*.npz`` file in the ``out_dir`` (in ``file_root`` if the former is not provided).
+    post_processing_results : dict[str]
+        Post-processing results as a dictionary with string keys and (mostly) Numpy array values. All this information is also saved in a ``Rescaled_Covariance_Matrices*.npz`` file in the ``out_dir`` (in ``file_root`` if the former is not provided).
         Selected common keys are: ``"full_theory_covariance"`` for the final covariance matrix and ``"shot_noise_rescaling"`` for the shot-noise rescaling value(s).
         For convenience, in the output dictionary only, ``"filename"`` contains the name of the file where the results were saved (which can be inconvenient to predict), and ``"path"`` contains its path (also obtainable by :func:`os.path.join`-ing ``out_dir`` with the filename)
     """
@@ -231,76 +239,77 @@ def post_process_auto(file_root: str,
 
     mocks = mocks_new or load_sample_cov
 
-    if not (jackknife or mocks):
-        # case when the shot-noise rescaling is not tuned - as it should be; lacking implementations resolved
-        print_function(f"Using {shot_noise_rescaling1=}" + two_tracers * f" and {shot_noise_rescaling2=}")
+    if not dry_run: # skip the additional messages and filesystem changes if this is just a dry run to determine the output filename and path
+        if not (jackknife or mocks):
+            # case when the shot-noise rescaling is not tuned - as it should be
+            print_function(f"Using {shot_noise_rescaling1=}" + two_tracers * f" and {shot_noise_rescaling2=}")
 
-    if mocks_new:
-        mock_cov_name = os.path.join(out_dir, mock_cov_basename) # in this case, the sample covariance will be written, and that should be into the output directory and not file_root; they can be the same if desired
-        if os.path.isfile(mock_cov_name): warn(f"The default (mock) sample covariance file '{mock_cov_name}' exists and will be overwritten")
-        elif not os.path.isdir(out_dir): # Need to make sure that the output directory exists. This is also checked in each post-processing functions, but only after writing the sample covariance file
-            os.makedirs(os.path.abspath(out_dir)) # abspath is to exclude "../" for makedirs not to become "confused"
-    # then write the sample covariance to file
-    if mocks_precomputed:
-        np.savetxt(mock_cov_name, xi_sample_cov)
-    elif mocks_from_samples:
-        if len(xi_11_samples) <= 1: raise ValueError("Need more than 1 sample in xi_11_samples to compute the sample covariance")
-        if any(not np.allclose(xi_sample.edges[0], xi_11_samples[0].edges[0]) for xi_sample in xi_11_samples[1:]): raise ValueError(f"Found different separation/radial binning in xi_11_samples")
-        if any(not np.allclose(xi_sample.edges[1], np.linspace(0, 1, n_mu_bins + 1)) for xi_sample in xi_11_samples): raise ValueError(f"Found angular/µ binning in xi_11_samples inconsistent with uniform and/or the inferred number of angular/µ bins")
-        xi_samples_all = [xi_11_samples]
-        if two_tracers:
-            # check the required 22 samples
-            if xi_22_samples is None: raise TypeError("xi_22_samples must be provided for multi-tracer")
-            if len(xi_22_samples) != len(xi_11_samples): raise ValueError("xi_22_samples must contain the same number of samples as xi_11_samples")
-            if any(not np.allclose(xi_sample.edges, xi_11_samples[0].edges) for xi_sample in xi_22_samples): raise ValueError(f"xi_22_samples must have the same binning as xi_11_samples")
-            # check 12 samples which are not critical. if anything is wrong, substitute 11 samples as a placeholder
-            if xi_12_samples is None:
-                warn("xi_12_samples not provided. The shot-noise calibration should be fine, but do not use the sample covariance from the output folder directly.")
-                xi_12_samples = xi_11_samples
-            elif len(xi_12_samples) != len(xi_11_samples):
-                warn("xi_12_samples must contain the same number of samples as xi_11_samples, will substitute them with a placeholder. The shot-noise calibration should be fine, but do not use the sample covariance from the output folder directly.")
-                xi_12_samples = xi_11_samples
-            elif any(not np.allclose(xi_sample.edges, xi_11_samples[0].edges) for xi_sample in xi_12_samples):
-                warn(f"xi_12_samples must have the same binning as xi_11_samples, will substitute them with a placeholder. The shot-noise calibration should be fine, but do not use the sample covariance from the output folder directly.")
-                xi_12_samples = xi_11_samples
-            xi_samples_all += [xi_12_samples, xi_22_samples]
-        if legendre:
-            sample_cov_multipoles_from_pycorr_to_file(xi_samples_all, mock_cov_name, max_l=max_l)
-        else:
-            sample_cov_from_pycorr_to_file(xi_samples_all, mock_cov_name)
+        if mocks_new:
+            mock_cov_name = os.path.join(out_dir, mock_cov_basename) # in this case, the sample covariance will be written, and that should be into the output directory and not file_root; they can be the same if desired
+            if os.path.isfile(mock_cov_name): warn(f"The default (mock) sample covariance file '{mock_cov_name}' exists and will be overwritten")
+            elif not os.path.isdir(out_dir): # Need to make sure that the output directory exists. This is also checked in each post-processing functions, but only after writing the sample covariance file
+                os.makedirs(os.path.abspath(out_dir)) # abspath is to exclude "../" for makedirs not to become "confused"
+        # then write the sample covariance to file
+        if mocks_precomputed:
+            np.savetxt(mock_cov_name, xi_sample_cov)
+        elif mocks_from_samples:
+            if len(xi_11_samples) <= 1: raise ValueError("Need more than 1 sample in xi_11_samples to compute the sample covariance")
+            if any(not np.allclose(xi_sample.edges[0], xi_11_samples[0].edges[0]) for xi_sample in xi_11_samples[1:]): raise ValueError(f"Found different separation/radial binning in xi_11_samples")
+            if any(not np.allclose(xi_sample.edges[1], np.linspace(0, 1, n_mu_bins + 1)) for xi_sample in xi_11_samples): raise ValueError(f"Found angular/µ binning in xi_11_samples inconsistent with uniform and/or the inferred number of angular/µ bins")
+            xi_samples_all = [xi_11_samples]
+            if two_tracers:
+                # check the required 22 samples
+                if xi_22_samples is None: raise TypeError("xi_22_samples must be provided for multi-tracer")
+                if len(xi_22_samples) != len(xi_11_samples): raise ValueError("xi_22_samples must contain the same number of samples as xi_11_samples")
+                if any(not np.allclose(xi_sample.edges, xi_11_samples[0].edges) for xi_sample in xi_22_samples): raise ValueError(f"xi_22_samples must have the same binning as xi_11_samples")
+                # check 12 samples which are not critical. if anything is wrong, substitute 11 samples as a placeholder
+                if xi_12_samples is None:
+                    warn("xi_12_samples not provided. The shot-noise calibration should be fine, but do not use the sample covariance from the output folder directly.")
+                    xi_12_samples = xi_11_samples
+                elif len(xi_12_samples) != len(xi_11_samples):
+                    warn("xi_12_samples must contain the same number of samples as xi_11_samples, will substitute them with a placeholder. The shot-noise calibration should be fine, but do not use the sample covariance from the output folder directly.")
+                    xi_12_samples = xi_11_samples
+                elif any(not np.allclose(xi_sample.edges, xi_11_samples[0].edges) for xi_sample in xi_12_samples):
+                    warn(f"xi_12_samples must have the same binning as xi_11_samples, will substitute them with a placeholder. The shot-noise calibration should be fine, but do not use the sample covariance from the output folder directly.")
+                    xi_12_samples = xi_11_samples
+                xi_samples_all += [xi_12_samples, xi_22_samples]
+            if legendre:
+                sample_cov_multipoles_from_pycorr_to_file(xi_samples_all, mock_cov_name, max_l=max_l)
+            else:
+                sample_cov_from_pycorr_to_file(xi_samples_all, mock_cov_name)
 
     if two_tracers:
         if legendre:
             if mocks:
-                results = post_process_legendre_mocks_multi(mock_cov_name, file_root, n_r_bins, max_l, out_dir, skip_s_bins, skip_l, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+                results = post_process_legendre_mocks_multi(mock_cov_name, file_root, n_r_bins, max_l, out_dir, skip_s_bins, skip_l, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
             elif jackknife:
-                results = post_process_legendre_mix_jackknife_multi(*xi_jack_names, os.path.join(file_root, "weights"), file_root, n_mu_bins, max_l, out_dir, skip_s_bins, skip_l, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+                results = post_process_legendre_mix_jackknife_multi(*xi_jack_names, os.path.join(file_root, "weights"), file_root, n_mu_bins, max_l, out_dir, skip_s_bins, skip_l, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
             else:
-                results = post_process_legendre_multi(file_root, n_r_bins, max_l, out_dir, shot_noise_rescaling1, shot_noise_rescaling2, skip_s_bins, skip_l, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+                results = post_process_legendre_multi(file_root, n_r_bins, max_l, out_dir, shot_noise_rescaling1, shot_noise_rescaling2, skip_s_bins, skip_l, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
         elif mocks:
-            results = post_process_default_mocks_multi(mock_cov_name, file_root, n_r_bins, n_mu_bins, out_dir, skip_s_bins, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+            results = post_process_default_mocks_multi(mock_cov_name, file_root, n_r_bins, n_mu_bins, out_dir, skip_s_bins, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
         elif jackknife:
-            results = post_process_jackknife_multi(*xi_jack_names, os.path.join(file_root, "weights"), file_root, n_mu_bins, out_dir, skip_s_bins, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+            results = post_process_jackknife_multi(*xi_jack_names, os.path.join(file_root, "weights"), file_root, n_mu_bins, out_dir, skip_s_bins, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
         else: # default
-            results = post_process_default_multi(file_root, n_r_bins, n_mu_bins, out_dir, shot_noise_rescaling1, shot_noise_rescaling2, skip_s_bins, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+            results = post_process_default_multi(file_root, n_r_bins, n_mu_bins, out_dir, shot_noise_rescaling1, shot_noise_rescaling2, skip_s_bins, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
     else:
         if legendre:
             if mocks:
-                results = post_process_legendre_mocks(mock_cov_name, file_root, n_r_bins, max_l, out_dir, skip_s_bins, skip_l, tracer = tracer, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+                results = post_process_legendre_mocks(mock_cov_name, file_root, n_r_bins, max_l, out_dir, skip_s_bins, skip_l, tracer=tracer, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
             elif jackknife:
-                results = post_process_legendre_mix_jackknife(xi_jack_names[0], os.path.join(file_root, "weights"), file_root, n_mu_bins, max_l, out_dir, skip_s_bins, skip_l, tracer = tracer, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+                results = post_process_legendre_mix_jackknife(xi_jack_names[0], os.path.join(file_root, "weights"), file_root, n_mu_bins, max_l, out_dir, skip_s_bins, skip_l, tracer=tracer, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
             else:
-                results = post_process_legendre(file_root, n_r_bins, max_l, out_dir, shot_noise_rescaling1, skip_s_bins, skip_l, tracer = tracer, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+                results = post_process_legendre(file_root, n_r_bins, max_l, out_dir, shot_noise_rescaling1, skip_s_bins, skip_l, tracer=tracer, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
         elif mocks:
-            results = post_process_default_mocks(mock_cov_name, file_root, n_r_bins, n_mu_bins, out_dir, skip_s_bins, tracer = tracer, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+            results = post_process_default_mocks(mock_cov_name, file_root, n_r_bins, n_mu_bins, out_dir, skip_s_bins, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
         elif jackknife:
-            results = post_process_jackknife(xi_jack_names[0], os.path.join(file_root, "weights"), file_root, n_mu_bins, out_dir, skip_s_bins, tracer = tracer, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+            results = post_process_jackknife(xi_jack_names[0], os.path.join(file_root, "weights"), file_root, n_mu_bins, out_dir, skip_s_bins, tracer=tracer, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
         else: # default
-            results = post_process_default(file_root, n_r_bins, n_mu_bins, out_dir, shot_noise_rescaling1, skip_s_bins, tracer = tracer, n_samples = n_samples, print_function = print_function, dry_run = dry_run)
+            results = post_process_default(file_root, n_r_bins, n_mu_bins, out_dir, shot_noise_rescaling1, skip_s_bins, tracer=tracer, n_samples=n_samples, check_finished=check_finished, print_function=print_function, dry_run=dry_run)
 
     if extra_convergence_check and not dry_run:
         print_function("Performing an extra convergence check")
-        results["extra_convergence_check_results"] = convergence_check_extra(results, print_function = print_function)
+        results["extra_convergence_check_results"] = convergence_check_extra(results, print_function=print_function)
 
     return results
     
