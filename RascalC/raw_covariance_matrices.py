@@ -105,9 +105,10 @@ def collect_raw_covariance_matrices(cov_dir: str, cleanup: bool = True, check_fi
                 if unfinished_names:
                     print_function(f"WARNING: {unfinished_names} full matrices not found for {2+threepcf}PCF output group {output_group_name}. This may indicate that the C++ code is still running. Will skip this output group to avoid disrupting an ongoing run by collecting and/or deleting the text files. If you are sure that the run(s) in this directory finished (e.g., it/they timed out without producing the full matrices), you can disable this check by setting check_finished to False, but be careful not to disrupt ongoing runs.")
                     continue
-                if threepcf: # additional check for 3PCF
+                # additional checks that all types of matrices are present
+                if threepcf: # different names for 3PCF, and only single-tracer for now
                     expected_matrix_names = [f'c{n}_{i}' for n in range(3, 7) for i in range(2)]
-                else: # additional checks for two tracers - all the different types of matrices should be present
+                else: # set 2PCF names, excluding jackknife
                     if two_tracers is None: two_tracers = os.path.isfile(os.path.join(cov_dir, f"xi/xi_22.dat")) # simple heuristic if not provided explicitly, copied from post_process_auto
                     expected_matrix_names = ['c2_' + i + j for i in "12" for j in "12"] + ['c3_' + i + ',' + index2 for i in "12" for index2 in ("11", "12", "22")] + ['c4_' + indices for indices in ("11,11", "11,22", "12,11", "12,12", "12,21", "21,22", "22,22")] if two_tracers else ['c2_11', 'c3_1,11', 'c4_11,11']
                 not_found_names = [matrix_name for matrix_name in expected_matrix_names if matrix_name not in output_group]
