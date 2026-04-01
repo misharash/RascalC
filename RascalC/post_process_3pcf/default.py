@@ -40,12 +40,12 @@ def symmetrized_3pcf(A: np.typing.NDArray[np.float64], n: int, max_l: int) -> np
     return symmetrized(A2) # finally, symetrize wrt full covariance matrix bin swap
 
 
-def load_matrices(input_data: dict[str], n: int, max_l: int, cov_filter: np.typing.NDArray[np.int_], full: bool = True) -> tuple[np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64]]:
+def load_matrices(input_data: dict[str], n: int, max_l: int, cov_filter: np.typing.NDArray[np.int_], full: bool = True, use_c6_0: bool = False) -> tuple[np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64]]:
     """Load the 3PCF single-tracer covariance matrix terms."""
     matrices = []
     for npoints in range(3, 7):
         these_matrices = [input_data[f"c{npoints}_{index}" + "_full" * full] for index in range(2)]
-        this_matrix = these_matrices[0] * (npoints != 6) + these_matrices[1] # do not include c6_0 term here (but why? need to test)
+        this_matrix = these_matrices[0] * (use_c6_0 or npoints != 6) + these_matrices[1] # by default, exclude c6_0 term here (but why? need to test)
         matrices.append(apply_cov_filter(symmetrized_3pcf(this_matrix, n, max_l), cov_filter)) # symmetrize before filtering, because filtering removes repeating bin pairs
     return tuple(matrices)
 
@@ -55,7 +55,7 @@ def add_cov_terms(c3: np.typing.NDArray[np.float64], c4: np.typing.NDArray[np.fl
     return c6 + c5 * alpha + c4 * alpha**2 + c3 * alpha**3
 
 
-def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, use_c6_0: bool = False, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     r"""
     3PCF post-processing for Legendre (accumulated) mode.
 
@@ -134,7 +134,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
 
     # Load in full theoretical matrices
     print_function("Loading best estimate of covariance matrix")
-    c3, c4, c5, c6 = load_matrices(input_file, n, max_l, cov_filter, full=True)
+    c3, c4, c5, c6 = load_matrices(input_file, n, max_l, cov_filter, full=True, use_c6_0=use_c6_0)
 
     # Check matrix convergence by analogy with 2PCF, may be less helpful
     check_eigval_convergence(c3, c6, alpha, Npcf=3, print_function=print_function)
@@ -148,7 +148,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
     # Load in partial theoretical matrices
-    c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False)
+    c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False, use_c6_0=use_c6_0)
     partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha)
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
     print_function("Full precision matrix estimate computed")
