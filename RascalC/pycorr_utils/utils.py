@@ -2,25 +2,80 @@ import pycorr
 import numpy as np
 from warnings import warn
 from ..utils import format_skip_r_bins
-from ..xi.utils import write_xi_file # for convenience of use in other scripts
+from ..xi.utils import write_xi_file # for convenience of use in other modules
+
+
+def fix_bad_bins_counts(counts: pycorr.twopoint_counter.BaseTwoPointCounter) -> pycorr.twopoint_counter.BaseTwoPointCounter:
+    """
+    Takes a counts object and fixes bins with negative wcounts by overwriting their content by reflection.
+    Only known cause for now is self-counts (DD, RR) in bin 0, n_mu_orig/2-1 – subtraction is sometimes not precise enough, especially with float32.
+    """
+    mu_edges = counts.edges[1]
+    if not np.allclose(mu_edges, -mu_edges[::-1]):
+        raise ValueError(f'input counts cannot be fixed by symmetry as 2nd dimension edges are not symmetric: {mu_edges} != {-mu_edges[::-1]}')
+    bad_bins_mask = counts.wcounts < 0
+    for s_bin, mu_bin in zip(*np.nonzero(bad_bins_mask)):
+        warn(f"Negative {counts.name}.wcounts ({counts.wcounts[s_bin, mu_bin]:.2e}) found in bin {s_bin}, {mu_bin}; replacing them with reflected bin ({counts.wcounts[s_bin, -1-mu_bin]:.2e})")
+        counts.wcounts[s_bin, mu_bin] = counts.wcounts[s_bin, -1-mu_bin]
+    bad_bins_mask = counts.wnorm < 0
+    for s_bin, mu_bin in zip(*np.nonzero(bad_bins_mask)):
+        warn(f"Negative {counts.name}.wnorm ({counts.wnorm[s_bin, mu_bin]:.2e}) found in bin {s_bin}, {mu_bin}; replacing them with reflected bin ({counts.wnorm[s_bin, -1-mu_bin]:.2e})")
+        counts.wnorm[s_bin, mu_bin] = counts.wnorm[s_bin, -1-mu_bin]
+    return counts
 
 
 def fix_bad_bins_pycorr(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator) -> pycorr.twopoint_estimator.BaseTwoPointEstimator:
-    # fixes bins with negative wcounts by overwriting their content by reflection
-    # only known cause for now is self-counts (DD, RR) in bin 0, n_mu_orig/2-1 – subtraction is sometimes not precise enough, especially with float32
+    """
+    Fixes bins with negative wcounts by overwriting their content by reflection.
+    Only known cause for now is self-counts (DD, RR) in bin 0, n_mu_orig/2-1 – subtraction is sometimes not precise enough, especially with float32.
+    """
     cls = xi_estimator.__class__
     kw = {}
     for name in xi_estimator.count_names:
-        counts = getattr(xi_estimator, name)
-        bad_bins_mask = counts.wcounts < 0
-        for s_bin, mu_bin in zip(*np.nonzero(bad_bins_mask)):
-            warn(f"Negative {name}.wcounts ({counts.wcounts[s_bin, mu_bin]:.2e}) found in bin {s_bin}, {mu_bin}; replacing them with reflected bin ({counts.wcounts[s_bin, -1-mu_bin]:.2e})")
-            counts.wcounts[s_bin, mu_bin] = counts.wcounts[s_bin, -1-mu_bin]
+        counts : pycorr.twopoint_counter.BaseTwoPointCounter = getattr(xi_estimator, name)
+        counts = fix_bad_bins_counts(counts)
+        if isinstance(counts, pycorr.twopoint_jackknife.JackknifeTwoPointCounter): # need to fix the counts in all realizations of the jackknife counter
+            for i in xi_estimator.realizations:
+                counts.auto[i] = fix_bad_bins_counts(counts.auto[i])
+                counts.cross12[i] = fix_bad_bins_counts(counts.cross12[i])
+                counts.cross21[i] = fix_bad_bins_counts(counts.cross21[i])
         kw[name] = counts
     return cls(**kw)
 
 
 def reshape_pycorr(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator, n_mu: int | None = None, r_step: float | None = None, r_max: float = np.inf, skip_r_bins: int | tuple[int, int] = 0) -> pycorr.twopoint_estimator.BaseTwoPointEstimator:
+    """
+    Reshape a pycorr estimator to match the settings of the covariance matrix, by rebinning in r and mu, applying r_max cut and skipping some r bins if requested.
+    Also checks negative counts and wraps to |mu| bins if the input extends to negative mu.
+
+    Parameters
+    ----------
+    xi_estimator : pycorr.twopoint_estimator.BaseTwoPointEstimator
+        The input pycorr estimator to reshape. It is recommended not to wrap it to |mu| bins beforehand, as the results could be weird if the wrapping was done before rebinning.
+
+    n_mu : integer
+        (Optional) the desired number of angular (|mu|) bins (after wrapping to absolute value of mu). If not provided, zero on None, the original number of mu bins is kept.
+
+    r_step : float
+        (Optional) the desired width of the radial (separation) bins. If not provided, zero or None, the original radial binning is kept. Rebinning is only supported for linear bins and will be done by integer factor, so the provided r_step needs to be close enough to an integer multiple of the original r_step in ``pycorr``.
+
+    r_max : float
+        (Optional) cut the radial bins with separations larger than the given r_max value. If not provided or infinity, no bins are removed by this criterion. The cut is applied after skipping bins but before rebinning.
+    
+    skip_r_bins : integer or tuple of two integers
+        (Optional) removal of some radial bins after radial rebinning.
+        First (or the only) number sets the number of radial/separation bins to skip from the beginning.
+        Second number (if provided) sets the number of radial/separation bins to skip from the end.
+        By default, no bins are skipped.
+    
+    output_cov_file1, output_cov_file2 : string or None
+        (Optional) if provided, the text covariance matrices for the corresponding region will be saved in this file.
+
+    Returns
+    -------
+    xi_estimator_reshaped : pycorr.twopoint_estimator.BaseTwoPointEstimator
+        The reshaped pycorr estimator.
+    """
     # determine the radius step in pycorr
     if not r_step: r_factor = 1
     else:
@@ -44,7 +99,7 @@ def reshape_pycorr(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator
 
     # determine the mu binning factor
     n_mu_orig = xi_estimator.shape[1]
-    need_wrap = xi_estimator.edges[1][0] < 0 # wrap if extends to negative mu
+    need_wrap = np.any(xi_estimator.edges[1] < 0) # wrap if extends to negative mu
     if need_wrap:
         if n_mu_orig % 2 != 0: raise ValueError("Wrapping not possible")
         n_mu_orig //= 2

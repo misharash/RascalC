@@ -1,20 +1,21 @@
-"This reads a cosmodesi/pycorr .npy file and generates jackknife xi, weight, paircounts, and total paircounts text files for RascalC to use"
+"This generates jackknife xi, weight, paircounts, and total paircounts text files for RascalC from pycorr TwoPointCorrelationFunction objects/files"
 
 import pycorr
 import numpy as np
 import numpy.typing as npt
-from .utils import reshape_pycorr, fix_bad_bins_pycorr, write_xi_file
+from .utils import reshape_pycorr, write_xi_file
 from .counts import get_counts_from_pycorr
 
 
-def jack_realization_rascalc(jack_estimator: pycorr.twopoint_jackknife.JackknifeTwoPointEstimator, i) -> pycorr.TwoPointEstimator:
+def jack_realization_rascalc(jack_estimator: pycorr.twopoint_jackknife.JackknifeTwoPointEstimator, i: int) -> pycorr.TwoPointEstimator:
     # returns RascalC-framed jackknife realization, different from implemented in pycorr
     cls = jack_estimator.__class__.__bases__[0]
     kw = {}
     for name in jack_estimator.count_names:
-        counts = getattr(jack_estimator, name)
+        counts : pycorr.twopoint_jackknife.JackknifeTwoPointCounter = getattr(jack_estimator, name)
         kw[name] = counts.auto[i] + 0.5 * (counts.cross12[i] + counts.cross21[i]) # j1 x all2 + all1 x j2 = 2 x j1 x j2 + j1 x (all2 - j2) + j2 x (all1 - j1); by conventions from jackknife_weights{,_cross}.py needs to be divided by 2
-    return fix_bad_bins_pycorr(cls(**kw))
+        kw[name].wnorm = counts.wnorm # we want the norm to be the same as for the total counts for further RascalC usage, otherwise the normalized counts of the jackknife realizations would not sum to the total normalized counts
+    return cls(**kw)
 
 
 def jack_realizations_rascalc(jack_estimator: pycorr.twopoint_jackknife.JackknifeTwoPointEstimator) -> list[pycorr.TwoPointEstimator]:
@@ -25,17 +26,12 @@ def get_jack_xi_weights_counts_from_pycorr(jack_estimator: pycorr.twopoint_jackk
     realizations = jack_realizations_rascalc(jack_estimator)
 
     xi_jack = np.array([jack.corr.ravel() for jack in realizations]) # already wrapped
-    if counts_factor: # nonzero value
-        jack_pairs = np.array([jack.R1R2.wcounts.ravel() for jack in realizations]) / counts_factor # already wrapped
-        nonsplit_mask = (jack_estimator.sepavg(axis=0) < split_above)
-        if split_above > 0: jack_pairs[:, nonsplit_mask] /= counts_factor # divide once more below the splitting scale
-    else: # zero value, use normalized counts
-        jack_pairs = np.array([(jack.R1R2.wcounts / jack_estimator.R1R2.wnorm).ravel() for jack in realizations]) # already wrapped
+    jack_pairs = np.array([get_counts_from_pycorr(jack, counts_factor, split_above).ravel() for jack in realizations]) # already wrapped
     jack_weights = jack_pairs / np.sum(jack_pairs, axis=0)[None, :] # weights are pair counts normalized by their total
     return xi_jack, jack_weights, jack_pairs
 
 
-def convert_jack_xi_weights_counts_from_pycorr_to_files(xi_estimator_orig: pycorr.twopoint_jackknife.JackknifeTwoPointEstimator, xi_jack_name: str, jackweights_name: str, jackpairs_name: str, binpairs_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, counts_factor: float | None = None, split_above: float = np.inf):
+def convert_jack_xi_weights_counts_from_pycorr_to_files(xi_estimator_orig: pycorr.twopoint_jackknife.JackknifeTwoPointEstimator, xi_jack_name: str, jackweights_name: str, jackpairs_name: str, binpairs_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, counts_factor: float | None = None, split_above: float = np.inf) -> None:
     xi_estimator = reshape_pycorr(xi_estimator_orig, n_mu, r_step, r_max)
     binpairs = get_counts_from_pycorr(xi_estimator, counts_factor, split_above).ravel()
 
@@ -50,6 +46,6 @@ def convert_jack_xi_weights_counts_from_pycorr_to_files(xi_estimator_orig: pycor
     np.savetxt(jackpairs_name, np.column_stack((jack_numbers, jack_pairs)))
 
 
-def convert_jack_xi_weights_counts_from_pycorr_files(infile_name: str, xi_jack_name: str, jackweights_name: str, jackpairs_name: str, binpairs_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, counts_factor: float | None = None, split_above: float = np.inf):
+def convert_jack_xi_weights_counts_from_pycorr_files(infile_name: str, xi_jack_name: str, jackweights_name: str, jackpairs_name: str, binpairs_name: str, n_mu: int | None = None, r_step: float = 1, r_max: float = np.inf, counts_factor: float | None = None, split_above: float = np.inf) -> None:
     xi_estimator = pycorr.TwoPointCorrelationFunction.load(infile_name)
     convert_jack_xi_weights_counts_from_pycorr_to_files(xi_estimator, xi_jack_name, jackweights_name, jackpairs_name, binpairs_name, n_mu, r_step, r_max, counts_factor, split_above)
