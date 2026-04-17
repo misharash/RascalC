@@ -5,14 +5,17 @@ Please bear with the long description; you can pay less attention to settings la
 """
 
 import pycorr
+import lsstypes
 import numpy as np
 import os
 from datetime import datetime
 from typing import Iterable, Literal
 from warnings import warn
-from .pycorr_utils.utils import fix_bad_bins_pycorr, write_xi_file
+from .xi.utils import write_xi_file
 from .write_binning_file import write_binning_file
 from .pycorr_utils.input_xi import get_input_xi_from_pycorr
+from .lsstypes_utils.input_xi import get_input_xi_from_lsstypes
+from .allcounts_utils import get_s_edges_from_allcounts, get_mu_edges_from_allcounts, get_s_avg_from_allcounts, get_mu_avg_from_allcounts, allcount_switch_function, fix_and_wrap_allcounts
 from .correction_function_3pcf import compute_3pcf_correction_function, compute_3pcf_correction_function_from_encore
 from .convergence_check_extra import convergence_check_extra
 from .utils import rmdir_if_exists_and_empty, suffixes_tracer_all, indices_corr_all, suffixes_corr_all
@@ -24,7 +27,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
                  nthread: int, N2: int, N3: int, N4: int, N5: int, N6: int, n_loops: int, loops_per_sample: int,
                  out_dir: str, tmp_dir: str,
                  randoms_positions1: np.ndarray[float], randoms_weights1: np.ndarray[float],
-                 xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]],
+                 xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]],
                  no_data_galaxies1: float,
                  RRR_counts: np.ndarray[float] | None = None,
                  n_mu_bins: int = 120,
@@ -87,10 +90,10 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
         (Optional) number of angular (mu) bins for the RRR (random triplet) counts computation. Default 120.
         If the RRR counts are provided in ENCORE format, this parameter has no effect.
     
-    xi_table_11 : :class:`pycorr.TwoPointEstimator`, or sequence (tuple or list) of 3 elements: ``(s_values, mu_values, xi_values)``, or sequence (tuple or list) of 4 elements: ``(s_values, mu_values, xi_values, s_edges)``
+    xi_table_11 : :class:`pycorr.TwoPointEstimator` or :class:`lsstypes.Count2Correlation`, or sequence (tuple or list) of 3 elements: ``(s_values, mu_values, xi_values)``, or sequence (tuple or list) of 4 elements: ``(s_values, mu_values, xi_values, s_edges)``
         Table of first tracer auto-correlation function in separation (s) and :math:`\mu` bins.
         The code will use it for interpolation in the covariance matrix integrals.
-        Important: if the given correlation function is an average in :math:`(s, \mu)` bins, the separation bin edges need to be provided (and the :math:`\mu` bins are assumed to be linear) for rescaling procedure which ensures that the interpolation results averaged over :math:`(s, \mu)` bins returns the given correlation function. In case of ``pycorr.TwoPointEstimator``, the edges will be recovered automatically. Unwrapped estimators (:math:`\mu` from -1 to 1) are preferred, because symmetry allows to fix some issues.
+        Important: if the given correlation function is an average in :math:`(s, \mu)` bins, the separation bin edges need to be provided (and the :math:`\mu` bins are assumed to be linear) for rescaling procedure which ensures that the interpolation results averaged over :math:`(s, \mu)` bins returns the given correlation function. In case of ``pycorr.TwoPointEstimator`` or :class:`lsstypes.Count2Correlation`, the edges will be recovered automatically. Unwrapped estimators (:math:`\mu` from -1 to 1) are preferred, because symmetry allows to fix some issues.
         In the sequence format:
 
             - ``s_values`` must be a 1D array of reference separation (s) values for the table, of length N;
@@ -99,7 +102,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
             - ``s_edges``, if given, must be a 1D array of separation bin edges of length N+1. The bins must come close to zero separation (say start at ``s <= 0.01``).
         
         The sequence containing 3 elements should be used for theoretical models evaluated at a grid of s, mu values.
-        The 4-element format should be used for bin-averaged estimates (unless they are in a :class:`pycorr.TwoPointEstimator`).
+        The 4-element format should be used for bin-averaged estimates (unless they are in a :class:`pycorr.TwoPointEstimator` or :class:`lsstypes.Count2Correlation`).
     
     xi_cut_s : float
         (Optional) separation value beyond which the correlation function is assumed to be zero for the covariance matrix integrals. Default: 250.
@@ -305,18 +308,15 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
         if c > 0:
             if type(xi) != type(all_xi[0]): raise TypeError(f"xi_table_{indices_corr[c]} must have the same type as xi_table_11")
             if xi.shape != all_xi[0].shape: raise ValueError(f"xi_table_{indices_corr[c]} must have the same shape as xi_table_11")
-        if isinstance(xi, pycorr.twopoint_estimator.BaseTwoPointEstimator):
+        if isinstance(xi, (pycorr.twopoint_estimator.BaseTwoPointEstimator, lsstypes.Count2Correlation)):
             refine_xi = True
-            if xi.edges[1][0] < 0:
-                xi = fix_bad_bins_pycorr(xi)
-                print_and_log(f"Wrapping xi_table_{indices_corr[c]} to mu>=0")
-                xi = xi.wrap()
+            xi = fix_and_wrap_allcounts(xi) # try to fix and wrap to |mu| if needed
             if c == 0:
-                xi_n_mu_bins = xi.shape[1]
-                xi_s_edges = xi.edges[0]
-            elif not np.allclose(xi_s_edges, xi.edges[0]): raise ValueError("Different binning for different correlation functions not supported")
-            if not np.allclose(xi.edges[1], np.linspace(0, 1, xi_n_mu_bins + 1)): raise ValueError(f"xi_table_{indices_corr[c]} mu binning is not consistent with linear between 0 and 1 (after wrapping)")
-            write_xi_file(cornames[c], xi.sepavg(axis = 0), xi.sepavg(axis = 1), get_input_xi_from_pycorr(xi))
+                xi_n_mu_bins = len(get_mu_edges_from_allcounts(xi)) - 1
+                xi_s_edges = get_s_edges_from_allcounts(xi)
+            elif not np.allclose(xi_s_edges, get_s_edges_from_allcounts(xi)): raise ValueError("Different binning for different correlation functions not supported")
+            if not np.allclose(get_mu_edges_from_allcounts(xi), np.linspace(0, 1, xi_n_mu_bins + 1)): raise ValueError(f"xi_table_{indices_corr[c]} mu binning is not consistent with linear between 0 and 1 (after wrapping)")
+            write_xi_file(cornames[c], get_s_avg_from_allcounts(xi), get_mu_avg_from_allcounts(xi), allcount_switch_function(xi, get_input_xi_from_pycorr, get_input_xi_from_lsstypes))
         elif isinstance(xi, Iterable):
             if len(xi) == 4: # the last element is the edges
                 refine_xi = True
@@ -333,7 +333,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
                     xi_s_edges = (r_vals[:-1] + r_vals[1:]) / 2 # middle values as midpoints of r_vals to be safe
                     xi_s_edges = [1e-4] + xi_s_edges + [2 * r_vals[-1] - xi_s_edges[-1]] # set the lowest edge near 0 and the highest beyond the last point of r_vals
             write_xi_file(cornames[c], r_vals, mu_vals, xi_vals)
-        else: raise TypeError(f"Xi table {indices_corr[c]} must be either a pycorr.TwoPointEstimator or a tuple/list")
+        else: raise TypeError(f"Xi table {indices_corr[c]} must be either a pycorr.TwoPointEstimator, a lsstypes.Count2Correlation, or a tuple/list")
     xi_refinement_iterations *= refine_xi # True is 1; False is 0 => 0 iterations => no refinement
     
     # write the randoms file(s)
