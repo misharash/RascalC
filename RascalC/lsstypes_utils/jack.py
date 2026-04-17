@@ -30,6 +30,9 @@ def get_jack_xi_weights_counts_from_lsstypes(jack_estimator: lsstypes.Count2Jack
     realizations = jack_realizations_rascalc(jack_estimator)
 
     xi_jack = np.array([jack.value().ravel() for jack in realizations]) # already wrapped
-    jack_pairs = np.array([get_counts_from_lsstypes(jack, counts_factor, split_above).ravel() for jack in realizations]) # already wrapped
+    if counts_factor: # nonzero value, use the get_counts machinery
+        jack_pairs = np.array([get_counts_from_lsstypes(jack, counts_factor, split_above).ravel() for jack in realizations]) # already wrapped
+    else: # zero value, use normalized counts, but a different normalization from the one in get_counts to make the sum of jackknife pair counts match the total pair counts
+        jack_pairs = np.array([(jack.get('RR').values('counts') / jack_estimator.get('RR').values('norm')).ravel() for jack in realizations]) # already wrapped
     jack_weights = jack_pairs / np.sum(jack_pairs, axis=0)[None, :] # weights are pair counts normalized by their total
     return xi_jack, jack_weights, jack_pairs
