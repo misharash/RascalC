@@ -339,16 +339,16 @@ public:
         // Define triangle sides independent of i
         triangle_bins(pj.pos,pk.pos,pl.pos,norm_jkl,ang_jkl,norm_jk,2);
         
+        // Save lengths and bins for later
+        norm_kl = norm_jkl[0];
+        
         // Define first xi function
         if(index==0){
-            los_tmp = compute_los(pk.pos,pl.pos,norm_jkl[0]);
-            tmp_xi1 = cf->xi(norm_jkl[0],los_tmp); //xi_kl
+            los_tmp = compute_los(pk.pos, pl.pos, norm_kl);
+            tmp_xi1 = cf->xi(norm_kl, los_tmp); //xi_kl
             xi_pass2[0] = tmp_xi1;
         }
         else tmp_xi1 = xi_pass[0]; //xi_jk
-        
-        // Save lengths and bins for later
-        norm_kl = norm_jkl[0];
         
         // Compute radial bins for this triangle
         int x = all_bins(norm_jkl,bins_jkl,bin_jk,2);
@@ -462,13 +462,13 @@ public:
         
         // Define first xi function
         if(index==0){
-            los_tmp = compute_los(pl.pos,pm.pos,norm_klm[0]);
-            tmp_xi1 = cf->xi(norm_klm[0],los_tmp); // xi_lm
+            los_tmp = compute_los(pl.pos, pm.pos, norm_lm);
+            tmp_xi1 = cf->xi(norm_lm, los_tmp); // xi_lm
         }
         else{
-            Float norm_tmp;
-            cleanup_l(pj.pos,pm.pos,norm_tmp,los_tmp);
-            tmp_xi1 = cf->xi(norm_tmp,los_tmp); // xi_jm
+            Float norm_jm;
+            cleanup_l(pj.pos, pm.pos, norm_jm, los_tmp);
+            tmp_xi1 = cf->xi(norm_jm, los_tmp); // xi_jm
             xi_pass3 = tmp_xi1; // save for next integrator
         }        
 
