@@ -61,6 +61,7 @@ def save_safe(output_dir: str, output_group_name: str, output_dictionary: dict[s
 def collect_raw_covariance_matrices(cov_dir: str, dry_run: bool = False, cleanup: bool = True, check_finished: bool = True, two_tracers: bool | None = None, print_function: Callable[[str], None] = print) -> list[dict[str, dict[str, npt.NDArray[np.float64]]]]:
     """
     Collect the covariance matrices from text files written by the C++ code and organize them into a Numpy .npz file.
+    Returns a list of two dictionaries, for 2PCF and 3PCF separately, with the structure {output_group_name: {matrix_name: array}}, with {matrix_name: array} replicating the structure of the .npz file.
     With dry_run enabled, this function will only return the output group names via the dictionary, and not perform the actual collection.
     With cleanup enabled (default), deletes the text files after collection.
     With check_finished enabled (default), performs a heuristic check whether the run seems finished by looking for the presence of the full covariance matrices. If they are not found, the collection does not proceed and a warning is issued. This is to prevent disrupting ongoing runs by collecting and/or deleting the text files. If you want to check convergence of timed-out run(s) that did not produce the full matrices, you can disable this check, but be careful not to disrupt ongoing runs.
