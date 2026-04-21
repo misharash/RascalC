@@ -44,8 +44,9 @@ def load_matrices(input_data: dict[str], n: int, max_l: int, cov_filter: np.typi
     """Load the 3PCF single-tracer covariance matrix terms."""
     matrices = []
     for npoints in range(3, 7):
-        these_matrices = [input_data[f"c{npoints}_{index}" + "_full" * full] for index in range(2)]
-        this_matrix = these_matrices[0] * (npoints != 6) + these_matrices[1] # do not include c6_0 term here (but why? need to test)
+        these_matrices = [input_data[f"c{npoints}_{index}" + "_full" * full] for index in range(npoints == 6, 2)] # exclude c6_0 term, because it should be small but is also hard to compute (see Section 5.2.3 and Appendix A of https://arxiv.org/abs/1910.04764)
+        this_matrix = these_matrices[0]
+        if npoints != 6: this_matrix += these_matrices[1]
         matrices.append(apply_cov_filter(symmetrized_3pcf(this_matrix, n, max_l), cov_filter)) # symmetrize before filtering, because filtering removes repeating bin pairs
     return tuple(matrices)
 

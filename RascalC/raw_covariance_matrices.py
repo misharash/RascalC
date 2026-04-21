@@ -111,7 +111,7 @@ def collect_raw_covariance_matrices(cov_dir: str, dry_run: bool = False, cleanup
                     continue
                 # additional checks that all types of matrices are present
                 if threepcf: # different names for 3PCF, and only single-tracer for now
-                    expected_matrix_names = [f'c{n}_{i}' for n in range(3, 7) for i in range(2)]
+                    expected_matrix_names = [f'c{n}_{i}' for n in range(3, 6) for i in range(2)] + ['c6_1'] # exclude c6_0 term, because it should be small but is also hard to compute (see Section 5.2.3 and Appendix A of https://arxiv.org/abs/1910.04764)
                 else: # set 2PCF names, excluding jackknife
                     if two_tracers is None: two_tracers = os.path.isfile(os.path.join(cov_dir, f"xi/xi_22.dat")) # simple heuristic if not provided explicitly, copied from post_process_auto
                     expected_matrix_names = ['c2_' + i + j for i in "12" for j in "12"] + ['c3_' + i + ',' + index2 for i in "12" for index2 in ("11", "12", "22")] + ['c4_' + indices for indices in ("11,11", "11,22", "12,11", "12,12", "12,21", "21,22", "22,22")] if two_tracers else ['c2_11', 'c3_1,11', 'c4_11,11']
