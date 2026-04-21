@@ -261,7 +261,7 @@ class compute_integral{
                                 
                                  // LOOP OVER N5 M CELLS
                                 for (int n5=0; n5<par->N5; n5++){
-                                    cell_attempt5+=1; // new fourth cell attempted
+                                    cell_attempt5+=1; // new fifth cell attempted
                                     
                                     // Draw fifth cell from l or i cell
                                     delta5 = rd->random_xidraw(locrng,&p5); 
@@ -278,18 +278,18 @@ class compute_integral{
                                     if(x==1) continue;
                                     if((pid_m==pid_l)||(pid_m==pid_k)||(pid_m==pid_j)) continue;
                                     
-                                    used_cell5+=1; // new fourth cell used
+                                    used_cell5+=1; // new fifth cell used
                                     
                                     p5*=p4/(double)filn;
                                     
-                                    // Now compute the four-point integral
+                                    // Now compute the five-point integral
                                     locint.fifth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, particle_m, pid_j, pid_k, pid_l, pid_m, p5, w_ijkl, bins_ijk, correction_ijk, legendre_ijk, xi_pass, xi_pass2, norm_kl, bin_kl, w_ijklm, xi_pass3, norm_lm, bin_lm, iter_no);
 
                                     if (iter_no == 0) continue; // skip the first 6-point term, because it should be small but is also hard to compute (see Section 5.2.3 and Appendix A of https://arxiv.org/abs/1910.04764)
                                     
                                     // LOOP OVER N6 N CELLS
                                     for (int n6=0; n6<par->N6; n6++){
-                                        cell_attempt6+=1; // new fourth cell attempted
+                                        cell_attempt6+=1; // new sixth cell attempted
                                         
                                         // Draw sixth cell from m cell weighted by xi(r)
                                         delta6 = rd->random_xidraw(locrng,&p6); 
@@ -310,7 +310,7 @@ class compute_integral{
                                         
                                         p6*=p5/(double)siln;
                                         
-                                        // Now compute the four-point integral
+                                        // Now compute the six-point integral
                                         locint.sixth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, particle_m, particle_n, pid_j, pid_k, pid_l, pid_m, pid_n, p6, w_ijklm, bins_ijk, correction_ijk, legendre_ijk, xi_pass, xi_pass2, xi_pass3, norm_lm, bin_lm, iter_no); 
                                     }
                                 }
