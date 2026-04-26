@@ -3,9 +3,10 @@ r"These functions generate sample covariances of binned :math:`\xi_\ell(s)` from
 import lsstypes
 import numpy as np
 import numpy.typing as npt
+from .utils import reshape_lsstypes
 
 
-def sample_cov_multipoles_from_lsstypes(xi_estimators: list[list[lsstypes.Count2Correlation]], max_l: int) -> npt.NDArray[np.float64]:
+def sample_cov_multipoles_from_lsstypes(xi_estimators: list[list[lsstypes.Count2Correlation]], max_l: int, r_step: float | None = None, r_max: float = np.inf) -> npt.NDArray[np.float64]:
     r"""
     Produce a sample covariance of binned :math:`\xi_\ell(s)` from ``adematti/lsstypes`` ``s_mu`` `2PCF estimators <https://github.com/adematti/lsstypes>`_.
     Considers only even multipoles.
@@ -21,6 +22,13 @@ def sample_cov_multipoles_from_lsstypes(xi_estimators: list[list[lsstypes.Count2
     
     max_l : integer
         Max (even) Legendre multipole index.
+    
+    r_step: float or None
+        (Optional) If float, sets the uniform spacing of radial/separation bins.
+        If None (default), the radial/separation binning is not changed.
+    
+    r_max: float
+        (Optional) Sets the maximum radius/separation, any bins beyond that value are discarded. By default, the value is infinity, so no bins are discarded.
     """
     if max_l < 0: raise ValueError("Maximal multipole can not be negative")
     assert max_l % 2 == 0, "Only even multipoles supported"
@@ -29,18 +37,19 @@ def sample_cov_multipoles_from_lsstypes(xi_estimators: list[list[lsstypes.Count2
     if any(len(xi_estimators_c) != len(xi_estimators[0]) for xi_estimators_c in xi_estimators[1:]):
         raise ValueError("Need the same number of files for different correlation functions")
     ells = np.arange(0, max_l+1, 2)
+    ells = list(ells) # make it a list, because lsstypes expects that (for now)
     # convert each xi estimator to multipoles array, and then turn list of lists into array too
-    xi = np.array([[xi_estimator.project(mode='poles', ells=ells) for xi_estimator in xi_estimators_c] for xi_estimators_c in xi_estimators])
-    # now indices are [c, s, l, r]: correlation number, sample number, multipole index and then radial bin
-    # need [s, c, l, r]
-    xi = xi.transpose(1, 0, 2, 3)
+    xi = np.array([[reshape_lsstypes(xi_estimator, r_step=r_step, r_max=r_max, n_mu=None).project(mode='poles', ells=ells).value() for xi_estimator in xi_estimators_c] for xi_estimators_c in xi_estimators])
+    # now indices are [c, s, l_r]: correlation number, sample number, multipole index and then radial bin (the latter two together because each correlation function will be flattened)
+    # need [s, c, l_r]
+    xi = xi.transpose(1, 0, 2)
     # now flatten all dimensions except the samples
     xi = xi.reshape(xi.shape[0], -1)
     return np.cov(xi.T) # xi has to be transposed, because variables (bins) are in columns (2nd index) of it and np.cov expects otherwise.
     # Weights are assumed the same, hard to figure out alternatives, and they do not seem necessary
 
 
-def sample_cov_multipoles_from_lsstypes_to_file(xi_estimators: list[list[lsstypes.Count2Correlation]], outfile_name: str, max_l: int) -> None:
+def sample_cov_multipoles_from_lsstypes_to_file(xi_estimators: list[list[lsstypes.Count2Correlation]], outfile_name: str, max_l: int, r_step: float | None = None, r_max: float = np.inf) -> None:
     r"""
     Produce a sample covariance of binned :math:`\xi_\ell(s)` from ``adematti/lsstypes`` ``s_mu`` `2PCF estimators <https://github.com/adematti/lsstypes>`_ and write the matrix to a text file.
     Considers only even multipoles.
@@ -51,10 +60,10 @@ def sample_cov_multipoles_from_lsstypes_to_file(xi_estimators: list[list[lsstype
     outfile_name : string (filename)
         The name for the output text file.
     """
-    np.savetxt(outfile_name, sample_cov_multipoles_from_lsstypes(xi_estimators, max_l))
+    np.savetxt(outfile_name, sample_cov_multipoles_from_lsstypes(xi_estimators, max_l, r_step, r_max), header=f"n_samples={len(xi_estimators[0])}, {max_l=}, {r_step=}, {r_max=}")
 
 
-def sample_cov_multipoles_from_lsstypes_files(infile_names: list[list[str]], outfile_name: str, max_l: int) -> None:
+def sample_cov_multipoles_from_lsstypes_files(infile_names: list[list[str]], outfile_name: str, max_l: int, r_step: float | None = None, r_max: float = np.inf) -> None:
     r"""
     Produce a sample covariance of binned :math:`\xi_\ell(s)` from ``adematti/lsstypes`` ``s_mu`` `.npy` files and write the matrix to a text file.
     Considers only even multipoles.
@@ -70,6 +79,16 @@ def sample_cov_multipoles_from_lsstypes_files(infile_names: list[list[str]], out
 
     outfile_name : string
         The name for the output text file.
+    
+    max_l : integer
+        Max (even) Legendre multipole index.
+    
+    r_step: float or None
+        (Optional) If float, sets the uniform spacing of radial/separation bins.
+        If None (default), the radial/separation binning is not changed.
+    
+    r_max: float
+        (Optional) Sets the maximum radius/separation, any bins beyond that value are discarded. By default, the value is infinity, so no bins are discarded.
     """
     if max_l < 0: raise ValueError("Maximal multipole can not be negative")
     assert max_l % 2 == 0, "Only even multipoles supported"
@@ -78,4 +97,4 @@ def sample_cov_multipoles_from_lsstypes_files(infile_names: list[list[str]], out
     if any(len(infile_names_c) != len(infile_names[0]) for infile_names_c in infile_names[1:]):
         raise ValueError("Need the same number of files for different correlation functions")
     xi_estimators = [[lsstypes.read(infile_name) for infile_name in infile_names_c] for infile_names_c in infile_names]
-    sample_cov_multipoles_from_lsstypes_to_file(xi_estimators, outfile_name, max_l)
+    sample_cov_multipoles_from_lsstypes_to_file(xi_estimators, outfile_name, max_l, r_step, r_max)
