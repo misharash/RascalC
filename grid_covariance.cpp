@@ -135,9 +135,9 @@ int main(int argc, char *argv[]) {
         if (!par.make_random) {
             char *filename = par.particle_filename(index);
 #ifdef JACKKNIFE
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index]);
+            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index], par.delete_in);
 #else
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax);
+            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, par.delete_in);
 #endif
             assert(all_np[index] > 0);
         }

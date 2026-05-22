@@ -569,6 +569,7 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     command = "env OMP_PROC_BIND=spread OMP_PLACES=threads " # set OMP environment variables, should not be set before
     command += f"{exec_path} -output {out_dir}/ -nside {sampling_grid_size} -rescale {coordinate_scaling} -nthread {nthread} -maxloops {n_loops} -loopspersample {loops_per_sample} -N2 {N2} -N3 {N3} -N4 {N4} -xicut {xi_cut_s} -binfile {binfile} -binfile_cf {binfile_cf} -mbin_cf {xi_n_mu_bins} -cf_loops {xi_refinement_iterations}" # here are universally acceptable parameters
     command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
+    command += " -delete_in" # ask the code to delete the random particle input files after reading them for easy cleanup
     command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
     command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
     if legendre: # only provide max multipole l for now
@@ -611,7 +612,6 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     # feed the command to bash because on Ubuntu it was executed in sh (dash) where pipefail is not supported
 
     # clean up
-    for input_filename in input_filenames: os.remove(input_filename) # delete the larger (temporary) input files
     for tmp_path in tmp_dirs_to_clean_up: rmdir_if_exists_and_empty(tmp_path) # safely remove the temporary directory and all its parents that did not exist before, but only if they are empty
 
     # check the run status

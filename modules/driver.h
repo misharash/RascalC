@@ -29,9 +29,9 @@ Particle *make_particles(Float3 rect_boxsize, int np, int index) {
 }
 
 #ifdef JACKKNIFE
-Particle *read_particles(Float rescale, int *np, const char *filename, const int rstart, uint64 nmax, const JK_weights *JK) {
+Particle *read_particles(Float rescale, int *np, const char *filename, const int rstart, uint64 nmax, const JK_weights *JK, bool remove_file) {
 #else
-Particle *read_particles(Float rescale, int *np, const char *filename, const int rstart, uint64 nmax) {
+Particle *read_particles(Float rescale, int *np, const char *filename, const int rstart, uint64 nmax, bool remove_file) {
 #endif
     // This will read particles from a file, space-separated x,y,z,w,JK for weight w, (jackknife region JK)
     // Particle positions will be rescaled by the variable 'rescale'.
@@ -122,6 +122,7 @@ Particle *read_particles(Float rescale, int *np, const char *filename, const int
 		j++;
     }
     fclose(fp);
+    if (remove_file) remove(filename); // remove the file
     printf("# Done reading the particles\n");
     
     return p;
