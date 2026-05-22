@@ -608,7 +608,7 @@ private:
 	    fprintf(stderr, "          Recommend having several grid cells per rmax.\n");
         fprintf(stderr, "          There are {nside} cells along the longest dimension of the periodic box.\n");
 	    fprintf(stderr, "   -nthread <nthread>: The number of CPU threads ot use for parallelization.\n");
-        fprintf(stderr, "   -perbox <perbox>: Boolean, whether the box is periodic is not\n");
+        fprintf(stderr, "   -perbox: Flag indicating a periodic box (if absent, indicates an aperiodic computation). To use it, the code needs to be compiled with -DPERIODIC flag.\n");
         fprintf(stderr, "\n");
 
 	    fprintf(stderr, "   -in2 <file>: (Optional) The input random particle file for particle-set 2 (space-separated x,y,z,w).\n");
@@ -661,8 +661,8 @@ private:
         fprintf(stderr, "   -mumin <mumin> : Minimum mu binning to use.\n");
         fprintf(stderr, "   -mumax <mumax> : Maximum mu binning to use.\n");
         fprintf(stderr, "   -cf_loops <cf_loops>: Number of iterations over which to refine the correlation functions.\n");
-        fprintf(stderr, "   -boxsize <boxsize> : If creating particles randomly, this is the periodic size of the cubic computational domain.\n");
-        fprintf(stderr, "           Default 400. If reading from file, this is reset dynamically creating a cuboidal box.\n");
+        fprintf(stderr, "   -boxsize <boxsize> : The periodic size of the cubic computational domain (-perbox also needs to be set).\n");
+        fprintf(stderr, "           Default 2000. If creating particles randomly (-np set), this is also the scale for their coordinates.\n");
 	    fprintf(stderr, "   -rescale <rescale>: How much to dilate the input positions by.  Default 1.\n");
         fprintf(stderr, "            Zero or negative value is reset to boxsize, rescaling an unit cube to full periodicity\n");
 	    fprintf(stderr, "   -xicut <xicutoff>: The radius beyond which xi is set to zero.  Default 400.\n");
