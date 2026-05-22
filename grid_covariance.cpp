@@ -90,6 +90,7 @@ int main(int argc, char *argv[]) {
     if(par.multi_tracers==true){
 #ifdef THREE_PCF
         printf("# WARNING: 3PCF covariances are not implemented for multiple tracers. Will proceed for single tracer.\n");
+        par.multi_tracers=false; // ignore the multi-tracer setting for 3PCF covariance
 #else
         no_functions=3;
         no_fields=2;

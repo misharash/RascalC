@@ -498,6 +498,7 @@ int main(int argc, char *argv[]) {
     int no_fields=1; // number of different fields used
     if(par.multi_tracers==true){
         printf("# WARNING: triple counts (and 3PCF covariances) are not implemented for multiple tracers. Will proceed for single tracer.\n");
+        par.multi_tracers=false;
         // no_functions=3;
         // no_fields=2;
     }
