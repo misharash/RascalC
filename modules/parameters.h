@@ -203,6 +203,8 @@ public:
     // The periodicity of the position-space cube.
 	Float boxsize = 2000.; // this is not used if the mode is not PERIODIC and random particles are not made in RascalC
 
+    bool delete_in = false; // whether to delete particle input files after reading in
+
 	// The particles will be read from the unit cube, but then scaled by boxsize.
 	Float rescale = 1.;   // If left zero or negative, set rescale=boxsize
 
@@ -273,6 +275,7 @@ public:
         else if (!strcmp(argv[i],"-nside")) nside = atoi(argv[++i]);
 		else if (!strcmp(argv[i],"-in")) fname = argv[++i];
         else if (!strcmp(argv[i],"-in2")) fname2 = argv[++i];
+        else if (!strcmp(argv[i],"-delete_in")) delete_in = true;
 		else if (!strcmp(argv[i],"-cor")) corname = argv[++i];
 		else if (!strcmp(argv[i],"-cor12")) corname12 = argv[++i];
 		else if (!strcmp(argv[i],"-cor2")) corname2 = argv[++i];
@@ -665,6 +668,7 @@ private:
         fprintf(stderr, "           Default 2000. If creating particles randomly (-np set), this is also the scale for their coordinates.\n");
 	    fprintf(stderr, "   -rescale <rescale>: How much to dilate the input positions by.  Default 1.\n");
         fprintf(stderr, "            Zero or negative value is reset to boxsize, rescaling an unit cube to full periodicity\n");
+        fprintf(stderr, "   -delete_in: Flag to delete input files after reading them in (disabled by default). This option is particularly useful for the Python library.\n");
 	    fprintf(stderr, "   -xicut <xicutoff>: The radius beyond which xi is set to zero.  Default 400.\n");
         fprintf(stderr, "   -nmax <nmax>: The maximum number of particles to read in from the random particle files. Default 1000000000000\n");
 	    fprintf(stderr, "   -save <filename>: Triggers option to store probability grid. <filename> has to end on \".bin\"\n");
