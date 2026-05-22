@@ -515,10 +515,10 @@ int main(int argc, char *argv[]) {
             if (index == 0) filename = par.fname;
             else filename = par.fname2;
 #ifdef JACKKNIFE
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index]);
+            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index], par.delete_in);
             // does this code actually support jackknife? does it matter?
 #else
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax);
+            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, par.delete_in);
 #endif
             assert(all_np[index] > 0);
         }
