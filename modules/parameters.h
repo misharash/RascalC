@@ -35,6 +35,9 @@ public:
     // Number of galaxies in first dataset
     Float nofznorm =156800;
 
+    // Whether to use weighted/effective number of random particles for normalization (sum(w)^2/sum(w^2), invariant to weight rescaling)
+    bool weighted_np = false;
+
     // Output directory
     char *out_file = NULL;
     const char default_out_file[500] = "out";
@@ -272,6 +275,7 @@ public:
 		else if (!strcmp(argv[i],"-xicut")) xicutoff = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-norm")) nofznorm = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-norm2")) nofznorm2 = atof(argv[++i]);
+		else if (!strcmp(argv[i],"-weighted_norm")) weighted_np = true;
         else if (!strcmp(argv[i],"-nside")) nside = atoi(argv[++i]);
 		else if (!strcmp(argv[i],"-in")) fname = argv[++i];
         else if (!strcmp(argv[i],"-in2")) fname2 = argv[++i];
@@ -598,6 +602,7 @@ private:
         fprintf(stderr, "   -cor <file>: File location of input xi_1 correlation function file.\n");
 	    fprintf(stderr, "   -binfile_cf <filename>: File containing the desired radial bins for the correlation function.\n");
         fprintf(stderr, "   -norm <nofznorm>: Number of galaxies in the first tracer set.\n");
+        fprintf(stderr, "   -weighted_norm: Flag indicating to use the weighted/effective number of random particles (sum(w)^2/sum(w^2), invariant to weight rescaling) instead of simple counting (default). Should match the way the -norm value was computed for the data galaxies externally.\n");
 #ifdef JACKKNIFE
         fprintf(stderr, "   -jackknife <filename>: File containing the {1,1} jackknife weights (normally computed from Corrfunc)\n");
 #endif
