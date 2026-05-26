@@ -28,7 +28,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
                  out_dir: str, tmp_dir: str,
                  randoms_positions1: np.ndarray[float], randoms_weights1: np.ndarray[float],
                  xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]],
-                 no_data_galaxies1: float,
+                 no_data_galaxies1: float, effective_no_def: bool = False,
                  RRR_counts: np.ndarray[float] | None = None,
                  n_mu_bins: int = 120,
                  position_type: Literal["rdd", "xyz", "pos"] = "pos",
@@ -79,6 +79,11 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
     
     no_data_galaxies1 : float
         Number of first tracer data (not random!) points for the covariance rescaling.
+        See the definition nuances under ``effective_no_def`` below and set the value of that parameter accordingly.
+    
+    effective_no_def: boolean
+        (Optional) whether to use the effective number of random particles (:math:`\sum(w_i)^2/\sum(w_i^2)`, taking into account weights but invariant to overall weight rescaling) instead of a simple count for the default (Gaussian) shot noise. Should match the way the ``no_data_galaxies1`` value was computed externally. Default False (simple count).
+        This definition does not affect the final results obtained with shot noise rescaling based on a mock-based sample covariance as a reference, but it seems to provide a slightly better default (Gaussian) shot noise for non-uniform weights.
     
     RRR_counts : Numpy array of floats, or None
         (Optional) RRR (random triplet) counts in ENCORE format. You should be able to load them via `np.genfromtxt("....r_3pcf.txt", skip_header=8)`. Removing the first/ell column is not necessary, the code should be able to do this.
@@ -413,6 +418,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
     command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
     command += " -delete_in" # ask the code to delete the random particle input files after reading them for easy cleanup
     command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
+    if effective_no_def: command += " -effective_norm" # ask the code to use the effective number definition on randoms for shot noise normalization instead of the simple counting
     command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
     command += f" -max_l {max_l}"
     command += f" -phi_file {inv_phi_filename}"
