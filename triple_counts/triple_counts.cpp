@@ -574,7 +574,7 @@ int main(int argc, char *argv[]) {
             // Sort particles into grid(s)
             Float nofznorm = par.nofznorm;
             if (index == 1) nofznorm = par.nofznorm2;
-            Grid tmp_grid(all_particles[index], all_np[index], par.rect_boxsize, par.cellsize, par.nside, shift, nofznorm);
+            Grid tmp_grid(all_particles[index], all_np[index], par.rect_boxsize, par.cellsize, par.nside, shift, nofznorm, par.effective_np);
 
             Float grid_density = (Float)tmp_grid.np/tmp_grid.nf;
             printf("\n RANDOM CATALOG %d DIAGNOSTICS:\n", index+1);
