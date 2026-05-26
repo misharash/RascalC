@@ -38,7 +38,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
                  skip_s_bins: int | tuple[int, int] = 0, skip_l: int = 0,
                  exclude_samebins: bool = True, exclude_odd_l: bool = False,
                  sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
-                 start_integral_index = None, last_integral_index = None,
+                 start_integral_index: Literal[1, 2] | None = None, last_integral_index: Literal[1, 2] | None = None,
                  verbose: bool = False) -> dict[str, np.ndarray[float]]:
     r"""
     Run the 3-point correlation function covariance integration.
