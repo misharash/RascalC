@@ -55,7 +55,7 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
             skip_s_bins: int | tuple[int, int] = 0, skip_l: int = 0,
             shot_noise_rescaling1: float = 1, shot_noise_rescaling2: float = 1,
             sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
-            start_integral_index = None, last_integral_index = None,
+            start_integral_index: Literal[1, 2, 3, 4, 5, 6, 7] | None = None, last_integral_index: Literal[1, 2, 3, 4, 5, 6, 7] | None = None,
             verbose: bool = False) -> dict[str, npt.NDArray[np.float64]]:
     r"""
     Run the 2-point correlation function covariance integration.
