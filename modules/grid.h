@@ -19,8 +19,9 @@ class Grid {
     int *filled = nullptr; //List of filled cells
     int nf;      //Number of filled cells
     int maxnp;   //Max number of particles in a single cell
-    Float norm; // sum_weights randoms / sum_weights galaxies for normalization
+    Float norm; // N_randoms / N_galaxies for normalization (sets the default/Gaussian shot noise)
     Float sum_weights; // total summed weights
+    Float sum_weights2; // total summed weights squared (for an advanced number definition)
     Float sumw_pos, sumw_neg; // Summing the weights
 
     int test_cell(integer3 cell){
@@ -99,7 +100,7 @@ class Grid {
         sumw_pos=g->sumw_pos;
         sumw_neg=g->sumw_neg;
         sum_weights=g->sum_weights;
-        
+        sum_weights2=g->sum_weights2;
         // Allocate memory:
         p = (Particle *)malloc(sizeof(Particle)*np);
         pid = (int *)malloc(sizeof(int)*np);
@@ -126,7 +127,7 @@ class Grid {
        //empty constructor
     }
 
-    Grid(Particle *input, int _np, Float3 _rect_boxsize, Float _cellsize, int _nside, Float3 shift, Float nofznorm) {
+    Grid(Particle *input, int _np, Float3 _rect_boxsize, Float _cellsize, int _nside, Float3 shift, Float nofznorm, bool effective_np) {
         // The constructor: the input set of particles is copied into a
         // new list, which is ordered by cell.
         // After this, Grid is self-sufficient; one could discard *input
@@ -172,9 +173,10 @@ class Grid {
         printf("\nThere are %d filled cells compared with %d total cells.\n",nf,ncells);
         
         // Count the number of positively weighted particles + total weights
-        sumw_pos = sumw_neg = sum_weights = 0.0;
+        sumw_pos = sumw_neg = sum_weights = sum_weights2 = 0.0;
         for (int j=0; j<np; j++){
-            sum_weights+=input[j].w;
+            sum_weights += input[j].w;
+            sum_weights2 += input[j].w * input[j].w;
             if (input[j].w>=0) {
                 np_pos++;
             sumw_pos += input[j].w;
@@ -231,7 +233,7 @@ class Grid {
         assert(tot == np);
 
         // compute normalization
-        norm = np/nofznorm;
+        norm = (effective_np ? sum_weights * sum_weights / sum_weights2 : np) / nofznorm;
 
         free(cell);
         

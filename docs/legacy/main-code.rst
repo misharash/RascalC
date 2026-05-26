@@ -126,6 +126,7 @@ Input parameters for the RascalC code may be specified by passing options on the
 
 - ``-perbox``: This flag signifies a periodic box computation (which requires the code to be compiled with the ``-DPERIODIC`` flag in the Makefile) as opposed to the default aperiodic behavior (which requires the code to be compiled without the ``-DPERIODIC`` flag in the Makefile).
 - ``-boxsize`` (*boxsize*): Sets the size of the computational domain if the periodic box is enabled, or the random particles are created in RascalC. (Default: 2000)
+- ``-effective_norm``: Flag indicating to use the effective number of random particles (:math:`\sum(w_i)^2/\sum(w_i^2)`, taking into account weights but invariant to overall weight rescaling) instead of simple counting (default). Should match the way the -norm value was computed for the data galaxies externally.
 - ``-seed`` (*seed*): Random number generator seed. If given, allows to reproduce the results with the same settings, except the number of threads.
 - ``-start_integral_index`` (*start_integral_index*): If given, chooses from which of 7 integrals (numbered 1 through 7) to start in the 2PCF multi-tracer regime, or 2 integrals for 3PCF. Default 1 (to cover all integrals). Intended to help complete the timed-out runs by skipping the integrals computed in an unfinished run.
 - ``-last_integral_index`` (*last_integral_index*): If given, chooses at which of 7 integrals (numbered 1 through 7) to stop in the 2PCF multi-tracer regime, or 2 integrals for 3PCF. Default 7 for 2PCF multi-tracer and 2 for 3PCF (to cover all integrals). Can be used to fit into the time limit if the full set of integrals is expected to take longer.
@@ -140,7 +141,7 @@ Input parameters for the RascalC code may be specified by passing options on the
 - ``-delete_in``: If this flag is passed to RascalC, all input particle files are deleted after reading them in. (Default: disabled)
 - ``-invert``: If this flag is passed to RascalC, all input particle weights are multiplied by -1. (Default: disabled)
 - ``-balance``: If this flag is passed to RascalC, all negative weights are rescaled such that the total particle weight is 0. (Default: disabled)
-- ``-np`` (*np*): If provided, this overrides any input random particle file and creates *np* randomly drawn particles in the cubic box with the side length *boxsize*. **NB**: Currently creating particles at random is only supported for a single set of tracer particles.
+- ``-np`` (*np*): If provided, this overrides any input random particle file and creates *np* randomly drawn particles in the cubic box with the side length *boxsize*.
 - ``-rs`` (*rstart*): If inverting particle weights, this sets the index from which to start weight inversion. (Default: 0)
 
 .. _code-output:

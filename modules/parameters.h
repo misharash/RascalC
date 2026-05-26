@@ -35,6 +35,9 @@ public:
     // Number of galaxies in first dataset
     Float nofznorm =156800;
 
+    // Whether to use weighted/effective number of random particles for normalization (sum(w)^2/sum(w^2), invariant to weight rescaling)
+    bool effective_np = false;
+
     // Output directory
     char *out_file = NULL;
     const char default_out_file[500] = "out";
@@ -276,6 +279,7 @@ public:
 		else if (!strcmp(argv[i],"-xicut")) xicutoff = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-norm")) nofznorm = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-norm2")) nofznorm2 = atof(argv[++i]);
+		else if (!strcmp(argv[i],"-effective_norm")) effective_np = true;
         else if (!strcmp(argv[i],"-nside")) nside = atoi(argv[++i]);
 		else if (!strcmp(argv[i],"-in")) fname = argv[++i];
         else if (!strcmp(argv[i],"-in2")) fname2 = argv[++i];
@@ -319,7 +323,7 @@ public:
         else if (!strcmp(argv[i],"-R0")) R0 = atof(argv[++i]);
         else if (!strcmp(argv[i],"-power_norm")) power_norm = atof(argv[++i]);
         else if (!strcmp(argv[i],"-power_norm12")) power_norm12 = atof(argv[++i]);
-        else if (!strcmp(argv[i],"-power_norm")) power_norm2 = atof(argv[++i]);
+        else if (!strcmp(argv[i],"-power_norm2")) power_norm2 = atof(argv[++i]);
 #elif defined THREE_PCF
         else if (!strcmp(argv[i],"-max_l")) max_l=atoi(argv[++i]);
         else if (!strcmp(argv[i],"-phi_file")) phi_file=argv[++i];
@@ -606,6 +610,7 @@ private:
         fprintf(stderr, "   -cor <file>: File location of input xi_1 correlation function file.\n");
 	    fprintf(stderr, "   -binfile_cf <filename>: File containing the desired radial bins for the correlation function.\n");
         fprintf(stderr, "   -norm <nofznorm>: Number of galaxies in the first tracer set.\n");
+        fprintf(stderr, "   -effective_norm: Flag indicating to use the effective number of random particles (sum(w)^2/sum(w^2), taking into account weights but invariant to overall weight rescaling) instead of simple counting (default). Should match the way the -norm value was computed for the data galaxies externally.\n");
 #ifdef JACKKNIFE
         fprintf(stderr, "   -jackknife <filename>: File containing the {1,1} jackknife weights (normally computed from Corrfunc)\n");
 #endif
@@ -646,8 +651,8 @@ private:
         fprintf(stderr, "\n");
         fprintf(stderr, "   -R0 <R0>: Truncation radius for pair-wise separation window function in Mpc/h. Default: R0 = 100\n");
         fprintf(stderr, "   -power_norm: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2)\n");
-        fprintf(stderr, "   -power_norm2: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2) for field 1 x 2\n");
-        fprintf(stderr, "   -power_norm12: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2) for field 2\n");
+        fprintf(stderr, "   -power_norm12: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2) for field 1 x 2\n");
+        fprintf(stderr, "   -power_norm2: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2) for field 2\n");
 #endif
 #if (!defined LEGENDRE && !defined POWER && !defined THREE_PCF)
         fprintf(stderr, "   -RRbin12 <filename>: (Optional) File containing the {1,2} jackknife RR bin counts (computed from Corrfunc)\n");
