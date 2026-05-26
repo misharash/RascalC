@@ -127,7 +127,7 @@ class Grid {
        //empty constructor
     }
 
-    Grid(Particle *input, int _np, Float3 _rect_boxsize, Float _cellsize, int _nside, Float3 shift, Float nofznorm, bool weighted_np) {
+    Grid(Particle *input, int _np, Float3 _rect_boxsize, Float _cellsize, int _nside, Float3 shift, Float nofznorm, bool effective_np) {
         // The constructor: the input set of particles is copied into a
         // new list, which is ordered by cell.
         // After this, Grid is self-sufficient; one could discard *input
@@ -233,7 +233,7 @@ class Grid {
         assert(tot == np);
 
         // compute normalization
-        norm = (weighted_np ? sum_weights * sum_weights / sum_weights2 : np) / nofznorm;
+        norm = (effective_np ? sum_weights * sum_weights / sum_weights2 : np) / nofznorm;
 
         free(cell);
         
