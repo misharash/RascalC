@@ -43,7 +43,7 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
             xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
             allcounts_12: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation | None = None, allcounts_22: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation | None = None,
             normalize_wcounts: bool = True,
-            no_data_galaxies1: float | None = None, no_data_galaxies2: float | None = None,
+            no_data_galaxies1: float | None = None, no_data_galaxies2: float | None = None, effective_no_def: bool = False,
             randoms_samples1: npt.NDArray[np.int_] | None = None,
             randoms_positions2: npt.NDArray[np.float64] | None = None, randoms_weights2: npt.NDArray[np.float64] | None = None, randoms_samples2: npt.NDArray[np.int_] | None = None,
             xi_11_samples: Iterable[pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation] | None = None,
@@ -168,11 +168,17 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     
     no_data_galaxies1 : None or float
         (Optional) number of first tracer data (not random!) points for the covariance rescaling.
-        If None (default), the code will attempt to obtain it from ``pycorr_allcounts_11``.
+        If None (default), the code will attempt to obtain it from ``allcounts_11``, but will not be able to proceed if that fails.
+        If you compute this manually, see the definition nuances under ``effective_no_def`` below and set the value of that parameter accordingly.
+    
+    effective_no_def: boolean
+        (Optional) whether to use the effective number of random particles (:math:`\sum(w_i)^2/\sum(w_i^2)`, taking into account weights but invariant to overall weight rescaling) instead of a simple count for the default (Gaussian) shot noise. Should match the way the ``no_data_galaxies1`` value was computed externally (as well as ``no_data_galaxies2`` for 2 tracers). Default False (simple count).
+        This definition does not affect the final results obtained with shot noise rescaling based on a jackknife or mock-based sample covariance as a reference, but it seems to provide a slightly better default (Gaussian) shot noise for non-uniform weights.
     
     no_data_galaxies2 : None or float
         (Optional) number of second tracer data (not random!) points for the covariance rescaling.
-        If None (default), the code will attempt to obtain it from ``pycorr_allcounts_22``.
+        If None (default), the code will attempt to obtain it from ``allcounts_22``, but will not be able to proceed if that fails.
+        If you compute this manually, see the definition nuances under ``effective_no_def`` above and set the value of that parameter accordingly.
     
     xi_table_11 : :class:`pycorr.TwoPointEstimator` or :class:`lsstypes.Count2Correlation`, or sequence (tuple or list) of 3 elements: ``(s_values, mu_values, xi_values)``, or sequence (tuple or list) of 4 elements: ``(s_values, mu_values, xi_values, s_edges)``
         Table of first tracer auto-correlation function in separation (s) and :math:`\mu` bins.
@@ -454,6 +460,9 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
         if not ndata[tracer1 := tracer1_corr[c]]:
             if isinstance(allcounts, pycorr.twopoint_estimator.BaseTwoPointEstimator):
                 ndata[tracer1] = allcounts.D1D2.size1
+                if effective_no_def:
+                    warn(f"Was set to use effective number of data galaxies, but not given no_data_galaxies{tracer1+1} value. The value recovered from pycorr estimator is simple counting, not effective number. If you want to use the effective number definition, please compute it manually and provide the value of no_data_galaxies{tracer1+1} accordingly.")
+                    effective_no_def = False
 
     if any(not tracer_ndata for tracer_ndata in ndata): raise ValueError("Not given and not recovered all the necessary normalization factors (no_data_galaxies1/2)")
     print_and_log(f"Number(s) of data galaxies: {ndata}")
@@ -571,6 +580,7 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
     command += "".join([f" -in{suffixes_tracer[t]} {input_filenames[t]}" for t in range(ntracers)]) # provide all the random filenames
     command += " -delete_in" # ask the code to delete the random particle input files after reading them for easy cleanup
     command += "".join([f" -norm{suffixes_tracer[t]} {ndata[t]}" for t in range(ntracers)]) # provide all ndata for normalization
+    if effective_no_def: command += " -effective_norm" # ask the code to use the effective number definition on randoms for shot noise normalization instead of the simple counting
     command += "".join([f" -cor{suffixes_corr[c]} {cornames[c]}" for c in range(ncorr)]) # provide all correlation functions
     if legendre: # only provide max multipole l for now
         command += f" -max_l {max_l}"
