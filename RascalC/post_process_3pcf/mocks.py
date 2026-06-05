@@ -133,8 +133,8 @@ def post_process_3pcf(mock_cov_file: str, file_root: str, n: int, max_l: int, ou
     # scale and transpose the covariance
     mock_cov = mock_cov.reshape(n_l, n_r_pairs_orig, n_l, n_r_pairs_orig) # reshape the covariance from 2D to 4D, the ENCORE ordering is [l, r_bin_pair] for both rows and columns
     mock_cov = mock_cov[ells][:, :, ells] # apply the multipole selection
-    mock_cov = mock_cov.transpose(1, 0, 3, 2) # change ordering to [r_bin_pair, l] for both rows and columns
-    mock_cov *= ell_factor[:, None, None] * ell_factor[None, None, :] # apply the factor, NumPy broadcasting matches trailing dimensions. need to double=check if it is not division; there might also be a factor of 2 or something similar
+    mock_cov = mock_cov.transpose(1, 0, 3, 2) # change ordering to [r_bin_pair, l] for both rows and columns as in RascalC
+    mock_cov *= ell_factor[:, None, None] * ell_factor[None, None, :] # apply the factor, NumPy broadcasting matches trailing dimensions. need to double-check if it is not division; there might also be a factor of 2 or something similar
     mock_cov = mock_cov[r_filter][:, :, r_filter] # apply the r bin pair filter
     mock_cov = mock_cov.reshape(n_r_pairs * len(ells), n_r_pairs * len(ells)) # reshape back to 2D, should be ready
 
