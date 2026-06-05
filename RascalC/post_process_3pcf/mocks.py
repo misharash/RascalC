@@ -7,6 +7,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.optimize import fmin
 import os
+from ..utils import format_skip_r_bins
 from ..post_process.utils import check_eigval_convergence, check_positive_definiteness, compute_D_precision_matrix, compute_N_eff_D
 from ..raw_covariance_matrices import load_raw_covariances_3pcf_legendre
 from .utils import cov_filter_3pcf_legendre, load_matrices, add_cov_terms
@@ -86,7 +87,7 @@ def post_process_3pcf(mock_cov_file: str, file_root: str, n: int, max_l: int, ou
             - If an array/list/tuple/etc of boolean, it will be used as a NumPy boolean array mask.
     
     exclude_samebins : boolean
-        (Optional) If False, the covariance will include the pairs of the same radial bins.
+        (Optional) If False, the covariance will include the pairs of the same radial bins. This probably will not work with the mock sample covariance file produced from ENCORE.
         The default behavior (for the True value) is to exclude them for compatibility with ENCORE.
         In either case, the post-processed covariances only include each pair of different radial bins in one ordering, ``bin1 < bin2``; the raw covariances also include ``bin1 > bin2`` pairs.
     
@@ -113,10 +114,29 @@ def post_process_3pcf(mock_cov_file: str, file_root: str, n: int, max_l: int, ou
     name_dict = dict(path=output_name, filename=os.path.basename(output_name))
     if dry_run: return name_dict
 
+    # Load the mock covariance matrix and convert it to the same convention as RascalC theoretical covariance matrices
     mock_cov = np.loadtxt(mock_cov_file) # load external mock covariance matrix from text file, would be based on ENCORE
-    # probably need to change bin ordering to match RascalC
-    # should odd ell be removed here? or assume that they have already been removed?
-    # need to apply ell-dependent scaling factors to match RascalC
+    # prepare r bin filtering
+    skip_r_bins_start, skip_r_bins_end = format_skip_r_bins(skip_r_bins)
+    r_bin_indices = np.arange(n)
+    r_bin_index1 = np.repeat(r_bin_indices, n-exclude_samebins-r_bin_indices)
+    r_bin_index2 = np.concatenate([r_bin_indices[i+exclude_samebins:] for i in r_bin_indices])
+    n_r_pairs_orig = len(r_bin_index1)
+    # r_bin_index1 and r_bin_index2 cover all the bin pairs under the condition r_bin_index1 < r_bin_index2, the order follows the ENCORE format
+    r_filter = (r_bin_index1 >= skip_r_bins_start) & (r_bin_index1 < n - skip_r_bins_end) & (r_bin_index2 >= skip_r_bins_start) & (r_bin_index2 < n - skip_r_bins_end) # filter for the bin pairs to keep based on the skip_r_bins option
+    n_r_pairs = r_filter.sum()
+    # prepare ell indexing and scaling factor accounting for the different basis
+    n_l = max_l + 1
+    ells = np.arange(0, n_l, 1+exclude_odd_l)
+    if skip_l > 0: ells = ells[:-skip_l] # without the condition, wouldn't work right for skip_l=0
+    ell_factor = ((-1)**ells * np.sqrt(2 * ells + 1) / (4 * np.pi)) # the ell-dependent factor between the ENCORE 3-point basis functions and Legendre polynomials given by Equation (16) in https://arxiv.org/pdf/2105.08722
+    # scale and transpose the covariance
+    mock_cov = mock_cov.reshape(n_l, n_r_pairs_orig, n_l, n_r_pairs_orig) # reshape the covariance from 2D to 4D, the ENCORE ordering is [l, r_bin_pair] for both rows and columns
+    mock_cov = mock_cov[ells][:, :, ells] # apply the multipole selection
+    mock_cov = mock_cov.transpose(1, 0, 3, 2) # change ordering to [r_bin_pair, l] for both rows and columns
+    mock_cov *= ell_factor[:, None, None] * ell_factor[None, None, :] # apply the factor, NumPy broadcasting matches trailing dimensions. need to double=check if it is not division; there might also be a factor of 2 or something similar
+    mock_cov = mock_cov[r_filter][:, :, r_filter] # apply the r bin pair filter
+    mock_cov = mock_cov.reshape(n_r_pairs * len(ells), n_r_pairs * len(ells)) # reshape back to 2D, should be ready
 
     cov_filter = cov_filter_3pcf_legendre(n, max_l, skip_r_bins, skip_l, exclude_samebins, exclude_odd_l)
     

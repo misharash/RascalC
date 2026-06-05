@@ -8,7 +8,7 @@ def cov_filter_3pcf_legendre(n: int, max_l: int, skip_r_bins: int | tuple[int, i
     skip_r_bins_start, skip_r_bins_end = format_skip_r_bins(skip_r_bins)
     n_l = max_l + 1
     l_indices = np.arange(0, n_l, 1+exclude_odd_l)
-    if skip_l > 0: l_indices = l_indices[:-skip_l] # without the condition, wouldn't work right for skip_l
+    if skip_l > 0: l_indices = l_indices[:-skip_l] # without the condition, wouldn't work right for skip_l=0
     r_indices = np.arange(skip_r_bins_start, n - skip_r_bins_end)
     r_indices1, r_indices2 = [a.ravel() for a in np.meshgrid(r_indices, r_indices, indexing='ij')] # flattened array indices
     r_filter = (r_indices1 <= r_indices2 - exclude_samebins) # strictly less for exclude_samebin=True, less or equal otherwise
