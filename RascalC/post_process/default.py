@@ -25,10 +25,10 @@ def post_process_default(file_root: str, n: int, m: int, outdir: str, alpha: flo
 
     # Load in full theoretical matrices
     print_function("Loading best estimate of covariance matrix")
-    c2, c3, c4 = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = False)
+    c2, c3, c4 = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=False)
 
     # Check matrix convergence
-    check_eigval_convergence(c2, c4, alpha, print_function = print_function)
+    check_eigval_convergence(c2, c4, alpha, print_function=print_function)
 
     # Compute full covariance matrices and precision
     full_cov = add_cov_terms_single(c2, c3, c4, alpha)
@@ -39,7 +39,7 @@ def post_process_default(file_root: str, n: int, m: int, outdir: str, alpha: flo
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
     # Load in partial theoretical matrices
-    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full = False, jack = False)
+    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full=False, jack=False)
 
     partial_cov = add_cov_terms_single(c2s, c3s, c4s, alpha)
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)

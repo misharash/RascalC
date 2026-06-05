@@ -165,11 +165,11 @@ def post_process_jackknife_multi(jackknife_file_11: str, jackknife_file_12: str,
     alpha_best = np.ones(2) # fill with ones by default, although this should not matter
 
     # Load full jack matrices
-    c2j, c3j, c4j = load_matrices_multi(input_file, cov_filter, full = True, jack = True)
-    c4j += load_disconnected_term_multi(input_file, cov_filter, RRs, weights, full = True)
+    c2j, c3j, c4j = load_matrices_multi(input_file, cov_filter, full=True, jack=True)
+    c4j += load_disconnected_term_multi(input_file, cov_filter, RRs, weights, full=True)
     # Load subsample jack matrices
-    c2s, c3s, c4s = load_matrices_multi(input_file, cov_filter, full = False, jack = True)
-    c4s += load_disconnected_term_multi(input_file, cov_filter, RRs, weights, full = False)
+    c2s, c3s, c4s = load_matrices_multi(input_file, cov_filter, full=False, jack=True)
+    c4s += load_disconnected_term_multi(input_file, cov_filter, RRs, weights, full=False)
 
     ## Optimize for alpha_1 and alpha_2 separately.
     for t, this_data_cov in enumerate(auto_data_cov):
@@ -183,7 +183,7 @@ def post_process_jackknife_multi(jackknife_file_11: str, jackknife_file_12: str,
         this_c4s = c4s[t, t, t, t]
 
         # Check matrix convergence
-        eigval_ok = check_eigval_convergence(this_c2j, this_c4j, kind = f"Tracer {t+1} jackknife", print_function = print_function)
+        eigval_ok = check_eigval_convergence(this_c2j, this_c4j, kind=f"Tracer {t+1} jackknife", print_function=print_function)
 
         # Now optimize for shot-noise rescaling parameter alpha
         print_function("Optimizing for the shot-noise rescaling parameter alpha_%d" % (t+1))
@@ -193,17 +193,17 @@ def post_process_jackknife_multi(jackknife_file_11: str, jackknife_file_12: str,
         alpha_best[t] = optimal_alpha
 
         # Check matrix convergence for the optimal alpha: if it is <1, the eigenvalue criterion should be strengthened
-        if eigval_ok and optimal_alpha < 1: check_eigval_convergence(this_c2j, this_c4j, optimal_alpha, kind = f"Tracer {t+1} jackknife")
+        if eigval_ok and optimal_alpha < 1: check_eigval_convergence(this_c2j, this_c4j, optimal_alpha, kind=f"Tracer {t+1} jackknife", print_function=print_function)
 
     # Load full matrices
-    c2f, c3f, c4f = load_matrices_multi(input_file, cov_filter, full = True, jack = False)
+    c2f, c3f, c4f = load_matrices_multi(input_file, cov_filter, full=True, jack=False)
     c_tot, c_comb = add_cov_terms_multi(c2f, c3f, c4f, alpha_best)
 
     # Check positive definiteness
     check_positive_definiteness(c_comb)
 
     # Compute subsampled matrices (all submatrices combined)
-    c2fs, c3fs, c4fs = load_matrices_multi(input_file, cov_filter, full = False, jack = False)
+    c2fs, c3fs, c4fs = load_matrices_multi(input_file, cov_filter, full=False, jack=False)
     _, c_comb_subsamples = add_cov_terms_multi(c2fs, c3fs, c4fs, alpha_best)
     
     # Compute jackknive totals

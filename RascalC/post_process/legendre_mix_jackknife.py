@@ -70,13 +70,13 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
 
     # Load in full jackknife theoretical matrices
     print_function("Loading best estimate of jackknife covariance matrix")
-    c2j, c3j, c4j = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = True)
+    c2j, c3j, c4j = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=True)
 
     # Check matrix convergence
-    eigval_ok = check_eigval_convergence(c2j, c4j, kind = "Jackknife", print_function = print_function)
+    eigval_ok = check_eigval_convergence(c2j, c4j, kind = "Jackknife", print_function=print_function)
 
     # Load in partial jackknife theoretical matrices
-    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full = False, jack = True)
+    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full=False, jack=True)
 
     # Now optimize for shot-noise rescaling parameter alpha
     print_function("Optimizing for the shot-noise rescaling parameter")
@@ -84,18 +84,18 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
     print_function("Optimization complete - optimal rescaling parameter is %.6f" % alpha_best)
 
     # Check matrix convergence for the optimal alpha: if it is <1, the eigenvalue criterion should be strengthened
-    if eigval_ok and alpha_best < 1: check_eigval_convergence(c2j, c4j, alpha_best, kind = "Jackknife")
+    if eigval_ok and alpha_best < 1: check_eigval_convergence(c2j, c4j, alpha_best, kind="Jackknife", print_function=print_function)
 
     # Compute jackknife and full covariance matrices
     jack_cov = add_cov_terms_single(c2j, c3j, c4j, alpha_best)
     partial_jack_cov = add_cov_terms_single(c2s, c3s, c4s, alpha_best)
     _, jack_prec = compute_D_precision_matrix(partial_jack_cov, jack_cov)
 
-    c2f, c3f, c4f = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = False)
+    c2f, c3f, c4f = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=False)
     full_cov = add_cov_terms_single(c2f, c3f, c4f, alpha_best)
 
     # Check convergence
-    check_eigval_convergence(c2f, c4f, alpha_best, kind = "Full", print_function = print_function)
+    check_eigval_convergence(c2f, c4f, alpha_best, kind="Full", print_function=print_function)
 
     # Check positive definiteness
     check_positive_definiteness(full_cov)
