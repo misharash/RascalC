@@ -26,14 +26,14 @@ def post_process_default_multi(file_root: str, n: int, m: int, outdir: str, alph
         os.makedirs(outdir)
 
     # Load full matrices
-    c2, c3, c4 = load_matrices_multi(input_file, cov_filter, full = True, jack = False)
+    c2, c3, c4 = load_matrices_multi(input_file, cov_filter, full=True, jack=False)
     c_tot, c_comb = add_cov_terms_multi(c2, c3, c4, alphas)
 
     # Check positive definiteness
     check_positive_definiteness(c_comb)
 
     # Load subsampled matrices (all submatrices combined)
-    c2s, c3s, c4s = load_matrices_multi(input_file, cov_filter, full = False, jack = False)
+    c2s, c3s, c4s = load_matrices_multi(input_file, cov_filter, full=False, jack=False)
     _, c_comb_subsamples = add_cov_terms_multi(c2s, c3s, c4s, alphas)
 
     # Now compute precision matrix

@@ -131,10 +131,8 @@ def collect_raw_covariance_matrices(cov_dir: str, dry_run: bool = False, cleanup
                 for matrix_filenames_dictionary in output_group.values():
                     subsample_suffixes_increasing = sorted([suffix for suffix in matrix_filenames_dictionary.keys() if isinstance(suffix, int)])
                     if len(subsample_suffixes_increasing) == 0: continue # some arrays will not have subsamples
-                    subsample_suffix_max = subsample_suffixes_increasing[subsample_number - 1]
-                    for suffix in matrix_filenames_dictionary.keys():
-                        if isinstance(suffix, int) and suffix > subsample_suffix_max:
-                            matrix_filenames_dictionary.pop(suffix)
+                    for suffix in subsample_suffixes_increasing[subsample_number:]: # keep only the first subsample_number suffixes, which are the lowest ones due to sorting
+                        matrix_filenames_dictionary.pop(suffix)
             
             # now create and fill the dictionary to be saved in the numpy file
             output_dictionary = {}
