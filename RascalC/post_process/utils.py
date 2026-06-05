@@ -42,7 +42,7 @@ def cov_filter_legendre(n: int, max_l: int, skip_r_bins: int | tuple[int, int] =
 
 
 def cov_filter_legendre_pycorr_1d(n: int, max_l: int, skip_r_bins: int = 0, skip_l: int = 0):
-    """Produce a 1D indexing array for Legendre covariance matrices, switching the bin order to RascalC convention."""
+    """Produce a 1D indexing array for Legendre covariance matrices, switching the bin order from pycorr to RascalC convention."""
     if max_l % 2 != 0: raise ValueError("Only even multipoles supported")
     n_l = max_l // 2 + 1
     l_indices = np.arange(n_l - skip_l)
