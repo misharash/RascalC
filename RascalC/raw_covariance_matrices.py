@@ -273,7 +273,7 @@ def load_raw_covariances_legendre(file_root: str, n: int, max_l: int, n_samples:
     return load_raw_covariances(file_root, label, threepcf=False, n_samples=n_samples, check_finished=check_finished, two_tracers=two_tracers, print_function=print_function)
 
 
-def load_raw_covariances_3pcf_legendre(file_root: str, n: int, max_l: int, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function = print) -> dict[str]:
+def load_raw_covariances_3pcf_legendre(file_root: str, n: int, max_l: int, n_samples: None | int | Iterable[int] | Iterable[bool] = None, check_finished: bool = True, print_function = print) -> dict[str]:
     """
     Load the raw covariance matrices from the 3PCF Legendre mode as a dictionary. Uses the Numpy file if it exists, otherwise tried to run the collection function.
 
@@ -285,9 +285,11 @@ def load_raw_covariances_3pcf_legendre(file_root: str, n: int, max_l: int, n_sam
     - if a positive integer, returns as many samples from the beginning;
     - if a sequence of integers, returns subsamples with indices from this sequence;
     - sequence of boolean values is interpreted as a boolean mask for subsamples.
+
+    With check_finished enabled (default), before collecting raw covariance matrices (if needed), performs a heuristic check whether the run seems finished by looking for the presence of the full covariance matrices. If they are not found, the collection does not proceed and a warning is issued. This is to prevent disrupting ongoing runs by collecting and/or deleting the text files. If you want to check convergence of timed-out run(s) that did not produce the full matrices, you can disable this check, but be careful not to disrupt ongoing runs.
     """
     label = f"n{n}_l{max_l}"
-    return load_raw_covariances(file_root, label, threepcf=True, n_samples=n_samples, print_function=print_function)
+    return load_raw_covariances(file_root, label, threepcf=True, n_samples=n_samples, check_finished=check_finished, print_function=print_function)
 
 
 def cat_raw_covariance_matrices(n: int, mstr: str, input_roots: list[str], ns_samples: list[None | int | Iterable[int] | Iterable[bool]], output_root: str, collapse_factor: int = 1, threepcf: bool = False, check_finished: bool = True, two_tracers: bool | None = None, print_function: Callable[[str], None] = print) -> dict[str]:

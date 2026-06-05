@@ -56,11 +56,13 @@ def add_cov_terms(c3: np.typing.NDArray[np.float64], c4: np.typing.NDArray[np.fl
     return c6 + c5 * alpha + c4 * alpha**2 + c3 * alpha**3
 
 
-def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     r"""
     3PCF post-processing for Legendre (accumulated) mode.
 
-    Do not run this (or any other post-processing function/script) while the main RascalC computation is running — this may delete the output directory and cause the code to crash.
+    Now it should be safe to run this post-processing while the main RascalC computation is still running, as long as you do not put multiple runs into one output directory.
+    This is achieved by a default heuristic check for the normal finishing of the main RascalC computation.
+    With this, inspecting the output of an aborted or timed-out run is harder, by default it will be considered unfinished. But if you are sure that the main computation is not running, you can disable the check via ``check_finished=False``. Doing this once should be sufficient, repeated post-processing attempts should no longer detect the run as unfinished.
 
     Parameters
     ----------
@@ -127,7 +129,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
 
     cov_filter = cov_filter_3pcf_legendre(n, max_l, skip_r_bins, skip_l, exclude_samebins, exclude_odd_l)
     
-    input_file = load_raw_covariances_3pcf_legendre(file_root, n, max_l, n_samples, print_function)
+    input_file = load_raw_covariances_3pcf_legendre(file_root, n, max_l, n_samples, check_finished=check_finished, print_function=print_function)
 
     # Create output directory
     if not os.path.exists(outdir):
