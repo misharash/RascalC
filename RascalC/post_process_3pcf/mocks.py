@@ -1,9 +1,11 @@
 """
-Function to post-process the single-field 3PCF Legendre binned integrals computed by the C++ code with a given shot-noise rescaling parameter value, alpha.
+Function to post-process the single-field 3PCF Legendre binned integrals computed by the C++ code, obtaining the shot-noise rescaling parameter, alpha, from a mock derived covariance matrix.
 We output the theoretical covariance matrices, (quadratic-bias corrected) precision matrices and the effective number of samples, N_eff.
 """
 
 import numpy as np
+import numpy.typing as npt
+from scipy.optimize import fmin
 import os
 from ..post_process.utils import check_eigval_convergence, check_positive_definiteness, compute_D_precision_matrix, compute_N_eff_D
 from ..raw_covariance_matrices import load_raw_covariances_3pcf_legendre
@@ -11,9 +13,38 @@ from .utils import cov_filter_3pcf_legendre, load_matrices, add_cov_terms
 from typing import Callable, Iterable
 
 
-def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def Psi(alpha: float, c3: npt.NDArray[np.float64], c4: npt.NDArray[np.float64], c5: npt.NDArray[np.float64], c6: npt.NDArray[np.float64], c3s: npt.NDArray[np.float64], c4s: npt.NDArray[np.float64], c5s: npt.NDArray[np.float64], c6s: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """Compute precision matrix from covariance matrix, removing quadratic order bias terms."""
+    c_tot = add_cov_terms(c3, c4, c5, c6, alpha)
+    partial_covs = add_cov_terms(c3s, c4s, c5s, c6s, alpha)
+    _, Psi = compute_D_precision_matrix(partial_covs, c_tot)
+    return Psi
+
+
+def neg_log_L1(alpha: float, target_cov: npt.NDArray[np.float64], c3: npt.NDArray[np.float64], c4: npt.NDArray[np.float64], c5: npt.NDArray[np.float64], c6: npt.NDArray[np.float64], c3s: npt.NDArray[np.float64], c4s: npt.NDArray[np.float64], c5s: npt.NDArray[np.float64], c6s: npt.NDArray[np.float64]) -> float:
+    """Return negative log L1 likelihood between 3PCF theory and target (data jackknife or mock sample) covariance matrices.
+    log L1 is the Kullback-Leibler divergence with constant terms (including log(det(target_cov))) removed.
+    As a result, the `target_cov` can be a singular matrix.
+    This function does not allow negative shot-noise rescaling `alpha` by returning infinity."""
+    if alpha < 0: return np.inf # negative shot-noise rescaling causes problems and does not make sense
+    Psi_alpha = Psi(alpha, c3, c4, c5, c6, c3s, c4s, c5s, c6s)
+    logdet = np.linalg.slogdet(Psi_alpha)
+    if logdet[0] < 0:
+        # Remove any dodgy inversions
+        return np.inf        
+    return np.trace(np.matmul(Psi_alpha, target_cov)) - logdet[1]
+
+
+def fit_shot_noise_rescaling(target_cov: npt.NDArray[np.float64], c3: npt.NDArray[np.float64], c4: npt.NDArray[np.float64], c5: npt.NDArray[np.float64], c6: npt.NDArray[np.float64], c3s: npt.NDArray[np.float64], c4s: npt.NDArray[np.float64], c5s: npt.NDArray[np.float64], c6s: npt.NDArray[np.float64]) -> float:
+    """Fit the 3PCF covariance matrix model to `target_cov` to find the optimal shot-noise rescaling.
+    `target_cov` can be a singular matrix."""
+    alpha_best = fmin(neg_log_L1, 1., args = (target_cov, c3, c4, c5, c6, c3s, c4s, c5s, c6s))
+    return alpha_best[0]
+
+
+def post_process_3pcf(mock_cov_file: str, file_root: str, n: int, max_l: int, outdir: str | None = None, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     r"""
-    3PCF post-processing for Legendre (accumulated) mode for a given shot-noise rescaling parameter value, alpha.
+    3PCF post-processing for Legendre (accumulated) mode, obtaining the shot-noise rescaling parameter, alpha, from a mock-derived covariance matrix.
 
     Now it should be safe to run this post-processing while the main RascalC computation is still running, as long as you do not put multiple runs into one output directory.
     This is achieved by a default heuristic check for the normal finishing of the main RascalC computation.
@@ -21,6 +52,9 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
 
     Parameters
     ----------
+    mock_cov_file : string
+        Path to the text file containing the mock sample covariance matrix, which should be used to determine the shot-noise rescaling parameter, alpha. The covariance matrix should be in the same binning as the theoretical matrices computed by RascalC, and should already have the same bin pairs removed as will be removed from the theoretical matrices by the skip_r_bins and exclude_samebins options (if they are used). The covariance matrix should be in a text format that can be loaded by ``numpy.loadtxt``.
+    
     file_root : string
         Path to the RascalC (:func:`RascalC.run_cov_3pcf` or command-line) output directory.
     
@@ -33,9 +67,6 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
     outdir : string or None
         (Optional) path to the directory in which the post-processing results should be saved. If None (default), is set to ``file_root``. Empty string means the current working directory.
         We advise to use different output directories for different post-processing options.
-
-    alpha : float
-        Fixed shot-noise rescaling value to use. In principle optional, but the default value of 1 may not be particularly good.
 
     skip_r_bins : integer or tuple of two integers
         (Optional) removal of some radial bins.
@@ -78,9 +109,14 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
     # Set default output directory if not set
     if outdir is None: outdir = file_root
 
-    output_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_3PCF_n%d_l%d.npz' % (n, max_l))
+    output_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_3PCF_Mocks_n%d_l%d.npz' % (n, max_l))
     name_dict = dict(path=output_name, filename=os.path.basename(output_name))
     if dry_run: return name_dict
+
+    mock_cov = np.loadtxt(mock_cov_file) # load external mock covariance matrix from text file, would be based on ENCORE
+    # probably need to change bin ordering to match RascalC
+    # should odd ell be removed here? or assume that they have already been removed?
+    # need to apply ell-dependent scaling factors to match RascalC
 
     cov_filter = cov_filter_3pcf_legendre(n, max_l, skip_r_bins, skip_l, exclude_samebins, exclude_odd_l)
     
@@ -95,28 +131,38 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
     c3, c4, c5, c6 = load_matrices(input_file, n, max_l, cov_filter, full=True)
 
     # Check matrix convergence by analogy with 2PCF, may be less helpful
-    check_eigval_convergence(c3, c6, alpha, Npcf=3, print_function=print_function)
+    eigval_ok = check_eigval_convergence(c3, c6, Npcf=3, print_function=print_function)
+
+    # Load in partial theoretical matrices
+    c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False)
+
+    # Now optimize for shot-noise rescaling parameter alpha
+    print_function("Optimizing for the shot-noise rescaling parameter")
+    alpha_best = fit_shot_noise_rescaling(mock_cov, c3, c4, c5, c6, c3s, c4s, c5s, c6s)
+    print_function("Optimization complete - optimal rescaling parameter is %.6f" % alpha_best)
+
+    # Check matrix convergence for the optimal alpha: if it is <1, the eigenvalue criterion should be strengthened
+    if eigval_ok and alpha_best < 1: check_eigval_convergence(c3, c6, alpha_best, Npcf=3, print_function=print_function)
 
     # Compute full covariance matrix
-    full_cov = add_cov_terms(c3, c4, c5, c6, alpha)
+    full_cov = add_cov_terms(c3, c4, c5, c6, alpha_best)
 
     # Check positive definiteness
     check_positive_definiteness(full_cov)
 
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
-    # Load in partial theoretical matrices
-    c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False)
-    partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha)
+    partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha_best)
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
     print_function("Full precision matrix estimate computed")
 
     # Now compute effective N:
     N_eff_D = compute_N_eff_D(full_D_est, print_function)  
 
-    output_dict = dict(full_theory_covariance=full_cov, shot_noise_rescaling=alpha,
+    output_dict = dict(full_theory_covariance=full_cov, shot_noise_rescaling=alpha_best,
                        full_theory_precision=full_prec, N_eff=N_eff_D,
-                       full_theory_D_matrix=full_D_est, individual_theory_covariances=partial_cov)
+                       full_theory_D_matrix=full_D_est, individual_theory_covariances=partial_cov,
+                       mock_covariance=mock_cov)
     
     np.savez_compressed(output_name, **output_dict)
     print_function("Saved output covariance matrices as %s"%output_name)
