@@ -54,7 +54,7 @@ def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: i
     Parameters
     ----------
     mock_cov_file : string
-        Path to the text file containing the mock sample covariance matrix, which should be used to determine the shot-noise rescaling parameter, alpha. The covariance matrix should be in the same binning as the theoretical matrices computed by RascalC, and should already have the same bin pairs removed as will be removed from the theoretical matrices by the skip_r_bins and exclude_samebins options (if they are used). The covariance matrix should be in a text format that can be loaded by ``numpy.loadtxt``.
+        Path to the text file containing the mock sample covariance matrix (from ENCORE 3PCF measurements), which will be used to determine the shot-noise rescaling parameter, alpha. The covariance matrix should have the same radial bins as the theoretical matrices computed by RascalC, have the repeated radial bin pairs removed and same-bin pairs removed according to the ``exclude_samebins`` option (typically, yes). It may have a different (higher) maximum ell than the computed ``RascalC`` covariance matrices (in such a case, specify it with max_l_mock). The ``skip_r_bins`` and ``skip_l`` filters will be applied after the mock covariance matrix is loaded. The covariance matrix should be in a text format that can be loaded by ``numpy.loadtxt``.
     
     file_root : string
         Path to the RascalC (:func:`RascalC.run_cov_3pcf` or command-line) output directory.
