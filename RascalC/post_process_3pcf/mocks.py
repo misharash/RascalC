@@ -43,7 +43,7 @@ def fit_shot_noise_rescaling(target_cov: npt.NDArray[np.float64], c3: npt.NDArra
     return alpha_best[0]
 
 
-def post_process_3pcf(mock_cov_file: str, file_root: str, n: int, max_l: int, outdir: str | None = None, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: int, outdir: str | None = None, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     r"""
     3PCF post-processing for Legendre (accumulated) mode, obtaining the shot-noise rescaling parameter, alpha, from a mock-derived covariance matrix.
 
