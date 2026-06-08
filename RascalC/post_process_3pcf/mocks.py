@@ -43,7 +43,7 @@ def fit_shot_noise_rescaling(target_cov: npt.NDArray[np.float64], c3: npt.NDArra
     return alpha_best[0]
 
 
-def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: int, outdir: str | None = None, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: int, outdir: str | None = None, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, max_l_mock: int | None = None, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     r"""
     3PCF post-processing for Legendre (accumulated) mode, obtaining the shot-noise rescaling parameter, alpha, from a mock-derived covariance matrix.
 
@@ -94,6 +94,9 @@ def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: i
     exclude_odd_l : boolean
         (Optional) If True, the covariance will exclude the odd multipoles; note that then they will also not count in ``skip_l``. By default (False value), odd multipoles are kept and counted in ``skip_l``.
     
+    max_l_mock : integer or None
+        (Optional) The maximum ell (Legendre moment index) used in the mock covariance matrix. If None (default), it is assumed to be the same as `max_l` for theoretical covariance matrices. This option is provided in case the mock covariance matrix has a different (higher) maximum ell than the theoretical covariance matrices computed by RascalC.
+    
     print_function : Callable
         (Optional) custom function to use for printing. Default is ``print``.
     
@@ -126,12 +129,12 @@ def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: i
     r_filter = (r_bin_index1 >= skip_r_bins_start) & (r_bin_index1 < n - skip_r_bins_end) & (r_bin_index2 >= skip_r_bins_start) & (r_bin_index2 < n - skip_r_bins_end) # filter for the bin pairs to keep based on the skip_r_bins option
     n_r_pairs = r_filter.sum()
     # prepare ell indexing and scaling factor accounting for the different basis
-    n_l = max_l + 1
-    ells = np.arange(0, n_l, 1+exclude_odd_l)
+    ells = np.arange(0, max_l + 1, 1+exclude_odd_l)
     if skip_l > 0: ells = ells[:-skip_l] # without the condition, wouldn't work right for skip_l=0
     ell_factor = ((-1)**ells * np.sqrt(2 * ells + 1) / (4 * np.pi)) # the ell-dependent factor between the ENCORE 3-point basis functions and Legendre polynomials given by Equation (16) in https://arxiv.org/pdf/2105.08722
     # scale and transpose the covariance
-    mock_cov = mock_cov.reshape(n_l, n_r_pairs_orig, n_l, n_r_pairs_orig) # reshape the covariance from 2D to 4D, the ENCORE ordering is [l, r_bin_pair] for both rows and columns
+    if max_l_mock is None: max_l_mock = max_l
+    mock_cov = mock_cov.reshape(max_l_mock + 1, n_r_pairs_orig, max_l_mock + 1, n_r_pairs_orig) # reshape the covariance from 2D to 4D, the ENCORE ordering is [l, r_bin_pair] for both rows and columns
     mock_cov = mock_cov[ells][:, :, ells] # apply the multipole selection
     mock_cov = mock_cov.transpose(1, 0, 3, 2) # change ordering to [r_bin_pair, l] for both rows and columns as in RascalC
     mock_cov *= ell_factor[:, None, None] * ell_factor[None, None, :] # apply the factor, NumPy broadcasting matches trailing dimensions. need to double-check if it is not division; there might also be a factor of 2 or something similar
