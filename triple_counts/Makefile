@@ -4,9 +4,10 @@ CC = gcc
 CFLAGS = -O3 -Wall -MMD
 CXX = g++
 CXXFLAGS	= -O3 -Wall -MMD -std=c++11 -ffast-math $(shell pkg-config --cflags gsl)
-CXXFLAGS	+= -DOPENMP -DPRINTPERCENTS
+CXXFLAGS	+= -DOPENMP -DTHREE_PCF -DPRINTPERCENTS
 #-DOPENMP  # use this to run multi-threaded with OPENMP
 #-DPERIODIC # use this to enable periodic behavior
+#-DTHREE_PCF # need this to have mumin=-1 and not 0 to be consistent with the 3PCF covariance
 #-DPRINTPERCENTS # use this to print percentage of progress in each loop. This can be a lot of output
 
 LFLAGS	= $(shell pkg-config --libs gsl) # common part

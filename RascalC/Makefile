@@ -97,6 +97,8 @@ $(foreach variant,$(VARIANTS),$(eval $(call make_targets,$(variant))))
 
 VARIANTS2 = s_mu s_mu_verbose s_mu_periodic s_mu_periodic_verbose
 
+DEFINES2 = -DTHREE_PCF # triple_counts needs this to have mumin=-1 and not 0 to be consistent with the 3PCF covariance
+
 VAR_SRC2_BASE	= triple_counts
 VAR_SRC2	= ../$(VAR_SRC2_BASE)/$(VAR_SRC2_BASE).cpp
 VAR_OBJ2_BASE	= $(OBJDIR)/$(VAR_SRC2_BASE)
@@ -110,7 +112,7 @@ EXEC2_$(1)	= $$(EXEC2_BASE).$(1)
 ALL_EXECS	+= $$(EXEC2_$(1))
 
 $$(OBJ2_$(1)): $$(VAR_SRC2) | $$(OBJDIR)
-	$$(CXX) $$(CXXFLAGS) $$(DEFINES_FOR_$(1)) -c $$(VAR_SRC2) -o $$@
+	$$(CXX) $$(CXXFLAGS) $$(DEFINES2) $$(DEFINES_FOR_$(1)) -c $$(VAR_SRC2) -o $$@
 
 $$(EXEC2_$(1)): $$(OBJ2_$(1)) $$(COMMON_OBJS) | $$(EXECDIR)
 	$$(LD) $$(OBJ2_$(1)) $$(COMMON_OBJS) $$(LFLAGS) -o $$@
