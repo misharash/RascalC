@@ -195,7 +195,7 @@ public:
     //-------- OTHER PARAMETERS ----------------------------------------------
 
 	// The minimum mu of the smallest bin.
-#ifdef THREE_PCF
+#if (defined THREE_PCF || defined TRIPLE)
     Float mumin = -1.0;
 #else
 	Float mumin = 0.0;

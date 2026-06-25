@@ -97,7 +97,7 @@ $(foreach variant,$(VARIANTS),$(eval $(call make_targets,$(variant))))
 
 VARIANTS2 = s_mu s_mu_verbose s_mu_periodic s_mu_periodic_verbose
 
-DEFINES2 = -DTHREE_PCF # triple_counts needs this to have mumin=-1 and not 0 to be consistent with the 3PCF covariance
+DEFINES2 = -DTRIPLE # triple_counts needs this to have mumin=-1 and not 0 to be consistent with the 3PCF covariance
 
 VAR_SRC2_BASE	= triple_counts
 VAR_SRC2	= ../$(VAR_SRC2_BASE)/$(VAR_SRC2_BASE).cpp
