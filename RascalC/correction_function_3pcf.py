@@ -63,7 +63,7 @@ def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: np
 
     vol_r = 4 * np.pi / 3 * (r_bins[:, 1] **3 - r_bins[:, 0] ** 3)
 
-    ## Construct inverse multipoles of Phi
+    ## Construct multipoles of inverse Phi
     phi_inv_mult = leg_triple / (.5 * vol_r[:, None, None] * vol_r[None, :, None])
             
     ## Check all seems reasonable
@@ -96,6 +96,7 @@ def compute_3pcf_correction_function(randoms_pos: np.ndarray[float], randoms_wei
 
     ## Define normalization constant
     norm = 6. * V * n_bar**3 * w_bar**3 # I don't think there is an exactly right answer once number density or weights vary across the survey
+    # this is equal to 6 * np.sum(randoms_weights)**3 / V**2, but the other form is easier to compare against the definitions in the paper (Sections 4.2 and 5.2.1 of https://arxiv.org/pdf/1910.04764)
 
     print_function("Normalizing output survey correction by %.2e"%norm)
 
@@ -180,8 +181,9 @@ def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float],
 
     ## Define normalization constant
     norm = 6. * V * n_bar**3 * w_bar**3 # I don't think there is an exactly right answer once number density or weights vary across the survey
+    # this is equal to 6 * np.sum(randoms_weights)**3 / V**2, but the other form is easier to compare against the definitions in the paper (Sections 4.2 and 5.2.1 of https://arxiv.org/pdf/1910.04764)
 
-    ## Construct inverse multipoles of Phi
+    ## Construct multipoles of inverse Phi
     phi_inv_mult = leg_triple / (.5 * norm * vol_r[:, None, None] * vol_r[None, :, None])
 
     # fill the middle diagonal elements, which have been zeros
