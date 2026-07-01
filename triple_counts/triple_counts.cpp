@@ -316,6 +316,7 @@ class compute_triples{
             printf("# INFO: the base RNG seed is %lu, incremented by %lu in each integration loop (matching these should guarantee the same results in a completed computation with the same input catalogs and correlation functions).\n", seed_shift, seed_step);
             
             gsl_rng_env_setup(); // initialize gsl rng
+            int completed_loops = 0; // counter of completed loops, since may not finish in index order
 
             uint64 tot_pairs=0, tot_triples=0; // global number of particle pairs/triples/quads used (including those rejected for being in the wrong bins)
             uint64 cell_attempt2=0,cell_attempt3=0; // number of j,k,l cells attempted
@@ -393,7 +394,7 @@ class compute_triples{
 #ifdef PRINTPERCENTS
                     // Print time left
                     if((float(n1)/float(grid->nf)*100)>=percent_counter){
-                        printf("Iteration %d of %d on thread %d: Using cell %d of %d - %.0f percent complete\n", 1+n_loops, par->max_loops, thread, n1+1, grid->nf, percent_counter);
+                        printf("Iteration %d of %d on thread %d: Using cell %d of %d - %.0f percent complete\n", n_loops, par->max_loops, thread, n1+1, grid->nf, percent_counter);
                         percent_counter+=5.;
                     }
 #endif
@@ -454,11 +455,13 @@ class compute_triples{
     #pragma omp critical // only one processor can access at once
     #endif
             {
-                if ((n_loops+1)%par->nthread==0){ // Print every nthread loops
+                completed_loops++; // increment completed loops counter, since they may be done not according to n_loops order
+                printf("Iteration %d of %d on thread %d completed (%d/%d)\n", n_loops, par->max_loops, thread, completed_loops, par->max_loops);
+                if (completed_loops % par->nthread == 0) { // Print every nthread completed loops
                     TotalTime.Stop(); // interrupt timing to access .Elapsed()
                     int current_runtime = TotalTime.Elapsed();
-                    int remaining_time = current_runtime/((n_loops+1)/par->nthread)*(par->max_loops/par->nthread-(n_loops+1)/par->nthread);  // estimated remaining time
-                    fprintf(stderr,"\nFinished integral loop %d of %d after %d s. Estimated time left:  %2.2d:%2.2d:%2.2d hms, i.e. %d s.\n",n_loops+1,par->max_loops, current_runtime,remaining_time/3600,remaining_time/60%60, remaining_time%60,remaining_time);
+                    int remaining_time = current_runtime*(par->max_loops - completed_loops)/completed_loops;  // estimated remaining time
+                    fprintf(stderr, "\nFinished %d integral loops of %d after %d s. Estimated time left:  %2.2d:%2.2d:%2.2d hms, i.e. %d s.\n", completed_loops, par->max_loops, current_runtime, remaining_time/3600, remaining_time/60%60, remaining_time%60, remaining_time);
                     
                     TotalTime.Start(); // Restart the timer
                 }
