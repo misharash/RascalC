@@ -4,6 +4,7 @@
 ## Now legacy, jackknife integrals convergence checking implemented in convergence_check_extra.py, but old post-processing results do not have the needed information saved in .npz files
 
 import numpy as np
+import numpy.typing as npt
 import sys, os
 
 
@@ -11,7 +12,7 @@ sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), "../
 from RascalC.convergence_check_extra import convergence_check_extra_splittings
 
 
-def symmetrized(A: np.ndarray):
+def symmetrized(A: npt.NDArray[np.float64]):
     return 0.5 * (A + A.T)
 
 

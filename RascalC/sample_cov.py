@@ -7,7 +7,7 @@ import numpy.typing as npt
 from .allcounts_utils import allcount_switch_function
 
 
-def get_corr(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation) -> np.ndarray:
+def get_corr(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation) -> npt.NDArray[np.float64]:
     "get s,mu binned correlation function array from either pycorr estimator or lsstypes Count2Correlation"
     return allcount_switch_function(xi_estimator, lambda x: x.corr, lambda x: x.value())
 
