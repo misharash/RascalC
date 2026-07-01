@@ -606,6 +606,7 @@ def run_cov(mode: Literal["s_mu", "legendre_projected", "legendre_accumulated"],
         elif ntracers == 2:
             compute_correction_function_multi(randoms_positions[0], randoms_weights[0], randoms_positions[1], randoms_weights[1], binfile, out_dir, periodic, *binned_pair_names, print_function = print_and_log)
         command += "".join([f" -phi_file{suffixes_corr[c]} {phi_names[c]}" for c in range(ncorr)])
+    del randoms_positions, randoms_weights # free memory (in some cases)
 
     # deal with the seed
     if seed is not None: # need to pass to the C++ code and make sure it can be received properly. 0 (False) is not equivalent to None in this case
