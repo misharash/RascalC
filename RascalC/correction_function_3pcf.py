@@ -36,8 +36,8 @@ def check_triple_counts_positive(leg_triple: npt.NDArray[np.float64], lenient_sa
 
 def check_inv_phi_values(phi_inv_mult: npt.NDArray[np.float64], print_function: Callable[[str], None] = print) -> None:
     "Check that the mean of the monopole is neither too small nor too large"
+    print_function(f"INFO: mean±std of the monopole of the inverse survey correction function is {np.mean(phi_inv_mult[:, :, 0])}±{np.std(phi_inv_mult[:, :, 0], ddof=1)}, expected to be not very far from 1")
     if np.mean(phi_inv_mult[:, :, 0]) < 1e-3:
-        print_function(phi_inv_mult[:,:,0])
         raise ValueError("Survey correction function seems too small - are the RRR counts normalized correctly?")
     if np.mean(phi_inv_mult[:, :, 0]) > 1e3:
         raise ValueError("Survey correction function seems too large - are the RRR counts normalized correctly?")
