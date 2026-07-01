@@ -1,11 +1,12 @@
 import os
 import numpy as np
+import numpy.typing as npt
 from typing import Callable
 from scipy.special import legendre
 from .correction_function import compute_V_n_w_bar, load_randoms
 
 
-def compute_inv_phi_periodic_3pcf(n: int, n_multipoles: int) -> np.ndarray[float]:
+def compute_inv_phi_periodic_3pcf(n: int, n_multipoles: int) -> npt.NDArray[np.float64]:
     "Compute the inverse 3PCF survey correction function multipoles for the periodic box geometry."
     ## Output periodic survey correction function
     phi_inv_mult = np.zeros([n, n, n_multipoles])
@@ -16,7 +17,7 @@ def compute_inv_phi_periodic_3pcf(n: int, n_multipoles: int) -> np.ndarray[float
     return phi_inv_mult
 
 
-def check_triple_counts_positive(leg_triple: np.ndarray[float], lenient_samebins: bool = False, print_function: Callable[[str], None] = print) -> None:
+def check_triple_counts_positive(leg_triple: npt.NDArray[np.float64], lenient_samebins: bool = False, print_function: Callable[[str], None] = print) -> None:
     "Check for negative counts, which should be problematic"
     n_mu = 2001
     triple_counts = np.zeros(list(leg_triple.shape[:-1]) + [n_mu])
@@ -33,7 +34,7 @@ def check_triple_counts_positive(leg_triple: np.ndarray[float], lenient_samebins
             print_function(f"{title}: counts are not positive for radial bin pair {rbin1}, {rbin2} for {mu_count} mu values of {n_mu} checked")
 
 
-def check_inv_phi_values(phi_inv_mult: np.ndarray[float], print_function: Callable[[str], None] = print) -> None:
+def check_inv_phi_values(phi_inv_mult: npt.NDArray[np.float64], print_function: Callable[[str], None] = print) -> None:
     "Check that the mean of the monopole is neither too small nor too large"
     if np.mean(phi_inv_mult[:, :, 0]) < 1e-3:
         print_function(phi_inv_mult[:,:,0])
@@ -42,7 +43,7 @@ def check_inv_phi_values(phi_inv_mult: np.ndarray[float], print_function: Callab
         raise ValueError("Survey correction function seems too large - are the RRR counts normalized correctly?")
 
 
-def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: np.ndarray[float], triple_counts: np.ndarray[float], print_function: Callable[[str], None] = print) -> np.ndarray[float]:
+def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: npt.NDArray[np.float64], triple_counts: npt.NDArray[np.float64], print_function: Callable[[str], None] = print) -> npt.NDArray[np.float64]:
     "Compute the inverse 3PCF survey correction function multipoles for the realistic survey geometry."
 
     mu_all = np.linspace(-1,1,m+1)
@@ -72,7 +73,7 @@ def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: np
     return phi_inv_mult
 
 
-def compute_3pcf_correction_function(randoms_pos: np.ndarray[float], randoms_weights: np.ndarray[float], binfile: str, outdir: str, periodic: bool, RRR_file: str | None = None, print_function: Callable[[str], None] = print) -> str:
+def compute_3pcf_correction_function(randoms_pos: npt.NDArray[np.float64], randoms_weights: npt.NDArray[np.float64], binfile: str, outdir: str, periodic: bool, RRR_file: str | None = None, print_function: Callable[[str], None] = print) -> str:
     """
     Function to compute the multipole decomposition of the 3PCF inverse survey correction function.
     The 3PCF survey correction function is defined as the ratio between idealistic and true RRR pair counts for a single survey.
@@ -128,7 +129,7 @@ def compute_3pcf_correction_function_from_files(random_filename: str, binfile: s
     return compute_3pcf_correction_function(*load_randoms(random_filename), binfile, outdir, periodic, RRR_file, print_function = print_function)
 
 
-def compute_3pcf_correction_function_from_encore(randoms_pos: np.ndarray[float], randoms_weights: np.ndarray[float], binfile: str, outdir: str, triple_counts: np.ndarray, print_function: Callable[[str], None] = print) -> str:
+def compute_3pcf_correction_function_from_encore(randoms_pos: npt.NDArray[np.float64], randoms_weights: npt.NDArray[np.float64], binfile: str, outdir: str, triple_counts: npt.NDArray[np.float64], print_function: Callable[[str], None] = print) -> str:
     """
     Function to compute the multipole decomposition of the 3PCF inverse survey correction function from ENCORE triple counts.
     The 3PCF survey correction function is defined as the ratio between idealistic and true RRR pair counts for a single survey.

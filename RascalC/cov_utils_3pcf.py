@@ -7,12 +7,13 @@ This module contains convenience functions that
 """
 
 import numpy as np
+import numpy.typing as npt
 from typing import Callable
 from .get_shot_noise_rescaling import get_shot_noise_rescaling # for convenience
 from .cov_utils import get_cov_header, load_cov
 
 
-def convert_cov_3pcf_legendre(cov: np.ndarray[float], max_l: int, exclude_odd_l: bool = False, apply_scaling: bool = True) -> np.ndarray[float]:
+def convert_cov_3pcf_legendre(cov: npt.NDArray[np.float64], max_l: int, exclude_odd_l: bool = False, apply_scaling: bool = True) -> npt.NDArray[np.float64]:
     """
     Change the bin ordering of the 3PCF covariance matrix in Legendre mode for a single tracer.
     The bin ordering in ``RascalC`` ``.npy`` files is by radial bin pairs (top-level) and then by multipoles.
@@ -33,7 +34,7 @@ def convert_cov_3pcf_legendre(cov: np.ndarray[float], max_l: int, exclude_odd_l:
     return cov
 
 
-def load_cov_3pcf_legendre(rascalc_results_file: str, max_l: int, exclude_odd_l: bool = False, apply_scaling: bool = True, print_function: Callable[[str], None] = print) -> np.ndarray[float]:
+def load_cov_3pcf_legendre(rascalc_results_file: str, max_l: int, exclude_odd_l: bool = False, apply_scaling: bool = True, print_function: Callable[[str], None] = print) -> npt.NDArray[np.float64]:
     "Load the theoretical covariance matrix from RascalC results file, change the bin ordering and apply scaling as in :func:`convert_cov_3pcf_legendre`; intended for 3PCF Legendre single-tracer mode."
     return convert_cov_3pcf_legendre(load_cov(rascalc_results_file, print_function), max_l, exclude_odd_l=exclude_odd_l, apply_scaling=apply_scaling)
 

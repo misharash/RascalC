@@ -9,6 +9,7 @@ import lsstypes
 import numpy as np
 import os
 from datetime import datetime
+import numpy.typing as npt
 from typing import Iterable, Literal
 from warnings import warn
 from .xi.utils import write_xi_file
@@ -23,13 +24,13 @@ from .post_process_3pcf import post_process_3pcf
 
 
 def run_cov_3pcf(mode: Literal["legendre_accumulated"],
-                 s_edges: np.ndarray[float], max_l: int,
+                 s_edges: npt.NDArray[np.float64], max_l: int,
                  nthread: int, N2: int, N3: int, N4: int, N5: int, N6: int, n_loops: int, loops_per_sample: int,
                  out_dir: str, tmp_dir: str,
-                 randoms_positions1: np.ndarray[float], randoms_weights1: np.ndarray[float],
-                 xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]] | tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]] | list[np.ndarray[float]],
+                 randoms_positions1: npt.NDArray[np.float64], randoms_weights1: npt.NDArray[np.float64],
+                 xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation | tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]] | tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
                  no_data_galaxies1: float, effective_no_def: bool = False,
-                 RRR_counts: np.ndarray[float] | None = None,
+                 RRR_counts: npt.NDArray[np.float64] | None = None,
                  n_mu_bins: int = 120,
                  position_type: Literal["rdd", "xyz", "pos"] = "pos",
                  xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
@@ -39,7 +40,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
                  exclude_samebins: bool = True, exclude_odd_l: bool = False,
                  sampling_grid_size: int = 301, coordinate_scaling: float = 1, seed: int | None = None,
                  start_integral_index: Literal[1, 2] | None = None, last_integral_index: Literal[1, 2] | None = None,
-                 verbose: bool = False) -> dict[str, np.ndarray[float]]:
+                 verbose: bool = False) -> dict[str, npt.NDArray[np.float64]]:
     r"""
     Run the 3-point correlation function covariance integration.
     Only supports single tracer in "accumulated" Legendre mode without jackknives.
@@ -213,7 +214,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
 
     Returns
     -------
-    post_processing_results : dict[str, np.ndarray[float]]
+    post_processing_results : dict[str, npt.NDArray[np.float64]]
         Post-processing results as a dictionary with string keys and Numpy array values. All this information is also saved in a ``Rescaled_Covariance_Matrices*.npz`` file in the output directory.
         Selected common keys are: ``"full_theory_covariance"`` for the final covariance matrix and ``"shot_noise_rescaling"`` for the shot-noise rescaling value(s).
         There will also be a ``Raw_Covariance_Matices*.npz`` file in the output directory (as long as the C++ code has run without errors), which can be post-processed separately in a different way using e.g. :func:`RascalC.post_process_auto`.
