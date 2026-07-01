@@ -135,7 +135,8 @@ public:
     // Number of galaxies in second dataset
     Float nofznorm2=3398430; //
 
-    // parameters allowing to run only some of the 7 integrals
+#ifndef TRIPLE
+    // parameters allowing to run only some of the 7 integrals for multi-tracer 2PCF or 2 for single-tracer 3PCF
     int start_integral_index = 1; // the first integral to be computed
 #ifdef THREE_PCF
     int last_integral_index = 2; // the last integral to be computed
@@ -143,6 +144,7 @@ public:
     int last_integral_index = 7; // the last integral to be computed
 #endif
     // defaults compute all integrals
+#endif
 
     //---------- (r,mu) MULTI-FIELD PARAMETERS ------------------------------
 
@@ -543,6 +545,7 @@ public:
 #endif
 
         // check integral selection parameters
+#ifndef TRIPLE
         assert(start_integral_index >= 1);
         assert(last_integral_index >= 1);
 #ifdef THREE_PCF
@@ -554,6 +557,7 @@ public:
         assert(start_integral_index <= last_integral_index);
         assert(start_integral_index <= no_integrals);
         assert(last_integral_index <= no_integrals);
+#endif
 
 	    create_directory();
 
