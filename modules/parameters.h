@@ -104,10 +104,12 @@ public:
 
     // Maximum number of iterations to compute the C_ab integrals over
     int max_loops = 40;
+#ifndef TRIPLE
     // Number of loops to output into each subsample/file
     int loops_per_sample = 1;
     // Number of output subsamples/files
     int no_subsamples = 120;
+#endif
 
     // Number of random cells to draw at each stage
     int N2 = 20; // number of j cells per i cell
@@ -273,7 +275,9 @@ public:
                 rect_boxsize = {boxsize, boxsize, boxsize};
                 }
         else if (!strcmp(argv[i],"-maxloops")) max_loops = atoi(argv[++i]);
+#ifndef TRIPLE
         else if (!strcmp(argv[i],"-loopspersample")) loops_per_sample = atoi(argv[++i]);
+#endif
         else if (!strcmp(argv[i],"-rescale")) rescale = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-mumax")) mumax = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-mumin")) mumin = atof(argv[++i]);
@@ -385,10 +389,12 @@ public:
 	    assert(nside%2!=0); // The probability integrator needs an odd grid size
 
 	    assert(nofznorm>0); // need some galaxies!
+#ifndef TRIPLE
         assert(max_loops % loops_per_sample == 0); // group size need to divide the number of loops
         no_subsamples = max_loops / loops_per_sample;
+#endif
 #ifndef THREE_PCF
-	    //assert(mumin>=0); // We take the absolte value of mu
+	    //assert(mumin>=0); // We take the absolute value of mu
 #endif
 	    assert(mumax<=1); // mu > 1 makes no sense
 
@@ -589,7 +595,9 @@ public:
 #endif
 		printf("Number of galaxies = %6.5e\n",nofznorm);
         printf("Maximum number of integration loops = %d\n",max_loops);
+#ifndef TRIPLE
         printf("Number of output subsamples = %d\n", no_subsamples);
+#endif
         printf("Output directory: '%s'\n",out_file);
 
 	}
@@ -678,7 +686,9 @@ private:
         fprintf(stderr, "   -jackknife2 <filename>: (Optional) File containing the {2,2} jackknife weights (normally computed from Corrfunc)\n");
 #endif
         fprintf(stderr, "   -maxloops <max_loops>: Maximum number of integral loops\n");
+#ifndef TRIPLE
         fprintf(stderr, "   -loopspersample <loops_per_sample>: Number of loops to collapse into each subsample. Default 1.\n");
+#endif
         fprintf(stderr, "   -N2 <N2>: Number of secondary particles to choose per primary particle\n");
         fprintf(stderr, "   -N3 <N3>: Number of tertiary particles to choose per secondary particle\n");
 #ifndef TRIPLE
