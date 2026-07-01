@@ -98,7 +98,7 @@ class compute_integral{
             TotalTime.Start(); // Start timer
             
 #ifdef OPENMP       
-    #pragma omp parallel firstprivate(seed_step,seed_shift,par,printtime,grid,cf) shared(sumint,TotalTime,LoopTimes,gsl_rng_default,rd) reduction(+:convergence_counter,cell_attempt3,cell_attempt4,cell_attempt5,cell_attempt6,used_cell3,used_cell4,used_cell5,used_cell6,tot_triples,tot_quads,tot_quints,tot_hexes)
+    #pragma omp parallel firstprivate(seed_step,seed_shift,par,grid,cf) shared(sumint,TotalTime,LoopTimes,gsl_rng_default,rd) reduction(+:cell_attempt3,cell_attempt4,cell_attempt5,cell_attempt6,used_cell3,used_cell4,used_cell5,used_cell6,tot_triples,tot_quads,tot_quints,tot_hexes)
             { // start parallel loop
             // Decide which thread we are in
             int thread = omp_get_thread_num();
