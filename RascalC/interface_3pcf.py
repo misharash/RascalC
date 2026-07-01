@@ -352,7 +352,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
         if len(randoms_weights[t]) != nrandoms: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
         randoms_properties.append(randoms_weights[t])
         np.savetxt(input_filename, np.column_stack(randoms_properties))
-        randoms_properties = None
+    del randoms_properties # free memory
 
     # write the binning files
     binfile = os.path.join(out_dir, "radial_binning_cov.csv")
@@ -405,6 +405,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
         inv_phi_filename = compute_3pcf_correction_function(randoms_positions[0], randoms_weights[0], binfile, out_dir, periodic, RRR_filename, print_function=print_and_log)
     else: # need to convert RRR counts from ENCORE/CADENZA format
         inv_phi_filename = compute_3pcf_correction_function_from_encore(randoms_positions[0], randoms_weights[0], binfile, out_dir, RRR_counts, print_function=print_and_log)
+    del randoms_positions, randoms_weights # free memory
 
     # Select the executable name
     exec_name = "bin/cov.3pcf_" + mode + "_periodic" * periodic + "_verbose" * verbose
