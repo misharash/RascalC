@@ -64,9 +64,7 @@ class compute_integral{
             
             STimer* LoopTimes = new STimer[par->max_loops];
             STimer initial, TotalTime; // Time initialization
-            initial.Start(); 
-            
-            int convergence_counter=0, printtime=0;// counter to stop loop early if convergence is reached.
+            initial.Start();
               
     //-----------INITIALIZE OPENMP + CLASSES----------
             unsigned long seed_step = (unsigned long)(std::numeric_limits<uint32_t>::max()) / (unsigned long)(par->max_loops); // restrict the seeds to 32 bits to avoid possible collisions, as most GSL random generators only accept 32-bit seeds and truncate the higher bits. unsigned long is at least 32 bits but can be more.
@@ -160,13 +158,6 @@ class compute_integral{
 #endif
                 loc_used_triples=0; loc_used_quads=0; loc_used_quints=0; loc_used_hexes=0;
                 LoopTimes[n_loops].Start();
-                
-                // End loops early if convergence has been acheived
-                if (convergence_counter==10){ 
-                    if (printtime==0) printf("1 percent convergence acheived in C6 10 times, exiting.\n");
-                    printtime++;
-                    continue;
-                    }
                 
                 // Set/reset the RNG seed based on loop number instead of thread number to reproduce results with different number of threads but other parameters kept the same. Individual subsamples may differ because they are accumulated/written in order of loop completion which may depend on external factors at runtime, but the final integrals should be the same.
                 gsl_rng_set(locrng, seed_step * (unsigned long)n_loops + seed_shift); // the second number, seed, will not overflow and will be unique for each loop in one run. Here, seed_shift is a random number between 0 and seed_step-1, inclusively.
@@ -344,7 +335,6 @@ class compute_integral{
                 if ((subsample_index > 0) && (completed_loops == accumulated_loops + 1)) { // the condition when the Frobenius difference after adding one loop is most straightforward to compute sensibly, because sumint is updated only every loops_per_sample completed loops. Also works for loops_per_sample=1 unlike the possible alternative condition, completed_loops % loops_per_sample == 1
                     Float frob_C3, frob_C4, frob_C5, frob_C6;
                     sumint.frobenius_difference_sum(&locint, accumulated_loops, frob_C3, frob_C4, frob_C5, frob_C6); // computes the Frobenius relative differences (in percents) after adding one integral loop result (locint) to the accumulation of accumulated_loops loops in sumint; the method signature is different with and without jackknives
-                    if (frob_C6<0.01) convergence_counter++;
                     fprintf(stderr,"Frobenius percent difference after loop %d is %.3f (C3), %.3f (C4), %.3f (C5), %.3f (C6) \n",n_loops,frob_C3, frob_C4, frob_C5, frob_C6);
                 }
 
