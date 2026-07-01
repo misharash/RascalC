@@ -30,7 +30,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
                  randoms_positions1: npt.NDArray[np.float64], randoms_weights1: npt.NDArray[np.float64],
                  xi_table_11: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation | tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]] | tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]],
                  no_data_galaxies1: float, effective_no_def: bool = False,
-                 RRR_counts: npt.NDArray[np.float64] | None = None,
+                 RRR_counts: npt.NDArray[np.float64] | None = None, normalized_RRR: bool = False,
                  n_mu_bins: int = 120,
                  position_type: Literal["rdd", "xyz", "pos"] = "pos",
                  xi_cut_s: float = 250, xi_refinement_iterations: int = 10,
@@ -88,9 +88,12 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
     
     RRR_counts : Numpy array of floats, or None
         (Optional) RRR (random triplet) counts in ENCORE format. You should be able to load them via `np.genfromtxt("....r_3pcf.txt", skip_header=8)`. Removing the first/ell column is not necessary, the code should be able to do this.
-        If provided, need to be computed with the same set of randoms, positions and weights. Otherwise, the covariance normalization will be off.
+        If provided and normalized_RRR=False (default), need to be computed with the same set of randoms, positions and weights, without splits or weight rescaling. If normalized_RRR=True, you need to normalize the RRR counts by the cube of the sum of weights of the randoms used to compute them (survey volume still needs to be the same, but the number of randoms and scaling of their weights can change between the ENCORE RRR and RascalC computations). Otherwise, the covariance normalization will be off.
         If not provided and the data is not in a periodic box, triple counts will be estimated with importance sampling (expect longer runtime).
         In case of periodic box, the RRR counts are not needed because they are trivial.
+    
+    normalized_RRR: boolean
+        (Optional) whether the RRR counts are normalized by the cube of the sum of weights. Default False (not normalized). If True, the code will renormalize the random weights for consistency.
     
     n_mu_bins : integer
         (Optional) number of angular (mu) bins for the RRR (random triplet) counts computation. Default 120.
@@ -351,6 +354,7 @@ def run_cov_3pcf(mode: Literal["legendre_accumulated"],
         nrandoms = len(randoms_properties[0])
         if randoms_weights[t].ndim != 1: raise ValueError(f"Weights of randoms {t+1} not contained in a 1D array")
         if len(randoms_weights[t]) != nrandoms: raise ValueError(f"Number of weights for randoms {t+1} mismatches the number of positions")
+        if normalized_RRR: randoms_weights[t] /= np.sum(randoms_weights[t])
         randoms_properties.append(randoms_weights[t])
         np.savetxt(input_filename, np.column_stack(randoms_properties))
     del randoms_properties # free memory
