@@ -335,7 +335,7 @@ class compute_integral{
                 if ((subsample_index > 0) && (completed_loops == accumulated_loops + 1)) { // the condition when the Frobenius difference after adding one loop is most straightforward to compute sensibly, because sumint is updated only every loops_per_sample completed loops. Also works for loops_per_sample=1 unlike the possible alternative condition, completed_loops % loops_per_sample == 1
                     Float frob_C3, frob_C4, frob_C5, frob_C6;
                     sumint.frobenius_difference_sum(&locint, accumulated_loops, frob_C3, frob_C4, frob_C5, frob_C6); // computes the Frobenius relative differences (in percents) after adding one integral loop result (locint) to the accumulation of accumulated_loops loops in sumint; the method signature is different with and without jackknives
-                    fprintf(stderr,"Frobenius percent difference after loop %d is %.3f (C3), %.3f (C4), %.3f (C5), %.3f (C6) \n",n_loops,frob_C3, frob_C4, frob_C5, frob_C6);
+                    fprintf(stderr, "Frobenius percent difference between %d and %d loops is %.3f (C3), %.3f (C4), %.3f (C5), %.3f (C6) \n", accumulated_loops, completed_loops, frob_C3, frob_C4, frob_C5, frob_C6);
                 }
 
                 // Sum up integrals
