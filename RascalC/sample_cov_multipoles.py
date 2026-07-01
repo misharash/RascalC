@@ -7,7 +7,7 @@ import numpy.typing as npt
 from .allcounts_utils import allcount_switch_function
 
 
-def get_poles(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation, ells: list[int]) -> np.ndarray:
+def get_poles(xi_estimator: pycorr.twopoint_estimator.BaseTwoPointEstimator | lsstypes.Count2Correlation, ells: list[int]) -> npt.NDArray[np.float64]:
     "get binned correlation function multipolesarray from either pycorr estimator or lsstypes Count2Correlation"
     return allcount_switch_function(xi_estimator, lambda x: x.get_corr(mode='poles', ells=ells), lambda x: x.project(mode='poles', ells=ells))
 

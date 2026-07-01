@@ -2,6 +2,7 @@
 # Not intended for execution from command line
 import numpy as np
 import os
+import numpy.typing as npt
 from typing import Iterable
 
 
@@ -25,12 +26,12 @@ def my_a2s(a, fmt='%.18e'):
     return ' '.join([fmt % e for e in a])
 
 
-def transposed(A: np.ndarray):
+def transposed(A: npt.NDArray[np.float64]):
     "swap last two (matrix) axes"
     return A.swapaxes(-2, -1)
 
 
-def symmetrized(A: np.ndarray):
+def symmetrized(A: npt.NDArray[np.float64]):
     "symmetrize a 2+D matrix over the last two axes"
     return 0.5 * (A + transposed(A))
 

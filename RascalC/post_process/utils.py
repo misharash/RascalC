@@ -69,7 +69,7 @@ def load_matrices_single(input_data: dict[str], cov_filter: npt.NDArray[np.int_]
     c4 = input_data["c4" + joint + str(tracer) * 2 + "," + suffix]
     matrices = (c2, c3, c4)
 
-    def finalize_matrix(a: np.ndarray):
+    def finalize_matrix(a: npt.NDArray[np.float64]):
         return symmetrized(a[cov_filter])
     
     if full: # 2D matrices, filter can be applied directly
@@ -189,7 +189,7 @@ def load_matrices_multi(input_data: dict[str], cov_filter: npt.NDArray[np.int_],
     n3 = np.zeros([ntracers] * 3)
     n4 = np.zeros([ntracers] * 4)
 
-    def finalize_matrix(a: np.ndarray):
+    def finalize_matrix(a: npt.NDArray[np.float64]):
         return a[cov_filter]
 
     # accumulate the values
