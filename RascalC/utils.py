@@ -21,17 +21,17 @@ def blank_function(*args, **kwargs) -> None:
     pass
 
 
-def my_a2s(a, fmt='%.18e'):
+def my_a2s(a: Iterable, fmt='%.18e') -> str:
     "custom array to string function"
     return ' '.join([fmt % e for e in a])
 
 
-def transposed(A: npt.NDArray[np.float64]):
+def transposed(A: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     "swap last two (matrix) axes"
     return A.swapaxes(-2, -1)
 
 
-def symmetrized(A: npt.NDArray[np.float64]):
+def symmetrized(A: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     "symmetrize a 2+D matrix over the last two axes"
     return 0.5 * (A + transposed(A))
 
