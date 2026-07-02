@@ -140,7 +140,7 @@ def collect_raw_covariance_matrices(cov_dir: str, dry_run: bool = False, cleanup
                 if not np.allclose(output_dictionary[full_matrix_name], full_matrix_computed):
                     print_function(f"WARNING: For {matrix_name} matrix, the loaded full is different from the average of subsamples. The latter will be saved.")
                     matrix_filenames_dictionary.pop("full") # remove the filename since it will be technically unused
-            output_dictionary[full_matrix_name] = full_matrix_computed
+                    output_dictionary[full_matrix_name] = full_matrix_computed # only override the full matrix if it is different from the computed one
         
         return_dictionary[output_group_name] = output_dictionary
         
