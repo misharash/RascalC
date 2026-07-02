@@ -119,18 +119,15 @@ def collect_raw_covariance_matrices(cov_dir: str, dry_run: bool = False, cleanup
         # now create and fill the dictionary to be saved in the numpy file
         output_dictionary = {}
         for matrix_name, matrix_filenames_dictionary in output_group.items():
-            output_dictionary[matrix_name] = dict()
+            output_dictionary[matrix_name] = {}
             for suffix, input_filename in matrix_filenames_dictionary.items():
                 matrix = np.loadtxt(input_filename)
                 if matrix_name.startswith("c2") and matrix.ndim == 1: matrix = np.diag(matrix) # convert 1D c2 to a 2D diagonal matrix
-                output_dictionary[matrix_name][suffix] = matrix
-
-            # special treatment for string suffixes (at the moment, only "full")
-            tmp_keys = list(output_dictionary[matrix_name].keys())
-            for suffix in tmp_keys:
-                if isinstance(suffix, str):
-                    output_dictionary[matrix_name + "_" + suffix] = output_dictionary[matrix_name].pop(suffix)
-                    # this creates a separate array to be saved
+                if isinstance(suffix, str): # special treatment for string suffixes (at the moment, only "full")
+                    output_dictionary[matrix_name + "_" + suffix] = matrix # this creates a separate array to be saved, which seems more convenient
+                elif isinstance(suffix, int): # integer suffixes are the subsample indices
+                    output_dictionary[matrix_name][suffix] = matrix # save the subsample matrices in a sub-dictionary, which will be converted to a numpy array later
+                else: raise TypeError(f"Unexpected suffix type {type(suffix)} for {matrix_name} in {output_group_name}; expected int or str")
 
             # now all the remaining suffixes must be integers so can be sorted easily
             output_dictionary[matrix_name] = np.array([output_dictionary[matrix_name][i_subsample] for i_subsample in sorted(output_dictionary[matrix_name].keys())])
