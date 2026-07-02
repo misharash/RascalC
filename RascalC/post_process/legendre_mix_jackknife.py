@@ -11,7 +11,7 @@ from ..raw_covariance_matrices import load_raw_covariances_legendre
 from typing import Literal, Callable, Iterable
 
 
-def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, file_root: str, m: int, max_l: int, outdir: str, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, tracer: Literal[1, 2] = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, file_root: str, m: int, max_l: int, outdir: str, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, tracer: Literal[1, 2] = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     # Load jackknife xi estimates from data
     print_function("Loading correlation function jackknife estimates from %s" % jackknife_file)
     xi_jack = np.loadtxt(jackknife_file, skiprows = 2)
@@ -62,7 +62,7 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
     cov_filter = cov_filter_legendre(n, max_l, skip_r_bins, skip_l)
     n_l = max_l // 2 + 1 # number of multipoles
     
-    input_file = load_raw_covariances_legendre(file_root, n, max_l, n_samples, print_function)
+    input_file = load_raw_covariances_legendre(file_root, n, max_l, n_samples, check_finished, print_function=print_function)
 
     # Create output directory
     if not os.path.exists(outdir):
@@ -70,13 +70,13 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
 
     # Load in full jackknife theoretical matrices
     print_function("Loading best estimate of jackknife covariance matrix")
-    c2j, c3j, c4j = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = True)
+    c2j, c3j, c4j = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=True)
 
     # Check matrix convergence
-    eigval_ok = check_eigval_convergence(c2j, c4j, kind = "Jackknife", print_function = print_function)
+    eigval_ok = check_eigval_convergence(c2j, c4j, kind = "Jackknife", print_function=print_function)
 
     # Load in partial jackknife theoretical matrices
-    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full = False, jack = True)
+    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full=False, jack=True)
 
     # Now optimize for shot-noise rescaling parameter alpha
     print_function("Optimizing for the shot-noise rescaling parameter")
@@ -84,18 +84,18 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
     print_function("Optimization complete - optimal rescaling parameter is %.6f" % alpha_best)
 
     # Check matrix convergence for the optimal alpha: if it is <1, the eigenvalue criterion should be strengthened
-    if eigval_ok and alpha_best < 1: check_eigval_convergence(c2j, c4j, alpha_best, kind = "Jackknife")
+    if eigval_ok and alpha_best < 1: check_eigval_convergence(c2j, c4j, alpha_best, kind="Jackknife", print_function=print_function)
 
     # Compute jackknife and full covariance matrices
     jack_cov = add_cov_terms_single(c2j, c3j, c4j, alpha_best)
     partial_jack_cov = add_cov_terms_single(c2s, c3s, c4s, alpha_best)
     _, jack_prec = compute_D_precision_matrix(partial_jack_cov, jack_cov)
 
-    c2f, c3f, c4f = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = False)
+    c2f, c3f, c4f = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=False)
     full_cov = add_cov_terms_single(c2f, c3f, c4f, alpha_best)
 
     # Check convergence
-    check_eigval_convergence(c2f, c4f, alpha_best, kind = "Full", print_function = print_function)
+    check_eigval_convergence(c2f, c4f, alpha_best, kind="Full", print_function=print_function)
 
     # Check positive definiteness
     check_positive_definiteness(full_cov)

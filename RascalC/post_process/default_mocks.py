@@ -1,5 +1,5 @@
 """
-Function to post-process the single-field integrals computed by the C++ code. This computes the shot-noise rescaling parameter, alpha, from a mock derived covariance matrix.
+Function to post-process the single-field integrals computed by the C++ code. This computes the shot-noise rescaling parameter, alpha, from a mock-derived covariance matrix.
 We output the theoretical covariance matrices, (quadratic-bias corrected) precision matrices and the effective number of samples, N_eff.
 """
 
@@ -10,7 +10,7 @@ from ..raw_covariance_matrices import load_raw_covariances_smu
 from typing import Literal, Callable, Iterable
 
 
-def post_process_default_mocks(mock_cov_file: str, file_root: str, n: int, m: int, outdir: str, skip_r_bins: int | tuple[int, int] = 0, tracer: Literal[1, 2] = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_default_mocks(mock_cov_file: str, file_root: str, n: int, m: int, outdir: str, skip_r_bins: int | tuple[int, int] = 0, tracer: Literal[1, 2] = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     output_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Default_Mocks_n%d_m%d.npz' % (n, m))
     name_dict = dict(path=output_name, filename=os.path.basename(output_name))
     if dry_run: return name_dict
@@ -18,7 +18,7 @@ def post_process_default_mocks(mock_cov_file: str, file_root: str, n: int, m: in
     cov_filter = cov_filter_smu(n, m, skip_r_bins)
     mock_cov = np.loadtxt(mock_cov_file)[cov_filter] # load external mock covariance matrix
 
-    input_file = load_raw_covariances_smu(file_root, n, m, n_samples, print_function)
+    input_file = load_raw_covariances_smu(file_root, n, m, n_samples, check_finished, print_function=print_function)
 
     # Create output directory
     if not os.path.exists(outdir):
@@ -26,13 +26,13 @@ def post_process_default_mocks(mock_cov_file: str, file_root: str, n: int, m: in
 
     # Load in full theoretical matrices
     print_function("Loading best estimate of covariance matrix")
-    c2f, c3f, c4f = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = False)
+    c2f, c3f, c4f = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=False)
 
     # Check matrix convergence
-    eigval_ok = check_eigval_convergence(c2f, c4f, print_function = print_function)
+    eigval_ok = check_eigval_convergence(c2f, c4f, print_function=print_function)
 
     # Load in partial theoretical matrices
-    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full = False, jack = False)
+    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full=False, jack=False)
 
     # Now optimize for shot-noise rescaling parameter alpha
     print_function("Optimizing for the shot-noise rescaling parameter")
@@ -40,7 +40,7 @@ def post_process_default_mocks(mock_cov_file: str, file_root: str, n: int, m: in
     print_function("Optimization complete - optimal rescaling parameter is %.6f" % alpha_best)
 
     # Check matrix convergence for the optimal alpha: if it is <1, the eigenvalue criterion should be strengthened
-    if eigval_ok and alpha_best < 1: check_eigval_convergence(c2f, c4f, alpha_best)
+    if eigval_ok and alpha_best < 1: check_eigval_convergence(c2f, c4f, alpha_best, print_function=print_function)
 
     # Compute full covariance matrices and precision
     full_cov = add_cov_terms_single(c2f, c3f, c4f, alpha_best)

@@ -4,6 +4,7 @@ We output the data and theory jackknife covariance matrices, in addition to full
 """
 
 import numpy as np
+import numpy.typing as npt
 import os
 from warnings import warn
 from .utils import symmetrized, cov_filter_smu, load_matrices_single, check_eigval_convergence, add_cov_terms_single, fit_shot_noise_rescaling, check_positive_definiteness, compute_D_precision_matrix, compute_N_eff_D
@@ -11,7 +12,7 @@ from ..raw_covariance_matrices import load_raw_covariances_smu
 from typing import Literal, Callable, Iterable
 
 
-def load_disconnected_term_single(input_data: dict[str], cov_filter: np.ndarray[int], RR: np.ndarray[float], weights: np.ndarray[float], tracer: Literal[1, 2] = 1, full: bool = True) -> np.ndarray[float]:
+def load_disconnected_term_single(input_data: dict[str], cov_filter: npt.NDArray[np.int_], RR: npt.NDArray[np.float64], weights: npt.NDArray[np.float64], tracer: Literal[1, 2] = 1, full: bool = True) -> npt.NDArray[np.float64]:
     suffix = "_" + str(tracer) * 2 + "_full" * full
     disconnected_array_names = ["EE1", "RR1", "EE2", "RR2"]
     disconnected_arrays = np.array([input_data[name + suffix] for name in disconnected_array_names])
@@ -20,7 +21,7 @@ def load_disconnected_term_single(input_data: dict[str], cov_filter: np.ndarray[
     fact = 1 - np.matmul(np.asmatrix(weights).T, np.asmatrix(weights))
     norm = RRaRRb * fact
 
-    def compute_disconnected_term(EEaA1: np.ndarray[float], RRaA1: np.ndarray[float], EEaA2: np.ndarray[float], RRaA2: np.ndarray[float]):
+    def compute_disconnected_term(EEaA1: npt.NDArray[np.float64], RRaA1: npt.NDArray[np.float64], EEaA2: npt.NDArray[np.float64], RRaA2: npt.NDArray[np.float64]):
         # argument order follows disconnected_array_names
         w_aA1 = RRaA1 / RRaA1.sum(axis = 0)
         w_aA2 = RRaA2 / RRaA2.sum(axis = 0)
@@ -29,7 +30,7 @@ def load_disconnected_term_single(input_data: dict[str], cov_filter: np.ndarray[
         cx = np.matmul(diff1.T, diff2) / norm
         return cx[cov_filter]
     
-    def get_disconnected_term(disconnected_arrays: np.ndarray[float]):
+    def get_disconnected_term(disconnected_arrays: npt.NDArray[np.float64]):
         return compute_disconnected_term(*disconnected_arrays)
     
     if full: # 2D arrays
@@ -40,7 +41,7 @@ def load_disconnected_term_single(input_data: dict[str], cov_filter: np.ndarray[
     return symmetrized(cx)
 
 
-def post_process_jackknife(jackknife_file: str, weight_dir: str, file_root: str, m: int, outdir: str, skip_r_bins: int | tuple[int, int] = 0, tracer: Literal[1, 2] = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_jackknife(jackknife_file: str, weight_dir: str, file_root: str, m: int, outdir: str, skip_r_bins: int | tuple[int, int] = 0, tracer: Literal[1, 2] = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     # Load jackknife xi estimates from data
     print_function(f"Loading correlation function jackknife estimates from {jackknife_file}")
     xi_jack = np.loadtxt(jackknife_file, skiprows=2)
@@ -80,7 +81,7 @@ def post_process_jackknife(jackknife_file: str, weight_dir: str, file_root: str,
     print_function(f"Loading weights file from {RR_file}")
     RR = np.loadtxt(RR_file)
     
-    input_file = load_raw_covariances_smu(file_root, n, m, n_samples, print_function)
+    input_file = load_raw_covariances_smu(file_root, n, m, n_samples, check_finished, print_function=print_function)
 
     # Create output directory
     if not os.path.exists(outdir):
@@ -88,15 +89,15 @@ def post_process_jackknife(jackknife_file: str, weight_dir: str, file_root: str,
 
     # Load in full jackknife theoretical matrices
     print_function("Loading best estimate of jackknife covariance matrix")
-    c2j, c3j, c4j = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = True)
-    c4j += load_disconnected_term_single(input_file, cov_filter, RR, weights, tracer, full = True)
+    c2j, c3j, c4j = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=True)
+    c4j += load_disconnected_term_single(input_file, cov_filter, RR, weights, tracer, full=True)
 
     # Check matrix convergence
-    eigval_ok = check_eigval_convergence(c2j, c4j, kind = "Jackknife", print_function = print_function)
+    eigval_ok = check_eigval_convergence(c2j, c4j, kind="Jackknife", print_function=print_function)
 
     # Load in partial jackknife theoretical matrices
-    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full = False, jack = True)
-    c4s += load_disconnected_term_single(input_file, cov_filter, RR, weights, tracer, full = False)
+    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full=False, jack=True)
+    c4s += load_disconnected_term_single(input_file, cov_filter, RR, weights, tracer, full=False)
 
     # Now optimize for shot-noise rescaling parameter alpha
     print_function("Optimizing for the shot-noise rescaling parameter")
@@ -104,7 +105,7 @@ def post_process_jackknife(jackknife_file: str, weight_dir: str, file_root: str,
     print_function("Optimization complete - optimal rescaling parameter is %.6f"%alpha_best)
 
     # Check matrix convergence for the optimal alpha: if it is <1, the eigenvalue criterion should be strengthened
-    if eigval_ok and alpha_best < 1: check_eigval_convergence(c2j, c4j, alpha_best, kind = "Jackknife")
+    if eigval_ok and alpha_best < 1: check_eigval_convergence(c2j, c4j, alpha_best, kind="Jackknife", print_function=print_function)
 
     # Compute jackknife covariance and precision matrices
     jack_cov = add_cov_terms_single(c2j, c3j, c4j, alpha_best)
@@ -112,12 +113,12 @@ def post_process_jackknife(jackknife_file: str, weight_dir: str, file_root: str,
     _, jack_prec = compute_D_precision_matrix(partial_jack_cov, jack_cov)
 
     # Load full covariance matrix terms
-    c2f, c3f, c4f = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = False)
+    c2f, c3f, c4f = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=False)
     # Compute full covariance matrix
     full_cov = add_cov_terms_single(c2f, c3f, c4f, alpha_best)
 
     # Check convergence
-    check_eigval_convergence(c2f, c4f, alpha_best, kind = "Full", print_function = print_function)
+    check_eigval_convergence(c2f, c4f, alpha_best, kind="Full", print_function=print_function)
 
     # Check positive definiteness
     check_positive_definiteness(full_cov)
@@ -125,7 +126,7 @@ def post_process_jackknife(jackknife_file: str, weight_dir: str, file_root: str,
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
     # Load in partial jackknife theoretical matrices
-    c2fs, c3fs, c4fs = load_matrices_single(input_file, cov_filter, tracer, full = False, jack = False)
+    c2fs, c3fs, c4fs = load_matrices_single(input_file, cov_filter, tracer, full=False, jack=False)
     partial_cov = add_cov_terms_single(c2fs, c3fs, c4fs, alpha_best)
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
     print_function("Full precision matrix estimate computed")    

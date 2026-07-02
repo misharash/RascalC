@@ -498,6 +498,7 @@ int main(int argc, char *argv[]) {
     int no_fields=1; // number of different fields used
     if(par.multi_tracers==true){
         printf("# WARNING: triple counts (and 3PCF covariances) are not implemented for multiple tracers. Will proceed for single tracer.\n");
+        par.multi_tracers=false;
         // no_functions=3;
         // no_fields=2;
     }
@@ -515,10 +516,10 @@ int main(int argc, char *argv[]) {
             if (index == 0) filename = par.fname;
             else filename = par.fname2;
 #ifdef JACKKNIFE
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index]);
+            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index], par.delete_in);
             // does this code actually support jackknife? does it matter?
 #else
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax);
+            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, par.delete_in);
 #endif
             assert(all_np[index] > 0);
         }
@@ -564,7 +565,7 @@ int main(int argc, char *argv[]) {
             // Sort particles into grid(s)
             Float nofznorm = par.nofznorm;
             if (index == 1) nofznorm = par.nofznorm2;
-            Grid tmp_grid(all_particles[index], all_np[index], par.rect_boxsize, par.cellsize, par.nside, shift, nofznorm);
+            Grid tmp_grid(all_particles[index], all_np[index], par.rect_boxsize, par.cellsize, par.nside, shift, nofznorm, par.effective_np);
 
             Float grid_density = (Float)tmp_grid.np/tmp_grid.nf;
             printf("\n RANDOM CATALOG %d DIAGNOSTICS:\n", index+1);

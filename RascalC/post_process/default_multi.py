@@ -10,14 +10,14 @@ from ..raw_covariance_matrices import load_raw_covariances_smu
 from typing import Iterable, Callable
 
 
-def post_process_default_multi(file_root: str, n: int, m: int, outdir: str, alpha_1: float = 1, alpha_2: float = 1, skip_r_bins: int | tuple[int, int] = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_default_multi(file_root: str, n: int, m: int, outdir: str, alpha_1: float = 1, alpha_2: float = 1, skip_r_bins: int | tuple[int, int] = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     output_name = os.path.join(outdir, 'Rescaled_Multi_Field_Covariance_Matrices_Default_n%d_m%d.npz' % (n, m))
     name_dict = dict(path=output_name, filename=os.path.basename(output_name))
     if dry_run: return name_dict
 
     cov_filter = cov_filter_smu(n, m, skip_r_bins)
 
-    input_file = load_raw_covariances_smu(file_root, n, m, n_samples, print_function)
+    input_file = load_raw_covariances_smu(file_root, n, m, n_samples, check_finished, two_tracers=True, print_function=print_function)
 
     alphas = [alpha_1, alpha_2]
 
@@ -26,14 +26,14 @@ def post_process_default_multi(file_root: str, n: int, m: int, outdir: str, alph
         os.makedirs(outdir)
 
     # Load full matrices
-    c2, c3, c4 = load_matrices_multi(input_file, cov_filter, full = True, jack = False)
+    c2, c3, c4 = load_matrices_multi(input_file, cov_filter, full=True, jack=False)
     c_tot, c_comb = add_cov_terms_multi(c2, c3, c4, alphas)
 
     # Check positive definiteness
     check_positive_definiteness(c_comb)
 
     # Load subsampled matrices (all submatrices combined)
-    c2s, c3s, c4s = load_matrices_multi(input_file, cov_filter, full = False, jack = False)
+    c2s, c3s, c4s = load_matrices_multi(input_file, cov_filter, full=False, jack=False)
     _, c_comb_subsamples = add_cov_terms_multi(c2s, c3s, c4s, alphas)
 
     # Now compute precision matrix

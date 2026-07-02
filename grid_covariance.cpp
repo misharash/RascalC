@@ -90,6 +90,7 @@ int main(int argc, char *argv[]) {
     if(par.multi_tracers==true){
 #ifdef THREE_PCF
         printf("# WARNING: 3PCF covariances are not implemented for multiple tracers. Will proceed for single tracer.\n");
+        par.multi_tracers=false; // ignore the multi-tracer setting for 3PCF covariance
 #else
         no_functions=3;
         no_fields=2;
@@ -135,9 +136,9 @@ int main(int argc, char *argv[]) {
         if (!par.make_random) {
             char *filename = par.particle_filename(index);
 #ifdef JACKKNIFE
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index]);
+            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, &all_weights[index], par.delete_in);
 #else
-            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax);
+            all_particles[index] = read_particles(par.rescale, &all_np[index], filename, par.rstart, par.nmax, par.delete_in);
 #endif
             assert(all_np[index] > 0);
         }
@@ -182,28 +183,31 @@ int main(int argc, char *argv[]) {
         // Create grid(s) and see if the particle density is acceptable
         bool nside_local_success = true; // assume this attempt succeeded be default, can be unset
         int index;
+        Float grid_density[max_no_fields];
         for (index = 0; index < no_fields; index++) {
             // Now ready to compute!
             // Sort particles into grid(s)
             Float nofznorm = par.nofznorm;
             if (index == 1) nofznorm = par.nofznorm2;
-            Grid tmp_grid(all_particles[index], all_np[index], par.rect_boxsize, par.cellsize, par.nside, shift, nofznorm);
+            Grid tmp_grid(all_particles[index], all_np[index], par.rect_boxsize, par.cellsize, par.nside, shift, nofznorm, par.effective_np);
 
-            Float grid_density = (Float)tmp_grid.np/tmp_grid.nf;
+            grid_density[index] = (Float)tmp_grid.np/tmp_grid.nf;
             printf("\n RANDOM CATALOG %d DIAGNOSTICS:\n", index+1);
-            printf("Average number of particles per grid cell = %6.2f\n", grid_density);
-            if (grid_density > max_density) {
+            printf("Average number of particles per grid cell = %6.2f\n", grid_density[index]);
+            if (grid_density[index] > max_density) {
                 nside_local_success = false; // unset this attempt's success flag
                 Float aimed_density = cbrt(max_density * max_density * min_density); // aim for density between the limits but closer to max
-                Float nside_approx = cbrt(grid_density/aimed_density) * par.nside; // approximate value of nside to reach this density
+                if (index) aimed_density = sqrt(max_density * min_density * grid_density[index] / grid_density[0]); // for two tracers, if the failure happens for the second tracer, effectively aim the geometric mean density of the two tracers at the geometric mean of the limits. specifically, put the naively aimed densities for both tracers equally close to the limits in log-space. this is the aimed density for the second tracer = sqrt(max_density * min_density) * sqrt(grid_density[1] / grid_density[0]), the expectation for the first tracer would then be sqrt(max_density * min_density) * sqrt(grid_density[0] / grid_density[1]). the previous method would not reach a resolution if the tracer densities come close to or above (max_density/min_density)^(2/3) = 4. the new method should be able to push the limit closer to max_density/min_density = 8, but it will probably fail a bit earlier because the aim is approximate due to discreteness
+                Float nside_approx = cbrt(grid_density[index]/aimed_density) * par.nside; // approximate value of nside to reach this density
                 par.nside = 2 * (int)round((nside_approx + 1)/2) - 1; // round to closest odd integer
                 printf("# INFO: Average particle density exceeds maximum advised particle density (%.0f particles per cell). Setting nside=%d.\n", max_density, par.nside);
                 break; // terminate the inner, tracer loop
             }
-            if (grid_density < min_density) {
+            if (grid_density[index] < min_density) {
                 nside_local_success = false; // unset this attempt's success flag
                 Float aimed_density = cbrt(max_density * min_density * min_density); // aim for density between the limits but closer to min
-                Float nside_approx = cbrt(grid_density/aimed_density) * par.nside; // approximate value of nside to reach this density
+                if (index) aimed_density = sqrt(max_density * min_density * grid_density[index] / grid_density[0]); // for two tracers, if the failure happens for the second tracer, effectively aim the geometric mean density of the two tracers at the geometric mean of the limits. specifically, put the naively aimed densities for both tracers equally close to the limits in log-space. this is the aimed density for the second tracer = sqrt(max_density * min_density) * sqrt(grid_density[1] / grid_density[0]), the expectation for the first tracer would then be sqrt(max_density * min_density) * sqrt(grid_density[0] / grid_density[1]). the previous method would not reach a resolution if the tracer densities come close to or above (max_density/min_density)^(2/3) = 4. the new method should be able to push the limit closer to max_density/min_density = 8, but it will probably fail a bit earlier because the aim is approximate due to discreteness
+                Float nside_approx = cbrt(grid_density[index]/aimed_density) * par.nside; // approximate value of nside to reach this density
                 par.nside = 2 * (int)round((nside_approx + 1)/2) - 1; // round to closest odd integer
                 printf("# INFO: grid appears inefficiently fine (average density less than %.0f particles per cell). Setting nside=%d.\n", min_density, par.nside);
                 break; // terminate the inner, tracer loop

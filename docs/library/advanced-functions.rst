@@ -15,7 +15,7 @@ Covariance comparison functions
 Extra convergence check functions
 ---------------------------------
 
-Extra convergence check is performed in the main wrapper function (``RascalC.run_cov``) and also performed by default in the automatic post-processing function (``RascalC.post_process_auto``), but the following functions may be useful to run additionally.
+Extra convergence check is performed in the main wrapper function (:func:`RascalC.run_cov`) and also performed by default in the automatic post-processing function (:func:`RascalC.post_process_auto`), but the following functions may be useful to run additionally.
 
 .. automodule:: RascalC.convergence_check_extra
     :members:
@@ -31,9 +31,6 @@ Sample catenation function
 Covariance combination functions for two independent regions
 ------------------------------------------------------------
 
-These functions follow the particular procedure for combination of DESI NGC and SGC 2-point correlation function measurements into GCcomb (previously N and S into NS).
-For more information, see Appendix B of `Rashkovetskyi et al 2025 <https://arxiv.org/abs/2404.03007>`_.
-
 .. automodule:: RascalC.combine_regions
     :members:
     :imported-members:
@@ -45,13 +42,21 @@ Sample covariance utility functions
 Radial and angular bins (``s_mu`` binning mode)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: RascalC.pycorr_utils.sample_cov
+.. automodule:: RascalC.sample_cov
     :members:
     :member-order: bysource
 
 Legendre multipoles (``legendre`` binning modes)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: RascalC.pycorr_utils.sample_cov_multipoles
+.. automodule:: RascalC.sample_cov_multipoles
     :members:
+    :member-order: bysource
+
+Covariances for combined/concatenated tracers from two-tracer covariances
+-------------------------------------------------------------------------
+
+.. automodule:: RascalC.combine_tracers
+    :members:
+    :imported-members:
     :member-order: bysource

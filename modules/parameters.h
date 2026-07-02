@@ -35,6 +35,9 @@ public:
     // Number of galaxies in first dataset
     Float nofznorm =156800;
 
+    // Whether to use weighted/effective number of random particles for normalization (sum(w)^2/sum(w^2), invariant to weight rescaling)
+    bool effective_np = false;
+
     // Output directory
     char *out_file = NULL;
     const char default_out_file[500] = "out";
@@ -203,6 +206,8 @@ public:
     // The periodicity of the position-space cube.
 	Float boxsize = 2000.; // this is not used if the mode is not PERIODIC and random particles are not made in RascalC
 
+    bool delete_in = false; // whether to delete particle input files after reading in
+
 	// The particles will be read from the unit cube, but then scaled by boxsize.
 	Float rescale = 1.;   // If left zero or negative, set rescale=boxsize
 
@@ -270,9 +275,11 @@ public:
 		else if (!strcmp(argv[i],"-xicut")) xicutoff = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-norm")) nofznorm = atof(argv[++i]);
 		else if (!strcmp(argv[i],"-norm2")) nofznorm2 = atof(argv[++i]);
+		else if (!strcmp(argv[i],"-effective_norm")) effective_np = true;
         else if (!strcmp(argv[i],"-nside")) nside = atoi(argv[++i]);
 		else if (!strcmp(argv[i],"-in")) fname = argv[++i];
         else if (!strcmp(argv[i],"-in2")) fname2 = argv[++i];
+        else if (!strcmp(argv[i],"-delete_in")) delete_in = true;
 		else if (!strcmp(argv[i],"-cor")) corname = argv[++i];
 		else if (!strcmp(argv[i],"-cor12")) corname12 = argv[++i];
 		else if (!strcmp(argv[i],"-cor2")) corname2 = argv[++i];
@@ -312,7 +319,7 @@ public:
         else if (!strcmp(argv[i],"-R0")) R0 = atof(argv[++i]);
         else if (!strcmp(argv[i],"-power_norm")) power_norm = atof(argv[++i]);
         else if (!strcmp(argv[i],"-power_norm12")) power_norm12 = atof(argv[++i]);
-        else if (!strcmp(argv[i],"-power_norm")) power_norm2 = atof(argv[++i]);
+        else if (!strcmp(argv[i],"-power_norm2")) power_norm2 = atof(argv[++i]);
 #elif defined THREE_PCF
         else if (!strcmp(argv[i],"-max_l")) max_l=atoi(argv[++i]);
         else if (!strcmp(argv[i],"-phi_file")) phi_file=argv[++i];
@@ -595,6 +602,7 @@ private:
         fprintf(stderr, "   -cor <file>: File location of input xi_1 correlation function file.\n");
 	    fprintf(stderr, "   -binfile_cf <filename>: File containing the desired radial bins for the correlation function.\n");
         fprintf(stderr, "   -norm <nofznorm>: Number of galaxies in the first tracer set.\n");
+        fprintf(stderr, "   -effective_norm: Flag indicating to use the effective number of random particles (sum(w)^2/sum(w^2), taking into account weights but invariant to overall weight rescaling) instead of simple counting (default). Should match the way the -norm value was computed for the data galaxies externally.\n");
 #ifdef JACKKNIFE
         fprintf(stderr, "   -jackknife <filename>: File containing the {1,1} jackknife weights (normally computed from Corrfunc)\n");
 #endif
@@ -608,7 +616,7 @@ private:
 	    fprintf(stderr, "          Recommend having several grid cells per rmax.\n");
         fprintf(stderr, "          There are {nside} cells along the longest dimension of the periodic box.\n");
 	    fprintf(stderr, "   -nthread <nthread>: The number of CPU threads ot use for parallelization.\n");
-        fprintf(stderr, "   -perbox <perbox>: Boolean, whether the box is periodic is not\n");
+        fprintf(stderr, "   -perbox: Flag indicating a periodic box (if absent, indicates an aperiodic computation). To use it, the code needs to be compiled with -DPERIODIC flag.\n");
         fprintf(stderr, "\n");
 
 	    fprintf(stderr, "   -in2 <file>: (Optional) The input random particle file for particle-set 2 (space-separated x,y,z,w).\n");
@@ -635,8 +643,8 @@ private:
         fprintf(stderr, "\n");
         fprintf(stderr, "   -R0 <R0>: Truncation radius for pair-wise separation window function in Mpc/h. Default: R0 = 100\n");
         fprintf(stderr, "   -power_norm: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2)\n");
-        fprintf(stderr, "   -power_norm2: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2) for field 1 x 2\n");
-        fprintf(stderr, "   -power_norm12: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2) for field 2\n");
+        fprintf(stderr, "   -power_norm12: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2) for field 1 x 2\n");
+        fprintf(stderr, "   -power_norm2: Power spectrum normalization = V*<(nw)^2> = Sum(nw^2) for field 2\n");
 #endif
 #if (!defined LEGENDRE && !defined POWER && !defined THREE_PCF)
         fprintf(stderr, "   -RRbin12 <filename>: (Optional) File containing the {1,2} jackknife RR bin counts (computed from Corrfunc)\n");
@@ -661,10 +669,11 @@ private:
         fprintf(stderr, "   -mumin <mumin> : Minimum mu binning to use.\n");
         fprintf(stderr, "   -mumax <mumax> : Maximum mu binning to use.\n");
         fprintf(stderr, "   -cf_loops <cf_loops>: Number of iterations over which to refine the correlation functions.\n");
-        fprintf(stderr, "   -boxsize <boxsize> : If creating particles randomly, this is the periodic size of the cubic computational domain.\n");
-        fprintf(stderr, "           Default 400. If reading from file, this is reset dynamically creating a cuboidal box.\n");
+        fprintf(stderr, "   -boxsize <boxsize> : The periodic size of the cubic computational domain (-perbox also needs to be set).\n");
+        fprintf(stderr, "           Default 2000. If creating particles randomly (-np set), this is also the scale for their coordinates.\n");
 	    fprintf(stderr, "   -rescale <rescale>: How much to dilate the input positions by.  Default 1.\n");
         fprintf(stderr, "            Zero or negative value is reset to boxsize, rescaling an unit cube to full periodicity\n");
+        fprintf(stderr, "   -delete_in: Flag to delete input files after reading them in (disabled by default). This option is particularly useful for the Python library.\n");
 	    fprintf(stderr, "   -xicut <xicutoff>: The radius beyond which xi is set to zero.  Default 400.\n");
         fprintf(stderr, "   -nmax <nmax>: The maximum number of particles to read in from the random particle files. Default 1000000000000\n");
 	    fprintf(stderr, "   -save <filename>: Triggers option to store probability grid. <filename> has to end on \".bin\"\n");

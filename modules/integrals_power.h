@@ -419,9 +419,8 @@ public:
     void save_counts(uint64 pair_counts,uint64 triple_counts,uint64 quad_counts){
         // Print the counts for each integral (used for combining the estimates outside of C++)
         // This is the number of counts used in each loop [always the same]
-        char counts_file[1000];
-        snprintf(counts_file, sizeof counts_file, "%sPowerCovMatrices/total_counts_n%d_l%d_%d%d,%d%d.txt",out_file,nbin,(mbin-1)*2,I1,I2,I3,I4);
-        FILE * CountsFile = fopen(counts_file,"w");
+        std::string counts_file = string_format("%sPowerCovMatrices/total_counts_n%d_l%d_%d%d,%d%d.txt",out_file,nbin,(mbin-1)*2,I1,I2,I3,I4);
+        FILE * CountsFile = fopen(counts_file.c_str(), "w");
         fprintf(CountsFile,"%llu\n",pair_counts);
         fprintf(CountsFile,"%llu\n",triple_counts);
         fprintf(CountsFile,"%llu\n",quad_counts);
@@ -437,15 +436,12 @@ public:
         */
         // Create output files
 
-        char c2name[1000];
-        snprintf(c2name, sizeof c2name, "%sPowerCovMatrices/c2_leg_n%d_l%d_%d%d_%s.txt", out_file,nbin, (mbin-1)*2,I1,I2,suffix);
-        char c3name[1000];
-        snprintf(c3name, sizeof c3name, "%sPowerCovMatrices/c3_leg_n%d_l%d_%d,%d%d_%s.txt", out_file, nbin, (mbin-1)*2,I2,I1,I3,suffix);
-        char c4name[1000];
-        snprintf(c4name, sizeof c4name, "%sPowerCovMatrices/c4_leg_n%d_l%d_%d%d,%d%d_%s.txt", out_file, nbin, (mbin-1)*2, I1,I2,I3,I4,suffix);
-        FILE * C2File = fopen(c2name,"w"); // for c2 part of integral
-        FILE * C3File = fopen(c3name,"w"); // for c3 part of integral
-        FILE * C4File = fopen(c4name,"w"); // for c4 part of integral
+        std::string c2name = string_format("%sPowerCovMatrices/c2_leg_n%d_l%d_%d%d_%s.txt", out_file,nbin, (mbin-1)*2,I1,I2,suffix);
+        std::string c3name = string_format("%sPowerCovMatrices/c3_leg_n%d_l%d_%d,%d%d_%s.txt", out_file, nbin, (mbin-1)*2,I2,I1,I3,suffix);
+        std::string c4name = string_format("%sPowerCovMatrices/c4_leg_n%d_l%d_%d%d,%d%d_%s.txt", out_file, nbin, (mbin-1)*2, I1,I2,I3,I4,suffix);
+        FILE * C2File = fopen(c2name.c_str(), "w"); // for c2 part of integral
+        FILE * C3File = fopen(c3name.c_str(), "w"); // for c3 part of integral
+        FILE * C4File = fopen(c4name.c_str(), "w"); // for c4 part of integral
         for(int i=0;i<nbin*mbin;i++){
             for(int j=0;j<nbin*mbin;j++){
                 fprintf(C2File,"%le\t",c2[i*nbin*mbin+j]);

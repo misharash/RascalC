@@ -10,7 +10,7 @@ class CorrelationFunction{
     private:
         int xsize, ysize;
         double *x,*y,*z;
-        double rmin,rmax,mumin,mumax;
+        double rmin, rmax;
         bool mudim = 0;
         gsl_interp_accel *xa, *ya, *x1a;
         gsl_interp2d* interp_2d;
@@ -30,6 +30,8 @@ class CorrelationFunction{
         }
 
     public:
+        double mumin, mumax; // these are public for easy access in rescaling
+
         double xi(double r, double mu){
             // 2D correlation function in radius and angular bins
             // xi values beyond the maximal radius in the correlation function file read in are extrapolated
@@ -79,7 +81,7 @@ class CorrelationFunction{
         void savetxt(const char *filename) {
             // Save the correlation function table to a text file in the same format as input file
             // (intended for use after refinement)
-            FILE* fp = fopen(filename, "r");
+            FILE* fp = fopen(filename, "w");
             if (fp == NULL) {
                 fprintf(stderr, "File %s could not be opened for writing\n", filename);
                 return;

@@ -2,10 +2,11 @@ r"These functions generate sample covariances of binned :math:`\xi_\ell(s)` from
 
 import pycorr
 import numpy as np
+import numpy.typing as npt
 from .utils import reshape_pycorr
 
 
-def sample_cov_multipoles_from_pycorr(xi_estimators: list[list[pycorr.twopoint_estimator.BaseTwoPointEstimator]], max_l: int, r_step: float | None = None, r_max: float = np.inf):
+def sample_cov_multipoles_from_pycorr(xi_estimators: list[list[pycorr.twopoint_estimator.BaseTwoPointEstimator]], max_l: int, r_step: float | None = None, r_max: float = np.inf) -> npt.NDArray[np.float64]:
     r"""
     Produce a sample covariance of binned :math:`\xi_\ell(s)` from ``cosmodesi/pycorr`` ``s_mu`` `2PCF estimators <https://github.com/cosmodesi/pycorr>`_.
     Considers only even multipoles.
@@ -37,7 +38,7 @@ def sample_cov_multipoles_from_pycorr(xi_estimators: list[list[pycorr.twopoint_e
         raise ValueError("Need the same number of files for different correlation functions")
     ells = np.arange(0, max_l+1, 2)
     # convert each xi estimator to multipoles array, and then turn list of lists into array too
-    xi = np.array([[reshape_pycorr(xi_estimator, r_step = r_step, r_max = r_max, n_mu = None).get_corr(mode='poles', ells = ells) for xi_estimator in xi_estimators_c] for xi_estimators_c in xi_estimators])
+    xi = np.array([[reshape_pycorr(xi_estimator, r_step=r_step, r_max=r_max, n_mu=None).get_corr(mode='poles', ells=ells) for xi_estimator in xi_estimators_c] for xi_estimators_c in xi_estimators])
     # now indices are [c, s, l, r]: correlation number, sample number, multipole index and then radial bin
     # need [s, c, l, r]
     xi = xi.transpose(1, 0, 2, 3)
@@ -47,7 +48,7 @@ def sample_cov_multipoles_from_pycorr(xi_estimators: list[list[pycorr.twopoint_e
     # Weights are assumed the same, hard to figure out alternatives, and they do not seem necessary
 
 
-def sample_cov_multipoles_from_pycorr_to_file(xi_estimators: list[list[pycorr.twopoint_estimator.BaseTwoPointEstimator]], outfile_name: str, max_l: int, r_step: float | None = None, r_max: float = np.inf):
+def sample_cov_multipoles_from_pycorr_to_file(xi_estimators: list[list[pycorr.twopoint_estimator.BaseTwoPointEstimator]], outfile_name: str, max_l: int, r_step: float | None = None, r_max: float = np.inf) -> None:
     r"""
     Produce a sample covariance of binned :math:`\xi_\ell(s)` from ``cosmodesi/pycorr`` ``s_mu`` `2PCF estimators <https://github.com/cosmodesi/pycorr>`_ and write the matrix to a text file.
     Considers only even multipoles.
@@ -58,10 +59,10 @@ def sample_cov_multipoles_from_pycorr_to_file(xi_estimators: list[list[pycorr.tw
     outfile_name : string (filename)
         The name for the output text file.
     """
-    np.savetxt(outfile_name, sample_cov_multipoles_from_pycorr(xi_estimators, max_l, r_step, r_max))
+    np.savetxt(outfile_name, sample_cov_multipoles_from_pycorr(xi_estimators, max_l, r_step, r_max), header=f"n_samples={len(xi_estimators[0])}, {max_l=}, {r_step=}, {r_max=}")
 
 
-def sample_cov_multipoles_from_pycorr_files(infile_names: list[list[str]], outfile_name: str, max_l: int, r_step: float | None = None, r_max: float = np.inf):
+def sample_cov_multipoles_from_pycorr_files(infile_names: list[list[str]], outfile_name: str, max_l: int, r_step: float | None = None, r_max: float = np.inf) -> None:
     r"""
     Produce a sample covariance of binned :math:`\xi_\ell(s)` from ``cosmodesi/pycorr`` ``s_mu`` `.npy` files and write the matrix to a text file.
     Considers only even multipoles.
@@ -94,5 +95,5 @@ def sample_cov_multipoles_from_pycorr_files(infile_names: list[list[str]], outfi
     if len(infile_names[0]) < 2: raise ValueError("Need at least two samples to compute the covariance matrix")
     if any(len(infile_names_c) != len(infile_names[0]) for infile_names_c in infile_names[1:]):
         raise ValueError("Need the same number of files for different correlation functions")
-    xi_estimators = [[reshape_pycorr(pycorr.TwoPointCorrelationFunction.load(infile_name), r_step = r_step, r_max = r_max, n_mu = None) for infile_name in infile_names_c] for infile_names_c in infile_names]
+    xi_estimators = [[reshape_pycorr(pycorr.TwoPointCorrelationFunction.load(infile_name), r_step=r_step, r_max=r_max, n_mu=None) for infile_name in infile_names_c] for infile_names_c in infile_names]
     sample_cov_multipoles_from_pycorr_to_file(xi_estimators, outfile_name, max_l, r_step, r_max)

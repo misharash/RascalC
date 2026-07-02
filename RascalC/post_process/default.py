@@ -10,14 +10,14 @@ from ..raw_covariance_matrices import load_raw_covariances_smu
 from typing import Literal, Callable, Iterable
 
 
-def post_process_default(file_root: str, n: int, m: int, outdir: str, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, tracer: Literal[1, 2] = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_default(file_root: str, n: int, m: int, outdir: str, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, tracer: Literal[1, 2] = 1, n_samples: None | int | Iterable[int] | Iterable[bool] = None, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     output_name = os.path.join(outdir, 'Rescaled_Covariance_Matrices_Default_n%d_m%d.npz' % (n, m))
     name_dict = dict(path=output_name, filename=os.path.basename(output_name))
     if dry_run: return name_dict
 
     cov_filter = cov_filter_smu(n, m, skip_r_bins)
 
-    input_file = load_raw_covariances_smu(file_root, n, m, n_samples, print_function)
+    input_file = load_raw_covariances_smu(file_root, n, m, n_samples, check_finished, print_function=print_function)
 
     # Create output directory
     if not os.path.exists(outdir):
@@ -25,10 +25,10 @@ def post_process_default(file_root: str, n: int, m: int, outdir: str, alpha: flo
 
     # Load in full theoretical matrices
     print_function("Loading best estimate of covariance matrix")
-    c2, c3, c4 = load_matrices_single(input_file, cov_filter, tracer, full = True, jack = False)
+    c2, c3, c4 = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=False)
 
     # Check matrix convergence
-    check_eigval_convergence(c2, c4, alpha, print_function = print_function)
+    check_eigval_convergence(c2, c4, alpha, print_function=print_function)
 
     # Compute full covariance matrices and precision
     full_cov = add_cov_terms_single(c2, c3, c4, alpha)
@@ -39,7 +39,7 @@ def post_process_default(file_root: str, n: int, m: int, outdir: str, alpha: flo
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
     # Load in partial theoretical matrices
-    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full = False, jack = False)
+    c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full=False, jack=False)
 
     partial_cov = add_cov_terms_single(c2s, c3s, c4s, alpha)
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
