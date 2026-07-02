@@ -91,8 +91,8 @@ def check_eigval_convergence(cN: npt.NDArray[np.float64], c2N: npt.NDArray[np.fl
     min_eig_cN = min(np.linalg.eigvalsh(cN))
     min_eig_c2N = min(np.linalg.eigvalsh(c2N))
     print_function(f"{kind}{2*Npcf}-point covariance matrix convergence check: min eigenvalue of C{Npcf} = {min_eig_cN:.2e}, min eigenvalue of C{2*Npcf} = {min_eig_c2N:.2e}")
-    inv_sqrt_c2 = np.linalg.inv(sqrtm(cN))
-    min_eig_comb = min(np.linalg.eigvalsh(inv_sqrt_c2.dot(c2N).dot(inv_sqrt_c2)))
+    inv_sqrt_cN = np.linalg.inv(sqrtm(cN))
+    min_eig_comb = min(np.linalg.eigvalsh(inv_sqrt_cN.dot(c2N).dot(inv_sqrt_cN)))
     print_function(f"{kind}{2*Npcf}-point covariance matrix convergence check: min eigenvalue of C{Npcf}^{{-1/2}} C{2*Npcf} C{Npcf}^{{-1/2}} = {min_eig_comb:.2f}")
     if min_eig_comb <= -alpha**2:
         warn_function(f"{kind}{2*Npcf}-point covariance matrix has not converged properly via the weaker eigenvalue test for shot-noise rescaling >= {alpha:.2f}. Min eigenvalue of C{Npcf}^{{-1/2}} C{2*Npcf} C{Npcf}^{{-1/2}} = {min_eig_comb:.2f}, should be > {-alpha**2:.2f}")
