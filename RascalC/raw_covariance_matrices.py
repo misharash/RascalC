@@ -102,19 +102,15 @@ def collect_raw_covariance_matrices(cov_dir: str, dry_run: bool = False, cleanup
                 print_function(f"WARNING: {not_found_names} matrices not found in output group {output_group_name}. This may indicate that the C++ code is still running. Will skip this output group to avoid disrupting an ongoing run by collecting and/or deleting the text files. If you are sure that the run(s) in this directory finished (e.g., it/they timed out without producing the full matrices), you can disable this check by setting check_finished to False, but be careful not to disrupt ongoing runs.")
                 continue
 
-        # check that the different matrices have the same number of subsamples
-        subsample_numbers = {matrix_name: sum(isinstance(suffix, int) for suffix in matrix_filenames_dictionary.keys()) for matrix_name, matrix_filenames_dictionary in output_group.items()}
-        subsample_number = min(subsample_numbers.values())
+        # check that the different matrices have the same subsamples by index
+        subsample_indices = [{suffix for suffix in matrix_filenames_dictionary.keys() if isinstance(suffix, int)} for matrix_filenames_dictionary in output_group.values()]
+        common_subsample_indices = subsample_indices[0].intersection(*subsample_indices)
 
-        if any(this_subsample_number != subsample_number for this_subsample_number in subsample_numbers.values()):
-            print_function(f"WARNING: Some matrices in output group {output_group_name} have different number of subsamples: {subsample_numbers}. " + ("This may indicate that the C++ code is still running. Will skip this output group to avoid disrupting an ongoing run by collecting and/or deleting the text files. If you are sure that the run(s) in this directory finished (e.g., it/they timed out without producing the full matrices), you can disable this check by setting check_finished to False, but be careful not to disrupt ongoing runs." if check_finished else "Will cut to the smallest number of subsamples."))
+        if any(this_subsample_indices != common_subsample_indices for this_subsample_indices in subsample_indices):
+            print_function(f"WARNING: Some matrices in output group {output_group_name} have different subsample indices. " + ("This may indicate that the C++ code is still running. Will skip this output group to avoid disrupting an ongoing run by collecting and/or deleting the text files. If you are sure that the run(s) in this directory finished (e.g., it/they timed out without producing the full matrices), you can disable this check by setting check_finished to False, but be careful not to disrupt ongoing runs." if check_finished else f"Will cut to the common subsample indices, leaving {len(common_subsample_indices)} subsamples."))
             if check_finished: continue # skip the output group to avoid disrupting an ongoing run
-            # otherwise, cut all to the minimal number of subsamples, using the lowest numbers present
-            for matrix_filenames_dictionary in output_group.values():
-                subsample_suffixes_increasing = sorted([suffix for suffix in matrix_filenames_dictionary.keys() if isinstance(suffix, int)])
-                if len(subsample_suffixes_increasing) == 0: continue # some arrays will not have subsamples
-                for suffix in subsample_suffixes_increasing[subsample_number:]: # remove the suffixes that are too high
-                    matrix_filenames_dictionary.pop(suffix)
+            # otherwise, cut all to the common subsample indices
+            output_group = {matrix_name: {suffix: input_filename for suffix, input_filename in matrix_filenames_dictionary.items() if suffix in common_subsample_indices or isinstance(suffix, str)} for matrix_name, matrix_filenames_dictionary in output_group.items()}
         
         # now create and fill the dictionary to be saved in the numpy file
         output_dictionary = {}
