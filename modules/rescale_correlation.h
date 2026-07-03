@@ -16,7 +16,8 @@ public:
 private:
     int nbin,mbin;
     bool rad;
-    Float dmu,mumin,mumax,*r_high,*r_low; // parameter file values
+    Float dmu,*r_high,*r_low; // parameter file values
+    const Float mumin=0, mumax=1; // hardcoded mu range for the correlation function. unlikely to change. loading from the parameters definitely has an issue for 3PCF mode and triple_counts, which have mumin=-1. loading from the correlation function object is also not a good idea because (currently) mumin and mumax are set to the centers of the first and last mu bins after rescaling
 
 public:
     correlation_integral(Parameters *par, CorrelationFunction *_cf){
@@ -31,8 +32,6 @@ public:
         // Important parameters
         nbin = par->nbin_cf;
         mbin = par->mbin_cf;
-        mumin = par->mumin;
-        mumax = par->mumax;
         r_high = par->radial_bins_high_cf;
         r_low = par->radial_bins_low_cf;
         dmu = (mumax-mumin)/mbin; // assume same mu ranges for correlation function and output covariance matrix
