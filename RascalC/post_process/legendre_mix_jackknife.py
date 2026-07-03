@@ -73,7 +73,7 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
     c2j, c3j, c4j = load_matrices_single(input_file, cov_filter, tracer, full=True, jack=True)
 
     # Check matrix convergence
-    eigval_ok = check_eigval_convergence(c2j, c4j, kind = "Jackknife", print_function=print_function)
+    eigval_ok = check_eigval_convergence(c2j, c4j, kind="Jackknife", print_function=print_function)
 
     # Load in partial jackknife theoretical matrices
     c2s, c3s, c4s = load_matrices_single(input_file, cov_filter, tracer, full=False, jack=True)
@@ -103,7 +103,7 @@ def post_process_legendre_mix_jackknife(jackknife_file: str, weight_dir: str, fi
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
     # Load in partial jackknife theoretical matrices
-    c2fs, c3fs, c4fs = load_matrices_single(input_file, cov_filter, tracer, full = False, jack = False)
+    c2fs, c3fs, c4fs = load_matrices_single(input_file, cov_filter, tracer, full=False, jack=False)
     partial_cov = add_cov_terms_single(c2fs, c3fs, c4fs, alpha_best)
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
     print_function("Full precision matrix estimate computed")    
