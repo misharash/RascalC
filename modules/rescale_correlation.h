@@ -31,11 +31,11 @@ public:
         // Important parameters
         nbin = par->nbin_cf;
         mbin = par->mbin_cf;
-        mumin = _cf->mumin;
-        mumax = _cf->mumax;
+        mumin = par->mumin;
+        mumax = par->mumax;
         r_high = par->radial_bins_high_cf;
         r_low = par->radial_bins_low_cf;
-        dmu = (mumax-mumin)/mbin;
+        dmu = (mumax-mumin)/mbin; // assume same mu ranges for correlation function and output covariance matrix
         rad=mbin==1&&dmu==1.;
 
         // Allocate memory;
