@@ -752,6 +752,7 @@ private:
 	    if (mkdir(out_file,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)==0){
             printf("\nCreating output directory\n");
         }
+#ifndef TRIPLE
 #ifdef THREE_PCF
         std::string cname = string_format("%s3PCFCovMatricesAll/", out_file);
 #elif defined POWER
@@ -775,6 +776,7 @@ private:
             printf("\nCreation of directory %s failed\n", cjname.c_str());
             exit(1);
         }
+#endif
 #endif
     }
 
