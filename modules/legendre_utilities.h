@@ -151,7 +151,8 @@ public:
         nbin = par->nbin; // number of radial bins 
         
         // READ IN FILE
-        char line[1000000], *phi_file;
+        const size_t line_size = 1000000;
+        char line[line_size], *phi_file;
         int line_no = 0;
         FILE *fp;
         
@@ -171,7 +172,7 @@ public:
         fprintf(stderr,"\nReading survey correction function coefficient file '%s'\n",phi_file);
         
         // Count lines to construct the correct size
-        while (fgets(line,1000000,fp)!=NULL){
+        while (fgets(line, line_size, fp)!=NULL){
             if (line[0]=='#') continue; // comment line
             if (line[0]=='\n') continue;
             line_no++;
@@ -191,8 +192,8 @@ public:
         int line_count=0; // line counter
         int index=0; // indexes array
             
-        // Read in values to file
-        while (fgets(line,1000000,fp)!=NULL) {
+        // Read in values from file
+        while (fgets(line, line_size, fp)!=NULL) {
             // Select required lines in file
         
             if (line[0]=='#') continue;
