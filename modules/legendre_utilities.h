@@ -140,8 +140,8 @@ public:
     
 #ifdef THREE_PCF
     SurveyCorrection(Parameters *par){
-        // This initializes the function and reads in the relevant polynomial coefficients for each radial bin. 
-        // NB: coefficients are indexed as INDEX = RADIAL_BIN_1*N_COEFF^2. + RADIAL_BIN_2*N_COEFF + COEFF_ID where N_COEFF is the total number of coefficients for each model; here 7.
+        // This initializes the function and reads in the relevant polynomial coefficients for each radial bin.
+        // NB: coefficients are indexed as INDEX = RADIAL_BIN_1*N_COEFF*NBIN + RADIAL_BIN_2*N_COEFF + COEFF_ID where N_COEFF is the total number of coefficients for each model; here 7.
 #else
     SurveyCorrection(Parameters *par, int index1, int index2){
         // This initializes the function and reads in the relevant polynomial coefficients for each radial bin
