@@ -1,5 +1,5 @@
 import numpy as np
-from ..utils import symmetrized, format_skip_r_bins
+from ..utils import format_skip_r_bins
 from ..post_process.utils import apply_cov_filter
 
 
@@ -25,11 +25,11 @@ def symmetrized_3pcf(A: np.typing.NDArray[np.float64], n: int, max_l: int) -> np
     m = max_l + 1
     if not np.array_equal(A.shape[-2:], [n * n * m] * 2): raise ValueError("Unexpected shape in the last 2 dimensions")
     leading_dims = list(A.shape[:-2]) # list containing a leading dimension for the array of covariance matrices, and empty for a single covariance matrix
-    A1 = A.reshape(leading_dims + [n, n, m] * 2) # last 6 axes will be [r1, r2, l12, r3, r4, l34]
-    A2 = (A1 + A1.swapaxes(-2, -3)) / 2 # symmetrize wrt swaps of r3 and r4. Create new array against the risk of A1 being a view of original A
-    A2 = (A2 + A2.swapaxes(-5, -6)) / 2 # symmetrize wrt swaps of r1 and r2
-    A2 = A2.reshape(leading_dims + [n * n * m] * 2) # back to the original shape
-    return symmetrized(A2) # finally, symetrize wrt full covariance matrix bin swap
+    A = A.reshape(leading_dims + [n, n, m] * 2) # last 6 axes will be [r1, r2, l12, r3, r4, l34]
+    A = (A + A.swapaxes(-2, -3)) / 2 # symmetrize wrt swaps of r3 and r4
+    A = (A + A.swapaxes(-5, -6)) / 2 # symmetrize wrt swaps of r1 and r2
+    A = A.reshape(leading_dims + [n * n * m] * 2) # back to the original shape
+    return (A + A.swapaxes(-1, -2)) / 2 # finally, symmetrize wrt full covariance matrix bin swap
 
 
 def load_matrices(input_data: dict[str], n: int, max_l: int, cov_filter: np.typing.NDArray[np.int_], full: bool = True) -> tuple[np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64]]:

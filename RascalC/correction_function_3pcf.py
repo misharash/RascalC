@@ -47,7 +47,7 @@ def check_inv_phi_values(phi_inv_mult: npt.NDArray[np.float64], print_function: 
         raise ValueError("Survey correction function seems too large - are the RRR counts normalized correctly?")
 
 
-def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: npt.NDArray[np.float64], RRRbin_over_3Vn3v3_raw: npt.NDArray[np.float64], print_function: Callable[[str], None] = print) -> npt.NDArray[np.float64]:
+def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: npt.NDArray[np.float64], RRRbin_over_3Vn3v3: npt.NDArray[np.float64], print_function: Callable[[str], None] = print) -> npt.NDArray[np.float64]:
     "Compute the inverse 3PCF survey correction function multipoles for the realistic survey geometry."
 
     chi_all = np.linspace(-1,1,m+1)
@@ -55,8 +55,8 @@ def compute_inv_phi_aperiodic_3pcf(n: int, m: int, n_multipoles: int, r_bins: np
     
     ## reshape RRR counts and add symmetries
     # 3Vn3v3 is just part of the normalization for the (inverse) survey correction function, see Equation 4.10 of https://arxiv.org/pdf/1910.04764
-    RRRbin_over_3Vn3v3 = RRRbin_over_3Vn3v3_raw.reshape(n, n, m)
-    RRRbin_over_3Vn3v3 = (RRRbin_over_3Vn3v3 + RRRbin_over_3Vn3v3.transpose(1, 0, 2)) / 2 # triple_counts code accumulates each triple to the three possible pairs of radial bins, but only to one of the two possible orderings of the pair, with twice the weight. so this symmetrization should give the counts where each triple contributes to the 6 bin triplets it can according to the RascalC convention (see Section 4.1 of https://arxiv.org/pdf/1910.04764, Equations 4.2-4.4). in the end, this is exactly symmetric under the interchange of the two radial bins, as it should be but wasn't before this step
+    RRRbin_over_3Vn3v3 = RRRbin_over_3Vn3v3.reshape(n, n, m)
+    RRRbin_over_3Vn3v3 = (RRRbin_over_3Vn3v3 + RRRbin_over_3Vn3v3.swapaxes(0, 1)) / 2 # triple_counts code accumulates each triple to the three possible pairs of radial bins, but only to one of the two possible orderings of the pair, with twice the weight. so this symmetrization should give the counts where each triple contributes to the 6 bin triplets it can according to the RascalC convention (see Section 4.1 of https://arxiv.org/pdf/1910.04764, Equations 4.2-4.4). in the end, this is exactly symmetric under the interchange of the two radial bins, as it should be but wasn't before this step
         
     ## Now construct Legendre moments
     RRRleg_over_3Vn3v3 = np.zeros([n, n, n_multipoles])
