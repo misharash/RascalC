@@ -11,7 +11,8 @@ from .utils import cov_filter_3pcf_legendre, load_matrices, add_cov_terms
 from typing import Callable, Iterable
 
 
-def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+
+def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False, raw_cov_multiplier: float = 1) -> dict[str]:
     r"""
     3PCF post-processing for Legendre (accumulated) mode for a given shot-noise rescaling parameter value, alpha.
 
@@ -92,7 +93,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
 
     # Load in full theoretical matrices
     print_function("Loading best estimate of covariance matrix")
-    c3, c4, c5, c6 = load_matrices(input_file, n, max_l, cov_filter, full=True)
+    c3, c4, c5, c6 = load_matrices(input_file, n, max_l, cov_filter, full=True, raw_cov_multiplier=raw_cov_multiplier)
 
     # Check matrix convergence by analogy with 2PCF, may be less helpful
     check_eigval_convergence(c3, c6, alpha, Npcf=3, print_function=print_function)
@@ -106,7 +107,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
     # Load in partial theoretical matrices
-    c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False)
+    c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False, raw_cov_multiplier=raw_cov_multiplier)
     partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha)
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
     print_function("Full precision matrix estimate computed")
