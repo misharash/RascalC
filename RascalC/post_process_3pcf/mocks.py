@@ -22,13 +22,13 @@ def Psi(alpha: float, c3: npt.NDArray[np.float64], c4: npt.NDArray[np.float64], 
     return Psi
 
 
-def neg_log_L1(alpha: float, scale: float, target_cov: npt.NDArray[np.float64], c3: npt.NDArray[np.float64], c4: npt.NDArray[np.float64], c5: npt.NDArray[np.float64], c6: npt.NDArray[np.float64], c3s: npt.NDArray[np.float64], c4s: npt.NDArray[np.float64], c5s: npt.NDArray[np.float64], c6s: npt.NDArray[np.float64]) -> float:
+def neg_log_L1(alpha: float, overall_scaling: float, target_cov: npt.NDArray[np.float64], c3: npt.NDArray[np.float64], c4: npt.NDArray[np.float64], c5: npt.NDArray[np.float64], c6: npt.NDArray[np.float64], c3s: npt.NDArray[np.float64], c4s: npt.NDArray[np.float64], c5s: npt.NDArray[np.float64], c6s: npt.NDArray[np.float64]) -> float:
     """Return negative log L1 likelihood between 3PCF theory and target (data jackknife or mock sample) covariance matrices.
     log L1 is the Kullback-Leibler divergence with constant terms (including log(det(target_cov))) removed.
     As a result, the `target_cov` can be a singular matrix.
-    This function does not allow negative shot-noise rescaling `alpha` by returning infinity."""
-    if alpha < 0 or scale <= 0: return np.inf # negative shot-noise rescaling causes problems and does not make sense
-    Psi_alpha = Psi(alpha, c3, c4, c5, c6, c3s, c4s, c5s, c6s) / scale
+    This function does not allow negative shot-noise rescaling `alpha` or non-positive overall scaling `overall_scaling` by returning infinity."""
+    if alpha < 0 or overall_scaling <= 0: return np.inf # negative shot-noise rescaling causes problems and does not make sense
+    Psi_alpha = Psi(alpha, c3, c4, c5, c6, c3s, c4s, c5s, c6s) / overall_scaling
     logdet = np.linalg.slogdet(Psi_alpha)
     if logdet[0] < 0:
         # Remove any dodgy inversions
