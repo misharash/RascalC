@@ -11,7 +11,7 @@ from .utils import cov_filter_3pcf_legendre, load_matrices, add_cov_terms
 from typing import Callable, Iterable
 
 
-def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = None, alpha: float = 1, overall_scaling: float = 1, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     r"""
     3PCF post-processing for Legendre (accumulated) mode for a given shot-noise rescaling parameter value, alpha.
 
@@ -36,6 +36,9 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
 
     alpha : float
         Fixed shot-noise rescaling value to use. In principle optional, but the default value of 1 may not be particularly good.
+
+    overall_scaling : float
+        Fixed overall scaling value to use. In principle optional, but the default value of 1 may not be particularly good.
 
     skip_r_bins : integer or tuple of two integers
         (Optional) removal of some radial bins.
@@ -98,7 +101,7 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
     check_eigval_convergence(c3, c6, alpha, Npcf=3, print_function=print_function)
 
     # Compute full covariance matrix
-    full_cov = add_cov_terms(c3, c4, c5, c6, alpha)
+    full_cov = add_cov_terms(c3, c4, c5, c6, alpha) * overall_scaling
 
     # Check positive definiteness
     check_positive_definiteness(full_cov)
@@ -107,14 +110,14 @@ def post_process_3pcf(file_root: str, n: int, max_l: int, outdir: str | None = N
     print_function("Computing the full precision matrix estimate:")
     # Load in partial theoretical matrices
     c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False)
-    partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha)
+    partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha) * overall_scaling
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
     print_function("Full precision matrix estimate computed")
 
     # Now compute effective N:
     N_eff_D = compute_N_eff_D(full_D_est, print_function)  
 
-    output_dict = dict(full_theory_covariance=full_cov, shot_noise_rescaling=alpha,
+    output_dict = dict(full_theory_covariance=full_cov, shot_noise_rescaling=alpha, overall_scaling=overall_scaling,
                        full_theory_precision=full_prec, N_eff=N_eff_D,
                        full_theory_D_matrix=full_D_est, individual_theory_covariances=partial_cov)
     

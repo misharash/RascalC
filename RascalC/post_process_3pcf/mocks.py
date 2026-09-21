@@ -50,7 +50,8 @@ def fit_shot_noise_and_overall_rescaling(target_cov: npt.NDArray[np.float64], c3
     return alpha_best[0]
 
 
-def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: int, outdir: str | None = None, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, max_l_mock: int | None = None, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
+
+def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: int, outdir: str | None = None, overall_scaling: float | None = None, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, max_l_mock: int | None = None, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     r"""
     3PCF post-processing for Legendre (accumulated) mode, obtaining the shot-noise rescaling parameter, alpha, from a mock-derived covariance matrix.
 
@@ -75,6 +76,9 @@ def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: i
     outdir : string or None
         (Optional) path to the directory in which the post-processing results should be saved. If None (default), is set to ``file_root``. Empty string means the current working directory.
         We advise to use different output directories for different post-processing options.
+
+    overall_scaling : float or None
+        (Optional) If a specific value is provided, it will be used as the fixed overall scaling factor. If None (default), the scaling will be determined by the best fit to the mock covariance matrix (together with the shot-noise rescaling parameter, alpha).
 
     skip_r_bins : integer or tuple of two integers
         (Optional) removal of some radial bins.
@@ -166,30 +170,36 @@ def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: i
     # Load in partial theoretical matrices
     c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False)
 
-    # Now optimize for shot-noise rescaling parameter alpha
-    print_function("Optimizing for the shot-noise rescaling parameter")
-    alpha_best = fit_shot_noise_rescaling(mock_cov, c3, c4, c5, c6, c3s, c4s, c5s, c6s)
-    print_function("Optimization complete - optimal rescaling parameter is %.6f" % alpha_best)
+    # Now optimize for shot-noise rescaling parameter alpha, and possibly overall scaling parameter
+    if overall_scaling is None:
+        print_function("Optimizing for the shot-noise rescaling and overall scaling parameters")
+        alpha_best, overall_scaling = fit_shot_noise_and_overall_rescaling(mock_cov, c3, c4, c5, c6, c3s, c4s, c5s, c6s)
+        print_function("Optimization complete - optimal shot-noise rescaling parameter is %.6f and optimal overall scaling parameter is %.6f" % (alpha_best, overall_scaling))
+    else:
+        print_function("Using the provided overall scaling parameter: %.6f" % overall_scaling)
+        print_function("Optimizing for the shot-noise rescaling parameter")
+        alpha_best = fit_shot_noise_rescaling(mock_cov, c3, c4, c5, c6, c3s, c4s, c5s, c6s)
+        print_function("Optimization complete - optimal rescaling parameter is %.6f" % alpha_best)
 
     # Check matrix convergence for the optimal alpha: if it is <1, the eigenvalue criterion should be strengthened
     if eigval_ok and alpha_best < 1: check_eigval_convergence(c3, c6, alpha_best, Npcf=3, print_function=print_function)
 
     # Compute full covariance matrix
-    full_cov = add_cov_terms(c3, c4, c5, c6, alpha_best)
+    full_cov = add_cov_terms(c3, c4, c5, c6, alpha_best) * overall_scaling
 
     # Check positive definiteness
     check_positive_definiteness(full_cov)
 
     # Compute full precision matrix
     print_function("Computing the full precision matrix estimate:")
-    partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha_best)
+    partial_cov = add_cov_terms(c3s, c4s, c5s, c6s, alpha_best) * overall_scaling
     full_D_est, full_prec = compute_D_precision_matrix(partial_cov, full_cov)
     print_function("Full precision matrix estimate computed")
 
     # Now compute effective N:
     N_eff_D = compute_N_eff_D(full_D_est, print_function)  
 
-    output_dict = dict(full_theory_covariance=full_cov, shot_noise_rescaling=alpha_best,
+    output_dict = dict(full_theory_covariance=full_cov, shot_noise_rescaling=alpha_best, overall_scaling=overall_scaling,
                        full_theory_precision=full_prec, N_eff=N_eff_D,
                        full_theory_D_matrix=full_D_est, individual_theory_covariances=partial_cov,
                        mock_covariance=mock_cov)
