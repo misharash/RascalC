@@ -32,15 +32,14 @@ def symmetrized_3pcf(A: np.typing.NDArray[np.float64], n: int, max_l: int) -> np
     return (A + A.swapaxes(-1, -2)) / 2 # finally, symmetrize wrt full covariance matrix bin swap
 
 
-
-def load_matrices(input_data: dict[str], n: int, max_l: int, cov_filter: np.typing.NDArray[np.int_], full: bool = True, raw_cov_multiplier: float = 1) -> tuple[np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64]]:
+def load_matrices(input_data: dict[str], n: int, max_l: int, cov_filter: np.typing.NDArray[np.int_], full: bool = True) -> tuple[np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64], np.typing.NDArray[np.float64]]:
     """Load the 3PCF single-tracer covariance matrix terms."""
     matrices = []
     for npoints in range(3, 7):
         these_matrices = [input_data[f"c{npoints}_{index}" + "_full" * full] for index in range(npoints == 6, 2)] # exclude c6_0 term, because it should be small but is also hard to compute (see Section 5.2.3 and Appendix A of https://arxiv.org/abs/1910.04764)
         this_matrix = these_matrices[0]
         if npoints != 6: this_matrix += these_matrices[1]
-        matrices.append(raw_cov_multiplier * apply_cov_filter(symmetrized_3pcf(this_matrix, n, max_l), cov_filter)) # symmetrize before filtering, because filtering removes repeating bin pairs
+        matrices.append(apply_cov_filter(symmetrized_3pcf(this_matrix, n, max_l), cov_filter)) # symmetrize before filtering, because filtering removes repeating bin pairs
     return tuple(matrices)
 
 

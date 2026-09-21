@@ -50,7 +50,7 @@ def fit_shot_noise_and_overall_rescaling(target_cov: npt.NDArray[np.float64], c3
     return alpha_best[0]
 
 
-def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: int, outdir: str | None = None, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, max_l_mock: int | None = None, print_function: Callable[[str], None] = print, dry_run: bool = False, raw_cov_multiplier: float = 1) -> dict[str]:
+def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: int, outdir: str | None = None, skip_r_bins: int | tuple[int, int] = 0, skip_l: int = 0, n_samples: None | int | Iterable[int] | Iterable[bool] = None, exclude_samebins: bool = True, exclude_odd_l: bool = False, check_finished: bool = True, max_l_mock: int | None = None, print_function: Callable[[str], None] = print, dry_run: bool = False) -> dict[str]:
     r"""
     3PCF post-processing for Legendre (accumulated) mode, obtaining the shot-noise rescaling parameter, alpha, from a mock-derived covariance matrix.
 
@@ -158,13 +158,13 @@ def post_process_3pcf_mocks(mock_cov_file: str, file_root: str, n: int, max_l: i
 
     # Load in full theoretical matrices
     print_function("Loading best estimate of covariance matrix")
-    c3, c4, c5, c6 = load_matrices(input_file, n, max_l, cov_filter, full=True, raw_cov_multiplier=raw_cov_multiplier)
+    c3, c4, c5, c6 = load_matrices(input_file, n, max_l, cov_filter, full=True)
 
     # Check matrix convergence by analogy with 2PCF, may be less helpful
     eigval_ok = check_eigval_convergence(c3, c6, Npcf=3, print_function=print_function)
 
     # Load in partial theoretical matrices
-    c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False, raw_cov_multiplier=raw_cov_multiplier)
+    c3s, c4s, c5s, c6s = load_matrices(input_file, n, max_l, cov_filter, full=False)
 
     # Now optimize for shot-noise rescaling parameter alpha
     print_function("Optimizing for the shot-noise rescaling parameter")
