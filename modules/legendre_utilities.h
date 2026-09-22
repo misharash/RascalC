@@ -92,7 +92,7 @@ class SurveyCorrection{
 public:
 #ifdef THREE_PCF
     Float* inv_phi_multipoles = nullptr; // houses multipole moments of the inverse correction function
-    int n_param = 7;
+    int n_param = 7; // number of multipole coefficients in the Legendre polynomial decomposition of the inverse correction function
 #else
     Float* phi_coeffs = nullptr; // houses polynomial coefficients for the correction function
     int n_param = 7; // number of polynomial coefficients in fitting model (only 5 are independent)

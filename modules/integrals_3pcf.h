@@ -38,7 +38,7 @@ public:
         mbin = par->mbin; // number of Legendre bins, should be simply max_l+1
         out_file = par->out_file; // output directory
         max_l = par->max_l; // maximum Legendre polynomial to output
-        max_leg = std::max(max_l, sc->n_param); // maximum Legendre multipole to use
+        max_leg = std::max(max_l, sc->n_param-1); // maximum Legendre multipole to use, selected among the max ell for the covariance and the max ell for the survey correction function decomposition, the latter being 1 less than the number of parameters (multipoles) there
         
         int ec=0;
         array_len = nbin*nbin*mbin;
