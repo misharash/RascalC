@@ -37,8 +37,8 @@ def read_estimators_for_sample_cov(infile_names: list[list[str]]) -> list[list[l
         raise ValueError("Need the same number of files for different correlation functions")
     xi_estimators = [[read_wrapper(infile_name) for infile_name in infile_names_c] for infile_names_c in infile_names]
     # if any of the xi_estimators is None (failed to read), skip that realization for all correlations
-    success = [all(xi_estimators[c][i] is not None for c in range(len(xi_estimators))) for i in range(len(xi_estimators[0]))] # equivalently, only keep the realization for which all types of correlation functions were successfully read
-    return [[xi_estimators_c[i] for i in range(len(xi_estimators[0])) if success[i]] for xi_estimators_c in range(len(xi_estimators))]
+    successes = [all(xi_estimators[c][i] is not None for c in range(len(xi_estimators))) for i in range(len(xi_estimators[0]))] # equivalently, only keep the realization for which all types of correlation functions were successfully read
+    return [[xi_estimator for xi_estimator, success in zip(xi_estimators_c, successes) if success] for xi_estimators_c in xi_estimators]
 
 
 def get_edges_from_lsstypes_to_pycorr(xi_estimator: lsstypes.Count2Correlation, coord: Literal['s', 'mu']) -> npt.NDArray[np.float64]:
