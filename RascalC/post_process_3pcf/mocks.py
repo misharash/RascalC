@@ -39,15 +39,14 @@ def neg_log_L1(alpha: float, overall_scaling: float, target_cov: npt.NDArray[np.
 def fit_shot_noise_rescaling(target_cov: npt.NDArray[np.float64], c3: npt.NDArray[np.float64], c4: npt.NDArray[np.float64], c5: npt.NDArray[np.float64], c6: npt.NDArray[np.float64], c3s: npt.NDArray[np.float64], c4s: npt.NDArray[np.float64], c5s: npt.NDArray[np.float64], c6s: npt.NDArray[np.float64]) -> float:
     """Fit the 3PCF covariance matrix model to `target_cov` to find the optimal shot-noise rescaling.
     `target_cov` can be a singular matrix."""
-    alpha_best = fmin(neg_log_L1, 1, args=(1, target_cov, c3, c4, c5, c6, c3s, c4s, c5s, c6s))
+    alpha_best = fmin(neg_log_L1, x0=1, args=(1, target_cov, c3, c4, c5, c6, c3s, c4s, c5s, c6s))
     return alpha_best[0]
 
 
-def fit_shot_noise_and_overall_rescaling(target_cov: npt.NDArray[np.float64], c3: npt.NDArray[np.float64], c4: npt.NDArray[np.float64], c5: npt.NDArray[np.float64], c6: npt.NDArray[np.float64], c3s: npt.NDArray[np.float64], c4s: npt.NDArray[np.float64], c5s: npt.NDArray[np.float64], c6s: npt.NDArray[np.float64]) -> float:
+def fit_shot_noise_and_overall_rescaling(target_cov: npt.NDArray[np.float64], c3: npt.NDArray[np.float64], c4: npt.NDArray[np.float64], c5: npt.NDArray[np.float64], c6: npt.NDArray[np.float64], c3s: npt.NDArray[np.float64], c4s: npt.NDArray[np.float64], c5s: npt.NDArray[np.float64], c6s: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     """Fit the 3PCF covariance matrix model to `target_cov` to find the optimal shot-noise rescaling and overall scaling.
     `target_cov` can be a singular matrix."""
-    alpha_best = fmin(neg_log_L1, (1, 1), args=(target_cov, c3, c4, c5, c6, c3s, c4s, c5s, c6s))
-    return alpha_best[0]
+    return fmin(lambda x: neg_log_L1(x[0], x[1], target_cov, c3, c4, c5, c6, c3s, c4s, c5s, c6s), x0=(1, 1))
 
 
 
