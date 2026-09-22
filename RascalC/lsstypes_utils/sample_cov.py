@@ -3,7 +3,7 @@ r"These functions generate sample covariances of binned :math:`\xi(s,\mu)` from 
 import lsstypes
 import numpy as np
 import numpy.typing as npt
-from .utils import reshape_lsstypes
+from .utils import reshape_lsstypes, read_estimators_for_sample_cov
 
 
 def sample_cov_from_lsstypes(xi_estimators: list[list[lsstypes.Count2Correlation]], n_mu: int | None = None, r_step: float | None = None, r_max: float = np.inf) -> npt.NDArray[np.float64]:
@@ -85,9 +85,4 @@ def sample_cov_from_lsstypes_files(infile_names: list[list[str]], outfile_name: 
     r_max: float
         (Optional) Sets the maximum radius/separation, any bins beyond that value are discarded. By default, the value is infinity, so no bins are discarded.
     """
-    if len(infile_names) <= 0: raise ValueError("Need at least one correlation function group in the outer list")
-    if len(infile_names[0]) < 2: raise ValueError("Need at least two samples to compute the covariance matrix")
-    if any(len(infile_names_c) != len(infile_names[0]) for infile_names_c in infile_names[1:]):
-        raise ValueError("Need the same number of files for different correlation functions")
-    xi_estimators = [[lsstypes.read(infile_name) for infile_name in infile_names_c] for infile_names_c in infile_names]
-    sample_cov_from_lsstypes_to_file(xi_estimators, outfile_name, n_mu, r_step, r_max)
+    sample_cov_from_lsstypes_to_file(read_estimators_for_sample_cov(infile_names), outfile_name, n_mu, r_step, r_max)
