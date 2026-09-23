@@ -6,6 +6,41 @@ from typing import Literal
 from ..utils import format_skip_r_bins
 
 
+def read_wrapper(filename: str) -> lsstypes.Count2Correlation:
+    """
+    Try to read a lsstypes Count2Correlation from a file. If failed, warn and return None instead of raising an exception.
+    """
+    try:
+        return lsstypes.read(filename)
+    except Exception as e:
+        warn(f"Failed to read {filename}: {e}")
+        return None
+
+
+def read_estimators_for_sample_cov(infile_names: list[list[str]]) -> list[list[lsstypes.Count2Correlation]]:
+    """
+    Read the ``adematti/lsstypes`` ``s_mu`` `.npy` files for the sample covariance computation.
+    Multiple tracers are supported.
+
+    Parameters
+    ----------
+    infile_names : list of lists of strings (filenames)
+        The first element must be the list of first tracer auto-correlation function estimator filenames.
+        The (optional) second element should be the list of cross-correlation function estimator filenames between the 1st and the 2nd tracer. (Ordering of mock realizations must be the same, or the cross-covariance blocks will be wrong.)
+        The (optional) third element should be the list of second tracer auto-correlation function estimator filenames.
+        This ordering can be extended (or altered) but it must be consistent.
+        If any realization for any correlation function fails to read, that realization will be skipped for all correlation functions.
+    """
+    if len(infile_names) <= 0: raise ValueError("Need at least one correlation function group in the outer list")
+    if len(infile_names[0]) < 2: raise ValueError("Need at least two samples to compute the covariance matrix")
+    if any(len(infile_names_c) != len(infile_names[0]) for infile_names_c in infile_names[1:]):
+        raise ValueError("Need the same number of files for different correlation functions")
+    xi_estimators = [[read_wrapper(infile_name) for infile_name in infile_names_c] for infile_names_c in infile_names]
+    # if any of the xi_estimators is None (failed to read), skip that realization for all correlations
+    successes = [all(xi_estimators[c][i] is not None for c in range(len(xi_estimators))) for i in range(len(xi_estimators[0]))] # equivalently, only keep the realization for which all types of correlation functions were successfully read
+    return [[xi_estimator for xi_estimator, success in zip(xi_estimators_c, successes) if success] for xi_estimators_c in xi_estimators]
+
+
 def get_edges_from_lsstypes_to_pycorr(xi_estimator: lsstypes.Count2Correlation, coord: Literal['s', 'mu']) -> npt.NDArray[np.float64]:
     """
     Get edges from a lsstypes Count2Correlation RR counts, and change their format to match the previous convention from pycorr.
